@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-achievements",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "count": 36,
+  "items": [
+    {
+      "alpha": false,
+      "id": 35,
+      "monster": "Unknown",
+      "name": "Dedicated Hunter",
+      "required": 1
+    },
+    {
+      "alpha": false,
+      "id": 36,
+      "monster": "Unknown",
+      "name": "Dedicated Practitioner",
+      "required": 1
+    },
+    {
+      "alpha": false,
+      "id": 2,
+      "monster": "Bug",
+      "name": "Bug Exterminator",
+      "required": 100
+    },
+    {
+      "alpha": false,
+      "id": 1,
+      "monster": "Rat",
+      "name": "Rat Hunter",
+      "required": 100
+    },
+    {
+      "alpha": false,
+      "id": 3,
+      "monster": "Snake",
+      "name": "Snake Charmer",
+      "required": 100
+    },
+    {
+      "alpha": false,
+      "id": 15,
+      "monster": "Ancient Scarab",
+      "name": "Ancient Scarab Digger",
+      "required": 150
+    },
+    {
+      "alpha": false,
+      "id": 14,
+      "monster": "Beholder",
+      "name": "Beholder Blinder",
+      "required": 150
+    },
+    {
+      "alpha": false,
+      "id": 4,
+      "monster": "Rotworm",
+      "name": "Rotworm Purger",
+      "required": 150
+    },
+    {
+      "alpha": false,
+      "id": 5,
+      "monster": "Troll",
+      "name": "Troll Slayer",
+      "required": 150
+    },
+    {
+      "alpha": false,
+      "id": 6,
+      "monster": "Wolf",
+      "name": "Wolf Fang",
+      "required": 150
+    },
+    {
+      "alpha": false,
+      "id": 13,
+      "monster": "Cyclops",
+      "name": "Cyclops Toppler",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 20,
+      "monster": "Dragon Lord",
+      "name": "Dragon Lord Vanquisher",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 12,
+      "monster": "Dwarf",
+      "name": "Dwarf Basher",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 10,
+      "monster": "Ghoul",
+      "name": "Ghoul Reaper",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 8,
+      "monster": "Orc",
+      "name": "Orc Crusher",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 9,
+      "monster": "Skeleton",
+      "name": "Skeleton Breaker",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 7,
+      "monster": "Spider",
+      "name": "Spider Stomper",
+      "required": 200
+    },
+    {
+      "alpha": false,
+      "id": 17,
+      "monster": "Giant Spider",
+      "name": "Giant Spider Terror",
+      "required": 250
+    },
+    {
+      "alpha": false,
+      "id": 18,
+      "monster": "Hero",
+      "name": "Hero Rival",
+      "required": 250
+    },
+    {
+      "alpha": false,
+      "id": 19,
+      "monster": "Dragon",
+      "name": "Dragon Slayer",
+      "required": 300
+    },
+    {
+      "alpha": false,
+      "id": 21,
+      "monster": "Hydra",
+      "name": "Hydra Hunter",
+      "required": 300
+    },
+    {
+      "alpha": false,
+      "id": 11,
+      "monster": "Minotaur",
+      "name": "Minotaur Destroyer",
+      "required": 300
+    },
+    {
+      "alpha": false,
+      "id": 16,
+      "monster": "Necromancer",
+      "name": "Necromancer Banisher",
+      "required": 300
+    },
+    {
+      "alpha": false,
+      "id": 22,
+      "monster": "Serpent Spawn",
+      "name": "Serpent Spawn Slayer",
+      "required": 300
+    },
+    {
+      "alpha": false,
+      "id": 23,
+      "monster": "Behemoth",
+      "name": "Behemoth Conqueror",
+      "required": 500
+    },
+    {
+      "alpha": false,
+      "id": 24,
+      "monster": "Warlock",
+      "name": "Warlock Nemesis",
+      "required": 1000
+    },
+    {
+      "alpha": false,
+      "id": 25,
+      "monster": "Demon",
+      "name": "Demon Bane",
+      "required": 1666
+    },
+    {
+      "alpha": true,
+      "id": 34,
+      "monster": "Alpha Behemoth",
+      "name": "Alpha Behemoth Hunter",
+      "required": 5
+    },
+    {
+      "alpha": true,
+      "id": 33,
+      "monster": "Alpha Demon",
+      "name": "Alpha Demon Hunter",
+      "required": 5
+    },
+    {
+      "alpha": true,
+      "id": 31,
+      "monster": "Alpha Dragon",
+      "name": "Alpha Dragon Hunter",
+      "required": 5
+    },
+    {
+      "alpha": true,
+      "id": 32,
+      "monster": "Alpha Dragon Lord",
+      "name": "Alpha Dragon Lord Hunter",
+      "required": 5
+    },
+    {
+      "alpha": true,
+      "id": 26,
+      "monster": "Alpha Monsters",
+      "name": "Alpha Initiate",
+      "required": 10
+    },
+    {
+      "alpha": true,
+      "id": 27,
+      "monster": "Alpha Monsters",
+      "name": "Alpha Tracker",
+      "required": 25
+    },
+    {
+      "alpha": true,
+      "id": 28,
+      "monster": "Alpha Monsters",
+      "name": "Alpha Predator",
+      "required": 50
+    },
+    {
+      "alpha": true,
+      "id": 29,
+      "monster": "Alpha Monsters",
+      "name": "Alpha Slayer",
+      "required": 100
+    },
+    {
+      "alpha": true,
+      "id": 30,
+      "monster": "Alpha Monsters",
+      "name": "Alpha Annihilator",
+      "required": 250
+    }
+  ]
+}

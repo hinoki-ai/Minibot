@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-vocation-pack",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "vocation": "knight",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "spellCount": 10,
+  "spells": [
+    {
+      "id": 60,
+      "name": "Find Person",
+      "words": "exiva",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 5,
+      "name": "Light",
+      "words": "utevo lux",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 28,
+      "name": "Magic Rope",
+      "words": "exani tera",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 2,
+      "name": "Light Healing",
+      "words": "exura",
+      "level": 1,
+      "mana": 25,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 12,
+      "name": "Antidote",
+      "words": "exana pox",
+      "level": 2,
+      "mana": 30,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 9,
+      "name": "Levitate",
+      "words": "exani hur",
+      "level": 3,
+      "mana": 50,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 19,
+      "name": "Great Light",
+      "words": "utevo gran lux",
+      "level": 3,
+      "mana": 60,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 29,
+      "name": "Challenge",
+      "words": "exeta res",
+      "level": 4,
+      "mana": 60,
+      "aggressive": true,
+      "area": false
+    },
+    {
+      "id": 8,
+      "name": "Haste",
+      "words": "utani hur",
+      "level": 4,
+      "mana": 60,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 23,
+      "name": "Berserk",
+      "words": "exori",
+      "level": 5,
+      "mana": 100,
+      "aggressive": true,
+      "area": true
+    }
+  ],
+  "attackSpells": [
+    "exeta res",
+    "exori"
+  ],
+  "supportSpells": [
+    "exiva",
+    "utevo lux",
+    "exani tera",
+    "exura",
+    "exana pox",
+    "exani hur",
+    "utevo gran lux",
+    "utani hur"
+  ]
+}

@@ -1,0 +1,1543 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';" />
+  <title>Minibot</title>
+  <link rel="icon" type="image/png" href="./assets/favicon.png?v=20260411-root-recovered" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <div class="window-frame">
+    <div id="app-shell" class="app">
+      <header class="bot-strip top-strip" aria-label="Character bot tabs and desk controls">
+        <div class="top-strip-main">
+          <div id="bot-tabs" class="bot-tabs" role="tablist" aria-label="Live character tabs"></div>
+        </div>
+        <div class="top-strip-side">
+          <div class="desk-actions" aria-label="Desk actions">
+            <button id="new-session" class="btn primary desk-action-primary" type="button">New Session</button>
+            <button id="kill-session" class="btn desk-action-primary" type="button">Close Session</button>
+            <button id="refresh" class="btn desk-action-secondary" type="button">Scan All Tabs</button>
+            <button id="window-close" class="btn danger desk-action-secondary" type="button"
+              aria-label="Close Client">Close Client</button>
+            <button id="new-route" class="btn desk-action-primary" type="button">New Route</button>
+            <button id="desk-route-files" class="btn desk-action-secondary" type="button"
+              data-open-route-library="true">Saved Files</button>
+            <button id="desk-accounts" class="btn desk-action-secondary" type="button" data-open-modal="accounts"
+              data-focus-target="#account-select">Accounts</button>
+            <button id="desk-route-panel" class="btn desk-action-secondary" type="button"
+              data-focus-route-builder="#cavebotName">Route Panel</button>
+            <button id="desk-hunt-studio" class="btn desk-action-secondary" type="button" data-open-modal="targeting"
+              data-focus-target="#monster">Hunt Studio</button>
+            <button id="compact-view" class="btn desk-action-secondary" type="button" aria-pressed="false">Compact
+              View</button>
+            <button id="window-pin" class="btn desk-action-secondary" type="button" aria-pressed="true">Desk
+              Pinned</button>
+            <button id="desk-presets" class="btn desk-action-secondary" type="button" data-open-modal="presets"
+              data-focus-target="#hunt-preset-search"
+              title="Open official hunt presets built from the vendored Minibia data.">Presets</button>
+
+          </div>
+          <button id="open-route-panel" class="visually-hidden" type="button" data-open-modal="autowalk"
+            data-focus-target="#cavebotName" aria-hidden="true" tabindex="-1">Routes</button>
+        </div>
+      </header>
+
+      <main class="dashboard dashboard-shell">
+        <div class="console-layout">
+          <section class="console-column left-column">
+            <fieldset class="panel-card desk-panel control-card">
+              <legend>Modules</legend>
+              <div class="control-group">
+                <div class="button-grid quick-grid">
+                  <div class="quick-module-card quick-module-card-master-stop">
+                    <button id="quick-open-cavebot-pause" type="button" class="quick-module-open"
+                      data-proxy-click="#quick-toggle-cavebot-pause">
+                      <span>Cavebot</span>
+                      <strong id="summary-cavebot-master-stop">Master Stop</strong>
+                      <small id="summary-cavebot-master-stop-detail">Hard stop every live tab in this desk</small>
+                    </button>
+                    <button id="quick-toggle-cavebot-pause" type="button"
+                      class="btn tile-btn quick-module-toggle danger">
+                      <span>Status</span>
+                      <strong>Stopped</strong>
+                    </button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-session-waypoints" type="button" class="quick-module-open"
+                      data-proxy-click="#quick-toggle-session-waypoints">
+                      <span>Waypoints</span>
+                      <strong>All tabs markers</strong>
+                      <small>Flip live waypoint markers for every tab</small>
+                    </button>
+                    <button id="quick-toggle-session-waypoints" type="button"
+                      class="btn tile-btn quick-module-toggle quick-session-waypoints-button">
+                      <span>View</span>
+                      <strong>Shown</strong>
+                    </button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="healer">
+                      <span>Healer</span>
+                      <strong id="summary-healer">-</strong>
+                      <small id="summary-heal-words">-</small>
+                    </button>
+                    <button id="quick-toggle-healer" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-trainer" type="button" class="quick-module-open" data-open-modal="trainer">
+                      <span>Trainer</span>
+                      <strong id="summary-trainer">-</strong>
+                      <small id="summary-trainer-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-trainer" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-reconnect" type="button" class="quick-module-open"
+                      data-open-modal="reconnect">
+                      <span>Reconnect</span>
+                      <strong id="summary-reconnect">-</strong>
+                      <small id="summary-reconnect-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-reconnect" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="deathHeal">
+                      <span>Death Heal</span>
+                      <strong id="summary-death-heal">-</strong>
+                      <small id="summary-death-heal-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-death-heal" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="manaTrainer">
+                      <span>Mana</span>
+                      <strong id="summary-mana">-</strong>
+                      <small id="summary-mana-words">-</small>
+                    </button>
+                    <button id="quick-toggle-mana-trainer" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="autoEat">
+                      <span>Auto Eat</span>
+                      <strong id="summary-auto-eat">-</strong>
+                      <small id="summary-auto-eat-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-auto-eat" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-ammo" type="button" class="quick-module-open" data-open-modal="ammo">
+                      <span>Ammo</span>
+                      <strong id="summary-ammo">-</strong>
+                      <small id="summary-ammo-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-ammo" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-ring-amulet-auto-replace" type="button" class="quick-module-open"
+                      data-open-modal="ringAutoReplace">
+                      <span>Ring Amulet</span>
+                      <strong id="summary-ring-amulet-auto-replace">-</strong>
+                      <small id="summary-ring-amulet-auto-replace-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-ring-amulet-auto-replace" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="runeMaker">
+                      <span>Runes</span>
+                      <strong id="summary-rune">-</strong>
+                      <small id="summary-rune-words">-</small>
+                    </button>
+                    <button id="quick-toggle-rune-maker" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="spellCaster">
+                      <span>Spells</span>
+                      <strong id="summary-spell">-</strong>
+                      <small id="summary-spell-words">-</small>
+                    </button>
+                    <button id="quick-toggle-spell-caster" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-targeting" type="button" class="quick-module-open"
+                      data-open-modal="targeting" data-focus-target="#monster">
+                      <span>Hunt</span>
+                      <strong id="summary-targeting">-</strong>
+                      <small id="summary-targeting-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-targeting" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>On</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-avoid-fields" type="button" class="quick-module-open"
+                      data-focus-route-builder="#avoidElementalFields">
+                      <span>Field Safe</span>
+                      <strong id="summary-field-safe">-</strong>
+                      <small id="summary-field-safe-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-avoid-fields" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Mode</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-looting" type="button" class="quick-module-open" data-open-modal="looting">
+                      <span>Looting</span>
+                      <strong id="summary-looting">-</strong>
+                      <small id="summary-looting-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-looting" type="button" class="btn tile-btn quick-module-toggle">
+                      <span>Power</span>
+                      <strong>Off</strong>
+                    </button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-banking" type="button" class="quick-module-open" data-open-modal="banking">
+                      <span>Banking</span>
+                      <strong id="summary-banking">-</strong>
+                      <small id="summary-banking-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-banking" type="button" class="btn tile-btn quick-module-toggle">
+                      <span>Power</span>
+                      <strong>Off</strong>
+                    </button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-anti-idle" type="button" class="quick-module-open"
+                      data-open-modal="antiIdle">
+                      <span>Anti Idle</span>
+                      <strong id="summary-anti-idle">-</strong>
+                      <small id="summary-anti-idle-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-anti-idle" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-alarms" type="button" class="quick-module-open" data-open-modal="alarms">
+                      <span>Alarms</span>
+                      <strong id="summary-alarms">-</strong>
+                      <small id="summary-alarms-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-alarms" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-party-follow" type="button" class="quick-module-open"
+                      data-open-modal="partyFollow">
+                      <span>Follow Chain</span>
+                      <strong id="summary-party-follow">-</strong>
+                      <small id="summary-party-follow-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-party-follow" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="autoLight">
+                      <span>Light</span>
+                      <strong id="summary-light">-</strong>
+                      <small id="summary-light-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-auto-light" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="autoConvert">
+                      <span>Gold</span>
+                      <strong id="summary-convert">-</strong>
+                      <small id="summary-convert-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-convert" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-rookiller" type="button" class="quick-module-open"
+                      title="Stop at level 8 and 90%, return to waypoint 1, then close the live client.">
+                      <span>Rookiller</span>
+                      <strong id="summary-rookiller">-</strong>
+                      <small id="summary-rookiller-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-rookiller" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="console-column center-column">
+            <fieldset id="route-overview-card"
+              class="panel-card desk-panel route-card route-overview-card interactive-summary-card" role="button"
+              tabindex="0" aria-haspopup="dialog" aria-controls="modal-route-library-picker"
+              aria-describedby="route-overview-note">
+              <legend>Route</legend>
+
+              <div class="summary-grid route-summary-grid route-overview-grid">
+                <button id="route-overview-open-name" type="button" class="summary-cell route-overview-metric-button"
+                  data-focus-route-builder="#cavebotName" title="Open the route panel and focus the route name.">
+                  <span>Cavebot</span>
+                  <strong id="route-overview-name">-</strong>
+                </button>
+                <button id="route-overview-open-waypoints" type="button"
+                  class="summary-cell route-overview-metric-button" data-focus-route-builder="#add-current-waypoint"
+                  title="Open the route panel and focus waypoint controls.">
+                  <span>Waypoints</span>
+                  <strong id="route-overview-count">-</strong>
+                </button>
+                <button id="route-overview-open-rules" type="button" class="summary-cell route-overview-metric-button"
+                  data-focus-route-builder="#add-current-tile-rule-wait"
+                  title="Open the route panel and focus tile-rule controls.">
+                  <span>Tile Rules</span>
+                  <strong id="route-overview-rules">-</strong>
+                </button>
+                <button id="route-overview-open-focus" type="button" class="summary-cell route-overview-metric-button"
+                  data-focus-route-builder="#route-item-label"
+                  title="Open the route panel and focus the selected route item editor.">
+                  <span>Selected</span>
+                  <strong id="route-overview-focus">-</strong>
+                </button>
+                <button id="route-overview-open-library" type="button" class="summary-cell route-overview-metric-button"
+                  data-open-route-library="true" title="Open the route panel and the saved-route picker.">
+                  <span>Saved Files</span>
+                  <strong id="route-overview-library">-</strong>
+                </button>
+              </div>
+              <div class="route-overview-options" aria-label="Route panel quick options">
+                <button id="route-overview-open-panel" type="button" class="btn mini route-overview-option"
+                  data-focus-route-builder="#cavebotName" title="Open the route panel.">Route Panel</button>
+                <button id="route-overview-open-files" type="button" class="btn mini route-overview-option"
+                  data-open-route-library="true" title="Open the saved-route list.">Saved Files</button>
+                <button id="route-overview-open-stack" type="button" class="btn mini route-overview-option"
+                  data-focus-route-builder="#add-current-waypoint" title="Open waypoint controls.">Waypoints</button>
+                <button id="route-overview-open-tile-rules" type="button" class="btn mini route-overview-option"
+                  data-focus-route-builder="#add-current-tile-rule-wait" title="Open tile-rule controls.">Tile
+                  Rules</button>
+              </div>
+              <div id="route-overview-note" class="field-note route-overview-note">Waiting for route state.</div>
+              <div class="route-toggle-grid" aria-label="Route live controls">
+                <div class="route-toggle-card">
+                  <button id="route-toggle-open-walk" type="button" class="route-toggle-open"
+                    data-focus-route-builder="#walkRepathMs">
+                    <span>Walk</span>
+                  </button>
+                  <button id="quick-toggle-autowalk" type="button"
+                    class="btn tile-btn route-toggle-button"><span>State</span><strong>Off</strong></button>
+                </div>
+                <div class="route-toggle-card">
+                  <button id="route-toggle-open-loop" type="button" class="route-toggle-open"
+                    data-focus-route-builder="#walkRepathMs">
+                    <span>Loop</span>
+                  </button>
+                  <button id="quick-toggle-loop" type="button"
+                    class="btn tile-btn route-toggle-button"><span>State</span><strong>Off</strong></button>
+                </div>
+                <div class="route-toggle-card">
+                  <button id="route-toggle-open-record" type="button" class="route-toggle-open"
+                    data-focus-route-builder="#routeRecordStep">
+                    <span>Record</span>
+                  </button>
+                  <button id="quick-toggle-record" type="button"
+                    class="btn tile-btn route-toggle-button"><span>State</span><strong>Off</strong></button>
+                </div>
+                <div id="route-toggle-waypoints-card" class="route-toggle-card route-toggle-card-wide" role="button"
+                  tabindex="0" aria-haspopup="dialog" aria-controls="modal-autowalk"
+                  aria-label="Open Route Builder and focus waypoint controls">
+                  <button id="route-toggle-open-waypoints" type="button"
+                    class="route-toggle-open route-toggle-open-stacked"
+                    data-focus-route-builder="#add-current-waypoint">
+                    <span>Way</span>
+                    <span>Point</span>
+                  </button>
+                  <button id="quick-toggle-waypoints" type="button"
+                    class="btn tile-btn route-toggle-button"><span>State</span><strong>On</strong></button>
+                </div>
+                <div class="route-waypoint-actions-cluster">
+                  <div id="route-add-waypoint-card" class="route-toggle-card route-reset-card route-add-waypoint-card">
+                    <button id="route-add-waypoint-panel" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-add-button route-add-button-stacked"
+                      title="Add a walk waypoint from your live position.">
+                      <span>Add</span>
+                      <span>Way</span>
+                      <span>Point</span>
+                    </button>
+                  </div>
+                  <div class="route-toggle-card route-reset-card route-reconnect-card">
+                    <button id="route-reconnect-panel" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-reconnect-button"
+                      title="Try the Minibia reconnect action now.">
+                      <span>Reconn</span>
+                      <strong>Now</strong>
+                    </button>
+                  </div>
+                  <div class="route-toggle-card route-reset-card route-stop-aggro-card">
+                    <button id="route-stop-aggro-panel" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-stop-aggro-button"
+                      title="Hold the character out of combat and clear target lock.">
+                      <span>Stop</span>
+                      <strong>Aggro</strong>
+                    </button>
+                  </div>
+                  <div id="route-reset-card" class="route-toggle-card route-reset-card route-reset-card-inline">
+                    <button id="route-reset-panel" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-reset-panel-button"
+                      title="Return to waypoint 1, hold there, and beep when ready for takeover.">
+                      <span>Return</span>
+                      <strong>WP 1</strong>
+                    </button>
+                  </div>
+                  <div class="route-toggle-card route-reset-card route-panel-card">
+                    <button id="route-panel-button" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-panel-button"
+                      data-focus-route-builder="#cavebotName" title="Open the route panel.">
+                      <span>Route</span>
+                      <strong>Panel</strong>
+                    </button>
+                  </div>
+                  <div class="route-toggle-card route-reset-card route-save-card">
+                    <button id="route-quick-save-button" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-save-button"
+                      title="Save the current route draft and settings without opening the route modal.">
+                      <span>Quick</span>
+                      <strong>Save</strong>
+                    </button>
+                  </div>
+                  <div class="route-toggle-card route-reset-card route-off-card">
+                    <button id="route-off-button" type="button"
+                      class="btn tile-btn route-toggle-button route-reset-button route-off-button"
+                      title="Disable route controls for the active session.">
+                      <span>Route</span>
+                      <strong>Off</strong>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="route-preview-shell route-live-preview-shell" aria-label="Live route preview">
+                <div id="route-live-preview-toolbar" class="route-live-preview-toolbar"
+                  aria-label="Live route preview controls">
+                  <div id="route-live-selection-summary" class="route-selection-summary route-live-selection-summary">
+                    Mark route tiles to stage a batch delete.
+                  </div>
+                  <div class="route-live-selection-actions">
+                    <button id="route-live-preview-toggle" class="btn mini" type="button" aria-pressed="false">Hide
+                      Grid</button>
+                    <button id="route-live-clear-selection" class="btn mini" type="button" hidden>Clear Marks</button>
+                    <button id="route-live-remove-selected" class="btn mini danger" type="button" hidden>Delete
+                      Selected</button>
+                  </div>
+                </div>
+                <div id="route-live-preview-collapsed" class="empty-state route-live-preview-collapsed" hidden>Live
+                  route grid hidden.</div>
+                <div id="route-live-preview" class="waypoint-preview waypoint-preview-live waypoint-square-grid"></div>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="console-column right-column">
+            <fieldset class="panel-card desk-panel feed-card">
+              <legend>Console</legend>
+              <div id="event-feed-meta" class="visually-hidden">Waiting for recent activity</div>
+              <div class="feed-toolbar">
+                <button id="open-logs" class="btn mini" type="button" data-open-modal="logs">Logs</button>
+              </div>
+              <div id="event-feed-summary" class="feed-summary" aria-live="polite"></div>
+              <div id="event-feed" class="event-feed" aria-live="polite"></div>
+            </fieldset>
+          </section>
+        </div>
+
+        <section class="compact-layout" aria-label="Compact quick actions">
+          <section class="panel-card compact-board" aria-label="Compact action board">
+            <div class="button-grid compact-grid compact-module-grid">
+              <div class="compact-split-card compact-split-card-route">
+                <button id="compact-open-walk" type="button" class="compact-card-open"
+                  data-focus-route-builder="#walkRepathMs">
+                  <span>Walk</span>
+                  <strong>Path</strong>
+                </button>
+                <button id="compact-toggle-autowalk" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-autowalk"><span>State</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card compact-split-card-route">
+                <button id="compact-open-loop" type="button" class="compact-card-open"
+                  data-focus-route-builder="#walkRepathMs">
+                  <span>Loop</span>
+                  <strong>Path</strong>
+                </button>
+                <button id="compact-toggle-loop" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-loop"><span>State</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card compact-split-card-route">
+                <button id="compact-open-record" type="button" class="compact-card-open"
+                  data-focus-route-builder="#routeRecordStep">
+                  <span>Record</span>
+                  <strong>Step</strong>
+                </button>
+                <button id="compact-toggle-record" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-record"><span>State</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card compact-split-card-route">
+                <button id="compact-open-waypoints" type="button" class="compact-card-open"
+                  data-focus-route-builder="#showWaypointOverlay">
+                  <span>Waypoints</span>
+                  <strong id="compact-waypoint-count">0 pts</strong>
+                </button>
+                <button id="compact-toggle-waypoints" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-waypoints"><span>State</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card compact-split-card-route compact-split-card-single">
+                <button id="compact-route-add-waypoint" class="compact-card-open" type="button"
+                  data-proxy-click="#route-add-waypoint-panel">
+                  <span>Add Waypoint</span>
+                  <strong>Live Pos</strong>
+                </button>
+              </div>
+              <div class="compact-split-card compact-split-card-route compact-split-card-single">
+                <button id="compact-route-reconnect" class="compact-card-open" type="button"
+                  data-proxy-click="#route-reconnect-panel">
+                  <span>Reconnect</span>
+                  <strong>Wait</strong>
+                </button>
+              </div>
+              <div class="compact-split-card compact-split-card-route compact-split-card-single">
+                <button id="compact-route-stop-aggro" class="compact-card-open danger" type="button"
+                  data-proxy-click="#route-stop-aggro-panel">
+                  <span>Stop Aggro</span>
+                  <strong>Aggro</strong>
+                </button>
+              </div>
+              <div class="compact-split-card compact-split-card-route compact-split-card-single">
+                <button id="compact-route-reset" class="compact-card-open" type="button"
+                  data-proxy-click="#route-reset-panel">
+                  <span>Return Route</span>
+                  <strong>WP 1</strong>
+                </button>
+              </div>
+              <div class="compact-split-card compact-split-card-route compact-split-card-single">
+                <button id="compact-route-off" class="compact-card-open" type="button"
+                  data-proxy-click="#route-off-button">
+                  <span>Route Off</span>
+                  <strong>Stop</strong>
+                </button>
+              </div>
+            </div>
+            <div class="button-grid compact-grid compact-module-grid">
+              <div class="compact-split-card">
+                <button id="compact-open-healer" type="button" class="compact-card-open" data-open-modal="healer">
+                  <span>Healer</span>
+                  <strong id="compact-healer-summary">-</strong>
+                </button>
+                <button id="compact-toggle-healer" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-healer"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-trainer" type="button" class="compact-card-open" data-open-modal="trainer">
+                  <span>Trainer</span>
+                  <strong id="compact-trainer-summary">-</strong>
+                </button>
+                <button id="compact-toggle-trainer" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-trainer"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-reconnect" type="button" class="compact-card-open" data-open-modal="reconnect">
+                  <span>Reconnect</span>
+                  <strong id="compact-reconnect-summary">-</strong>
+                </button>
+                <button id="compact-toggle-reconnect" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-reconnect"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-death-heal" type="button" class="compact-card-open"
+                  data-open-modal="deathHeal">
+                  <span>Death Heal</span>
+                  <strong id="compact-death-heal-summary">-</strong>
+                </button>
+                <button id="compact-toggle-death-heal" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-death-heal"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-mana" type="button" class="compact-card-open" data-open-modal="manaTrainer">
+                  <span>Mana</span>
+                  <strong id="compact-mana-summary">-</strong>
+                </button>
+                <button id="compact-toggle-mana-trainer" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-mana-trainer"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-auto-eat" type="button" class="compact-card-open" data-open-modal="autoEat">
+                  <span>Auto Eat</span>
+                  <strong id="compact-auto-eat-summary">-</strong>
+                </button>
+                <button id="compact-toggle-auto-eat" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-auto-eat"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-ammo" type="button" class="compact-card-open" data-open-modal="ammo">
+                  <span>Ammo</span>
+                  <strong id="compact-ammo-summary">-</strong>
+                </button>
+                <button id="compact-toggle-ammo" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-ammo"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-ring-amulet-auto-replace" type="button" class="compact-card-open"
+                  data-open-modal="ringAutoReplace">
+                  <span>Ring Amulet</span>
+                  <strong id="compact-ring-amulet-auto-replace-summary">-</strong>
+                </button>
+                <button id="compact-toggle-ring-amulet-auto-replace" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-ring-amulet-auto-replace"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-rune" type="button" class="compact-card-open" data-open-modal="runeMaker">
+                  <span>Runes</span>
+                  <strong id="compact-rune-summary">-</strong>
+                </button>
+                <button id="compact-toggle-rune-maker" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-rune-maker"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-spell" type="button" class="compact-card-open" data-open-modal="spellCaster">
+                  <span>Spells</span>
+                  <strong id="compact-spell-summary">-</strong>
+                </button>
+                <button id="compact-toggle-spell-caster" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-spell-caster"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-light" type="button" class="compact-card-open" data-open-modal="autoLight">
+                  <span>Light</span>
+                  <strong id="compact-light-summary">-</strong>
+                </button>
+                <button id="compact-toggle-auto-light" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-auto-light"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-convert" type="button" class="compact-card-open" data-open-modal="autoConvert">
+                  <span>Gold</span>
+                  <strong id="compact-convert-summary">-</strong>
+                </button>
+                <button id="compact-toggle-convert" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-convert"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-anti-idle" type="button" class="compact-card-open" data-open-modal="antiIdle">
+                  <span>Anti Idle</span>
+                  <strong id="compact-anti-idle-summary">-</strong>
+                </button>
+                <button id="compact-toggle-anti-idle" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-anti-idle"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-alarms" type="button" class="compact-card-open" data-open-modal="alarms">
+                  <span>Alarms</span>
+                  <strong id="compact-alarms-summary">-</strong>
+                </button>
+                <button id="compact-toggle-alarms" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-alarms"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-party-follow" type="button" class="compact-card-open"
+                  data-open-modal="partyFollow">
+                  <span>Follow Chain</span>
+                  <strong id="compact-party-follow-summary">-</strong>
+                </button>
+                <button id="compact-toggle-party-follow" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-party-follow"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-avoid-fields" type="button" class="compact-card-open"
+                  data-focus-route-builder="#avoidElementalFields">
+                  <span>Field Safe</span>
+                  <strong id="compact-field-safe-summary">-</strong>
+                </button>
+                <button id="compact-toggle-avoid-fields" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-avoid-fields"><span>Mode</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-rookiller" type="button" class="compact-card-open"
+                  data-proxy-click="#quick-toggle-rookiller">
+                  <span>Rookiller</span>
+                  <strong id="compact-rookiller-summary">-</strong>
+                </button>
+                <button id="compact-toggle-rookiller" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-rookiller"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card compact-split-card-single">
+                <button id="compact-open-cavebot-pause" type="button" class="compact-card-open danger"
+                  data-proxy-click="#quick-toggle-cavebot-pause">
+                  <span>Cavebot</span>
+                  <strong id="compact-cavebot-master-stop">Master Stop</strong>
+                </button>
+              </div>
+              <div class="compact-split-card compact-split-card-single">
+                <button id="compact-open-logs" type="button" class="compact-card-open" data-open-modal="logs">
+                  <span>Logs</span>
+                  <strong>Console</strong>
+                </button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-targeting" type="button" class="compact-card-open" data-open-modal="targeting"
+                  data-focus-target="#monster">
+                  <span>Hunt</span>
+                  <strong id="compact-targeting-summary">-</strong>
+                </button>
+                <button id="compact-toggle-targeting" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-targeting"><span>Power</span><strong>On</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-looting" type="button" class="compact-card-open" data-open-modal="looting">
+                  <span>Looting</span>
+                  <strong id="compact-looting-summary">-</strong>
+                </button>
+                <button id="compact-toggle-looting" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-looting"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-banking" type="button" class="compact-card-open" data-open-modal="banking">
+                  <span>Banking</span>
+                  <strong id="compact-banking-summary">-</strong>
+                </button>
+                <button id="compact-toggle-banking" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-banking"><span>Power</span><strong>Off</strong></button>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="modal-layer" class="modal-layer" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel modal-panel-wide modal-panel-targeting" id="modal-targeting" data-modal="targeting"
+      role="dialog" aria-modal="true" aria-label="Hunt studio" tabindex="-1" aria-hidden="true" hidden>
+      <div class="modal-head route-hunt-modal-head-compact">
+        <div class="modal-head-copy">
+          <div class="section-title">Hunt Studio</div>
+        </div>
+        <div class="route-hunt-head-stats">
+          <div class="route-hunt-head-badge"><span>Q</span><strong id="targeting-queue-count">-</strong></div>
+          <div class="route-hunt-head-badge"><span>Prof</span><strong id="targeting-profile-count">-</strong></div>
+          <div class="route-hunt-head-badge"><span>Seen</span><strong id="targeting-monster-history-count">-</strong>
+          </div>
+          <div class="route-hunt-head-badge"><span>Plyr</span><strong id="targeting-player-history-count">-</strong>
+          </div>
+        </div>
+        <div class="modal-head-tools">
+          <label class="module-rule-control module-rule-check target-profile-check route-hunt-head-check">
+            <input id="targeting-distance-enabled" type="checkbox" />
+            <span>On</span>
+          </label>
+          <button id="targeting-add-distance-rule" class="btn compact" type="button">Add</button>
+        </div>
+      </div>
+      <div class="modal-body modal-body-targeting route-hunt-workspace route-hunt-workspace-modal">
+        <div class="route-hunt-modal-summary">
+          <div class="route-hunt-summary-bar">
+            <div id="autowalk-shared-spawn-summary" class="route-hunt-inline-note">Waiting for player policy.</div>
+            <div id="autowalk-distance-summary" class="route-hunt-inline-note">No fallback combat rules.</div>
+          </div>
+          <label class="route-hunt-search-bar">
+            <span>Search</span>
+            <input id="creature-registry-search" type="search"
+              placeholder="Filter queue, profiles, seen monsters, players, NPCs" spellcheck="false" />
+          </label>
+        </div>
+        <div class="route-hunt-grid route-hunt-grid-3col">
+          <section class="targeting-config-card route-hunt-config-panel">
+            <label class="monster-field target-queue-field route-hunt-queue-field"
+              title="One monster per line. Comma-separated names also work.">Queue<textarea id="monster" rows="4"
+                spellcheck="false"></textarea></label>
+            <div id="monster-target-list" class="monster-archive monster-target-list" hidden></div>
+            <div class="form-grid route-hunt-runtime-grid">
+              <label>Port<input id="port" type="number" min="1" step="1" /></label>
+              <label>Poll<input id="intervalMs" type="number" min="1" step="1" /></label>
+              <label>Retarget<input id="retargetMs" type="number" min="1" step="1" /></label>
+              <label>Floor<input id="floorTolerance" type="number" min="0" step="1" /></label>
+              <label>Range X<input id="rangeX" type="number" min="0" step="1" /></label>
+              <label>Range Y<input id="rangeY" type="number" min="0" step="1" /></label>
+              <label class="route-hunt-wide-field">Page<input id="pageUrlPrefix" type="text" /></label>
+              <label class="route-hunt-wide-field">Players
+                <select id="autowalk-sharedSpawnMode">
+                  <option value="attack-all">Attack All</option>
+                  <option value="respect-others">Respect Others</option>
+                  <option value="watch-only">Watch Only</option>
+                </select>
+              </label>
+              <label>Default stance
+                <select id="chaseMode">
+                  <option value="auto">Auto</option>
+                  <option value="stand">Stand</option>
+                  <option value="chase">Chase</option>
+                  <option value="aggressive">Aggressive</option>
+                </select>
+              </label>
+            </div>
+            <div class="checks route-hunt-toggles">
+              <label title="Stops after the first real engage."><input id="once" type="checkbox" /> Once</label>
+              <label title="Previews targeting, casts, movement, and route tools without sending live inputs."><input
+                  id="dryRun" type="checkbox" /> Dry Run</label>
+            </div>
+          </section>
+
+          <section class="target-profile-card target-profile-workbench route-hunt-profile-panel">
+            <div id="target-profile-list" class="target-profile-list"></div>
+          </section>
+
+          <section class="target-set-card targeting-combat-card route-hunt-combat-panel">
+            <div id="targeting-distance-state" class="target-profile-summary route-hunt-inline-note">No fallback combat
+              rules.</div>
+            <div id="targeting-distance-rule-list" class="module-rule-list targeting-distance-rule-list"></div>
+          </section>
+
+          <section class="route-hunt-registry">
+            <section class="target-source-panel route-hunt-registry-panel">
+              <div class="route-hunt-panel-head route-hunt-panel-head-actions">
+                <div class="inline-actions">
+                  <button id="monster-use-visible" class="btn compact" type="button">Nearby</button>
+                  <button id="monster-use-archive" class="btn compact" type="button">Seen</button>
+                  <button id="monster-archive-targets" class="btn compact" type="button">Save</button>
+                </div>
+              </div>
+              <div id="monster-visible-note" class="field-note route-hunt-inline-note">Nearby now: none</div>
+              <div id="monster-archive" class="monster-archive monster-source-list"
+                data-creature-registry-drop-kind="monster"></div>
+              <div class="route-hunt-registry-actions">
+                <div id="archive-danger-copy" class="field-note route-hunt-inline-note">No seen monsters to clear.</div>
+                <div class="inline-actions">
+                  <button id="monster-undo-archive" class="btn compact" type="button" hidden>Undo</button>
+                  <button id="monster-cancel-archive" class="btn compact" type="button" hidden>Cancel</button>
+                  <button id="monster-clear-archive" class="btn compact danger" type="button">Clear</button>
+                </div>
+              </div>
+            </section>
+
+            <div class="route-hunt-presence-grid">
+              <section class="target-watch-group route-hunt-presence-panel">
+                <div class="route-hunt-panel-head">
+                  <strong>Players</strong>
+                </div>
+                <div id="player-visible-note" class="field-note route-hunt-inline-note">Nearby now: none</div>
+                <div id="player-visible-list" class="monster-archive player-archive"
+                  data-creature-registry-drop-kind="player"></div>
+              </section>
+
+              <section class="target-watch-group route-hunt-presence-panel">
+                <div class="route-hunt-panel-head">
+                  <strong>NPCs</strong>
+                </div>
+                <div id="npc-visible-note" class="field-note route-hunt-inline-note">No NPCs nearby.</div>
+                <div id="npc-visible-list" class="monster-archive npc-archive" data-creature-registry-drop-kind="npc">
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+        <div hidden aria-hidden="true">
+          <span id="autowalk-target-queue-count">-</span>
+          <span id="autowalk-target-profile-count">-</span>
+          <span id="autowalk-distance-rule-count">-</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button id="save-targeting" class="btn primary modal-save-button" type="button">Save Hunt</button>
+      </div>
+    </section>
+
+    <section class="modal-panel modal-panel-wide route-modal-panel" id="modal-autowalk" data-modal="autowalk"
+      role="dialog" aria-modal="true" aria-label="Route builder" tabindex="-1" aria-hidden="true" hidden>
+      <div class="modal-head route-modal-head">
+        <div class="route-modal-head-top">
+          <div class="modal-head-copy">
+            <div class="section-title">Route Builder</div>
+          </div>
+        </div>
+        <div class="route-modal-head-grid">
+          <div class="route-modal-head-block route-modal-head-block-left">
+            <label class="route-head-field">Route File
+              <select id="route-library-select"></select>
+            </label>
+            <div class="route-head-meta-row">
+              <div id="route-library-meta" class="route-library-meta">No saved cavebot files yet.</div>
+              <button id="load-route" class="btn" type="button">Load</button>
+            </div>
+          </div>
+          <div class="route-modal-head-block route-modal-head-block-right">
+            <label class="route-head-field">Route Name<input id="cavebotName" type="text" /></label>
+            <div class="route-head-meta-row route-head-meta-row-route">
+              <div class="field-note route-file-note route-file-note-compact">
+                <strong id="route-file-status">Route file pending</strong>
+                <span id="route-file-path">Save the route to create a named cavebot file.</span>
+              </div>
+              <button id="new-blank-route" class="btn" type="button">Blank Draft</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body modal-body-route">
+        <div id="route-builder" class="desk-panel route-card route-modal-card route-editor-shell route-builder-shell">
+          <div class="route-main-layout route-builder-grid modal-split-layout">
+            <section class="route-main-column">
+              <div class="route-stack-card route-stack-card-main">
+                <div class="route-section-head route-stack-card-head">
+                  <div class="route-section-copy">
+                    <span class="route-card-label">Waypoints</span>
+                    <span class="route-pane-copy">Select, mark, reorder, and review the route stack.</span>
+                  </div>
+                  <div class="route-panel-action-grid route-panel-action-grid-waypoints">
+                    <button id="add-current-waypoint" class="btn primary" type="button" aria-expanded="false">Add From
+                      Live Pos</button>
+                    <button id="move-waypoint-up" class="btn compact" type="button">Move Up</button>
+                    <button id="move-waypoint-down" class="btn compact" type="button">Move Down</button>
+                  </div>
+                </div>
+                <div class="waypoint-add-stack">
+                  <div id="waypoint-add-panel" class="waypoint-add-panel" hidden>
+                    <button type="button" class="btn compact" data-add-waypoint-type="walk">Walk</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="action">Action</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="helper">Helper</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="avoid">Avoid</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="use-item">Use Item</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="bank">Bank</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="shop">Shop</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="npc-action">NPC Action</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="daily-task">Daily Task</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="stairs-up">Stairs Up</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="stairs-down">Stairs Down</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="ladder">Ladder</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="exani-tera">Exani Tera</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="rope">Rope</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="shovel-hole">Shovel</button>
+                  </div>
+                </div>
+                <div id="route-stack-selection-bar" class="route-stack-selection-bar" hidden>
+                  <div id="route-stack-selection-summary" class="route-selection-summary route-stack-selection-summary">
+                    Mark route tiles to stage a batch delete.
+                  </div>
+                  <div class="route-stack-selection-actions">
+                    <button id="clear-waypoint-marks" class="btn compact" type="button" hidden>Clear Marks</button>
+                  </div>
+                </div>
+                <div id="waypoint-list" class="waypoint-list waypoint-list-grid route-stack-waypoint-grid"></div>
+              </div>
+
+              <section class="route-danger-bar">
+                <div class="route-section-head route-section-head-inline">
+                  <div class="route-section-copy">
+                    <span class="route-card-label">Danger Zone</span>
+                    <div id="route-danger-summary" class="route-pane-copy">Delete points, clear the draft, or remove the
+                      selected route file.</div>
+                  </div>
+                  <div class="route-danger-tools">
+                    <button id="undo-route-change" class="btn compact" type="button" hidden>Undo Route Edit</button>
+                    <button id="cancel-route-danger" class="btn compact" type="button" hidden>Cancel</button>
+                  </div>
+                </div>
+                <div class="route-danger-meta">
+                  <div class="route-danger-meta-item">
+                    <span>Waypoint</span>
+                    <strong id="route-danger-selected">No waypoint selected.</strong>
+                  </div>
+                  <div class="route-danger-meta-item">
+                    <span>Draft</span>
+                    <strong id="route-danger-clear">This route has 0 waypoints.</strong>
+                  </div>
+                  <div class="route-danger-meta-item">
+                    <span>Saved File</span>
+                    <strong id="route-danger-delete-file">No saved route file selected.</strong>
+                  </div>
+                </div>
+                <div class="route-danger-action-bar">
+                  <button id="remove-waypoint" class="btn danger compact" type="button">Delete Waypoint</button>
+                  <button id="clear-route" class="btn danger compact" type="button">Clear Route</button>
+                  <button id="delete-route" class="btn danger compact" type="button">Delete File</button>
+                </div>
+              </section>
+            </section>
+
+            <aside class="route-mid-column">
+              <div class="route-side-scroll modal-scroll-stack">
+                <section class="route-power-card route-drive-card">
+                  <div class="route-section-head route-section-head-inline">
+                    <div class="route-section-copy">
+                      <span class="route-card-label">Route Summary</span>
+                      <span class="route-pane-copy">Reset live progress and tune route defaults.</span>
+                    </div>
+                    <div class="route-card-tools route-card-tools-stretch">
+                      <button id="quick-reset-route" class="btn compact" type="button">Return To WP 1</button>
+                      <button id="reset-route" class="btn compact" type="button">Set Live Route To Selected WP</button>
+                    </div>
+                  </div>
+                  <div class="form-grid route-tune-grid">
+                    <label>Default Radius<input id="waypointRadius" type="number" min="0" step="1" /></label>
+                    <label>Record Step<input id="routeRecordStep" type="number" min="1" step="1" /></label>
+                    <label>Repath ms<input id="walkRepathMs" type="number" min="1" step="1" /></label>
+                    <label>Vocation
+                      <select id="vocation">
+                        <option value="">Auto Detect Live</option>
+                        <option value="knight">Knight</option>
+                        <option value="paladin">Paladin</option>
+                        <option value="sorcerer">Sorcerer</option>
+                        <option value="druid">Druid</option>
+                      </select>
+                    </label>
+                    <label>Sustain ms<input id="sustainCooldownMs" type="number" min="0" step="100" /></label>
+                  </div>
+                  <div class="checks route-checks">
+                    <label><input id="sustainEnabled" type="checkbox" /> Sustain</label>
+                    <label><input id="preferHotbarConsumables" type="checkbox" /> Prefer Hotbar Consumables</label>
+                  </div>
+                </section>
+
+                <section class="route-avoid-fields-card">
+                  <div class="route-pane-head route-pane-head-avoid">
+                    <div>
+                      <span class="route-card-label">Hazard Guard</span>
+                      <span id="route-avoid-summary-copy" class="route-pane-copy">Route-wide hazard toggles for fields,
+                        teleports, traps, and floor changes.</span>
+                    </div>
+                    <span class="route-avoid-status">
+                      <span class="route-avoid-status-on">Field Safe</span>
+                      <span class="route-avoid-status-off">Fields Live</span>
+                    </span>
+                  </div>
+                  <label class="route-avoid-toggle">
+                    <span class="route-avoid-toggle-copy">
+                      <strong>Auto Hazard Guard</strong>
+                      <small>Master switch for route hazard filters.</small>
+                    </span>
+                    <span class="route-avoid-toggle-control">
+                      <input id="avoidElementalFields" type="checkbox" />
+                    </span>
+                  </label>
+                  <div id="route-avoid-category-grid" class="route-avoid-category-grid" aria-label="Hazard categories">
+                    <label class="route-avoid-category" data-avoid-category-card="fire">
+                      <input id="avoid-field-fire" type="checkbox" data-avoid-field-category="fire" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Fire</strong>
+                        <small>Burning field tiles</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="energy">
+                      <input id="avoid-field-energy" type="checkbox" data-avoid-field-category="energy" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Energy</strong>
+                        <small>Electric field tiles</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="poison">
+                      <input id="avoid-field-poison" type="checkbox" data-avoid-field-category="poison" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Poison</strong>
+                        <small>Venom and toxic fields</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="holes">
+                      <input id="avoid-field-holes" type="checkbox" data-avoid-field-category="holes" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Holes</strong>
+                        <small>Holes, pitfalls, trapdoors</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="stairsLadders">
+                      <input id="avoid-field-stairs-ladders" type="checkbox"
+                        data-avoid-field-category="stairsLadders" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Stairs &amp; Ladders</strong>
+                        <small>Unplanned floor-change tiles</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="teleports">
+                      <input id="avoid-field-teleports" type="checkbox" data-avoid-field-category="teleports" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Teleports</strong>
+                        <small>Portals and teleport pads</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="traps">
+                      <input id="avoid-field-traps" type="checkbox" data-avoid-field-category="traps" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Traps</strong>
+                        <small>Trap and spike tiles</small>
+                      </span>
+                    </label>
+                    <label class="route-avoid-category" data-avoid-category-card="invisibleWalls">
+                      <input id="avoid-field-invisible-walls" type="checkbox"
+                        data-avoid-field-category="invisibleWalls" />
+                      <span class="route-avoid-category-copy">
+                        <strong>Invisible Walls</strong>
+                        <small>Forcefields and hidden blockers</small>
+                      </span>
+                    </label>
+                  </div>
+                  <div id="route-avoid-category-summary" class="field-note route-avoid-category-summary">All hazard
+                    lanes armed.</div>
+                  <div class="route-avoid-metric-grid">
+                    <div class="route-avoid-metric">
+                      <span>Route</span>
+                      <strong>Hazard SQMs auto-skip</strong>
+                    </div>
+                    <div class="route-avoid-metric">
+                      <span>Waypoint</span>
+                      <strong>Unsafe route points auto-advance</strong>
+                    </div>
+                    <div class="route-avoid-metric">
+                      <span>Tile Rules</span>
+                      <strong>Use avoid or wait for local overrides</strong>
+                    </div>
+                  </div>
+                  <div class="route-panel-action-grid route-panel-action-grid-avoid">
+                    <button class="btn compact" type="button" data-proxy-click="#add-current-tile-rule-avoid">Add Avoid
+                      Rule</button>
+                    <button class="btn compact" type="button" data-proxy-click="#add-current-tile-rule-wait">Add Wait
+                      Rule</button>
+                  </div>
+                  <div class="route-hidden-flags" hidden aria-hidden="true">
+                    <input id="autowalkEnabled" type="checkbox" />
+                    <input id="autowalkLoop" type="checkbox" />
+                    <input id="routeStrictClear" type="checkbox" />
+                    <input id="routeFollowExactWaypoints" type="checkbox" />
+                    <input id="routeRecording" type="checkbox" />
+                    <input id="showWaypointOverlay" type="checkbox" />
+                  </div>
+                </section>
+
+                <section class="route-tile-rule-card">
+                  <div class="route-section-head route-section-head-inline">
+                    <div class="route-section-copy">
+                      <span class="route-card-label">Tile Rules</span>
+                      <span class="route-pane-copy">Local avoid and wait overrides.</span>
+                    </div>
+                  </div>
+                  <div class="route-panel-action-grid route-panel-action-grid-tile-rules">
+                    <button id="add-current-tile-rule-avoid" class="btn compact" type="button">Add Avoid</button>
+                    <button id="add-current-tile-rule-wait" class="btn primary compact" type="button">Add Wait</button>
+                    <button id="move-tile-rule-up" class="btn compact" type="button">Move Up</button>
+                    <button id="move-tile-rule-down" class="btn compact" type="button">Move Down</button>
+                  </div>
+                  <div id="tile-rule-selection-summary" class="route-selection-summary route-selection-summary-compact">
+                    No tile rule selected.</div>
+                  <div id="tile-rule-list" class="waypoint-list tile-rule-list"></div>
+                </section>
+              </div>
+            </aside>
+
+            <aside class="route-side-column">
+              <div class="route-side-scroll modal-scroll-stack">
+                <section class="route-editor-card route-editor-card-top">
+                  <div class="route-section-head route-editor-card-head">
+                    <div class="route-section-copy">
+                      <div id="route-editor-title" class="section-title">Route Item Editor</div>
+                      <div id="route-editor-copy" class="route-pane-copy">Edit the selected waypoint or tile rule.</div>
+                    </div>
+                    <div class="route-editor-toolbar">
+                      <div class="route-editor-mode-toggle" role="tablist" aria-label="Route item editor">
+                        <button id="route-editor-mode-waypoint" class="btn compact" type="button" role="tab"
+                          aria-selected="true">Waypoint</button>
+                        <button id="route-editor-mode-tile-rule" class="btn compact" type="button" role="tab"
+                          aria-selected="false">Tile Rule</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="waypoint-selection-summary" class="route-selection-summary">No route item selected.</div>
+                  <div class="route-editor-shared-panel">
+                    <div class="form-grid two route-item-shared-grid">
+                      <label>Label<input id="route-item-label" type="text" /></label>
+                      <label>X<input id="route-item-x" type="number" step="1" /></label>
+                      <label>Y<input id="route-item-y" type="number" step="1" /></label>
+                      <label>Z<input id="route-item-z" type="number" step="1" /></label>
+                    </div>
+                    <div id="route-editor-shared-help" class="field-note route-type-help" hidden>Shared label and
+                      coordinates for the selected route item.</div>
+                  </div>
+
+                  <div id="waypoint-editor-panel" class="route-editor-panel">
+                    <div class="form-grid two route-waypoint-grid">
+                      <label>Type
+                        <select id="waypoint-type">
+                          <option value="walk">Walk</option>
+                          <option value="action">Action</option>
+                          <option value="node">Node</option>
+                          <option value="stand">Stand</option>
+                          <option value="helper">Helper</option>
+                          <option value="safe-zone">Safe Zone</option>
+                          <option value="avoid">Avoid</option>
+                          <option value="exit-zone">Exit Zone</option>
+                          <option value="stairs-up">Go Up Stairs</option>
+                          <option value="stairs-down">Go Down Stairs</option>
+                          <option value="use-item">Use Item</option>
+                          <option value="bank">Bank NPC</option>
+                          <option value="shop">Shop NPC</option>
+                          <option value="npc-action">NPC Action</option>
+                          <option value="daily-task">Daily Task</option>
+                          <option value="ladder">Ladder</option>
+                          <option value="exani-tera">Exani Tera Up</option>
+                          <option value="rope">Rope Up</option>
+                          <option value="shovel-hole">Open Hole With Shovel</option>
+                        </select>
+                      </label>
+                      <label>Step Radius<input id="waypoint-step-radius" type="number" min="0" /></label>
+                    </div>
+                    <div id="waypoint-type-help" class="field-note route-type-help">Walk waypoint.</div>
+                    <div id="waypoint-action-fields" class="form-grid two waypoint-action-fields" hidden>
+                      <label>Action
+                        <select id="waypoint-action">
+                          <option value="restart">Restart Route</option>
+                          <option value="goto">Go To Waypoint</option>
+                        </select>
+                      </label>
+                      <label>Jump Target
+                        <select id="waypoint-action-target"></select>
+                      </label>
+                    </div>
+                    <div id="waypoint-action-help" class="field-note route-type-help" hidden>Action waypoint for restart
+                      or jump.</div>
+                    <div class="inline-actions route-editor-actions">
+                      <button id="save-waypoint" class="btn primary" type="button">Apply Point</button>
+                    </div>
+                  </div>
+
+                  <div id="tile-rule-editor-panel" class="route-editor-panel" hidden>
+                    <div class="form-grid two route-tile-rule-grid">
+                      <label class="module-rule-control module-rule-check">
+                        <input id="tile-rule-enabled" type="checkbox" />
+                        <span>Enabled</span>
+                      </label>
+                      <label>Shape
+                        <select id="tile-rule-shape">
+                          <option value="tile">Tile</option>
+                          <option value="rect">Rectangle</option>
+                        </select>
+                      </label>
+                      <label>Width<input id="tile-rule-width" type="number" min="1" step="1" /></label>
+                      <label>Height<input id="tile-rule-height" type="number" min="1" step="1" /></label>
+                      <label>Trigger
+                        <select id="tile-rule-trigger">
+                          <option value="approach">Approach</option>
+                          <option value="enter">Enter</option>
+                        </select>
+                      </label>
+                      <label>Policy
+                        <select id="tile-rule-policy">
+                          <option value="avoid">Avoid</option>
+                          <option value="wait">Wait</option>
+                        </select>
+                      </label>
+                      <label>Wait ms<input id="tile-rule-wait-ms" type="number" min="0" step="100" /></label>
+                      <label>Cooldown ms<input id="tile-rule-cooldown-ms" type="number" min="0" step="100" /></label>
+                      <label>Exactness
+                        <select id="tile-rule-exactness">
+                          <option value="exact">Exact</option>
+                          <option value="vicinity">Vicinity</option>
+                        </select>
+                      </label>
+                      <label>Vicinity Radius<input id="tile-rule-vicinity-radius" type="number" min="0"
+                          step="1" /></label>
+                    </div>
+                    <div id="tile-rule-policy-help" class="field-note route-type-help">Avoid blocks matching tiles from
+                      route movement. Wait holds the route once per approach or entry.</div>
+                    <div class="inline-actions route-editor-actions">
+                      <button id="save-tile-rule" class="btn primary" type="button">Apply Rule</button>
+                      <button id="remove-tile-rule" class="btn danger compact" type="button">Delete Rule</button>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="route-hunt-launchpad">
+                  <div class="route-section-head route-section-head-inline">
+                    <div class="route-section-copy">
+                      <span class="route-card-label">Hunt Studio</span>
+                      <span class="route-pane-copy">Target queue, fallback combat, creature profiles, players, and NPC
+                        registries now open in the dedicated Hunt modal.</span>
+                    </div>
+                    <button id="route-open-hunt-studio" class="btn primary compact" type="button"
+                      data-open-modal="targeting" data-focus-target="#monster">Open Hunt</button>
+                  </div>
+                  <div class="summary-grid route-hunt-launchpad-grid" aria-label="Hunt summary">
+                    <div class="summary-cell">
+                      <span>Queue</span>
+                      <strong id="route-hunt-launchpad-queue-count">-</strong>
+                    </div>
+                    <div class="summary-cell">
+                      <span>Profiles</span>
+                      <strong id="route-hunt-launchpad-profile-count">-</strong>
+                    </div>
+                    <div class="summary-cell">
+                      <span>Combat</span>
+                      <strong id="route-hunt-launchpad-distance-rule-count">-</strong>
+                    </div>
+                  </div>
+                  <div class="route-hunt-summary-bar">
+                    <div id="route-hunt-launchpad-shared-spawn-summary" class="route-hunt-inline-note">Waiting for
+                      player policy.</div>
+                    <div id="route-hunt-launchpad-distance-summary" class="route-hunt-inline-note">No fallback combat
+                      rules.</div>
+                  </div>
+                </section>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button id="save-autowalk" class="btn primary modal-save-button" type="button">Save Route</button>
+      </div>
+    </section>
+
+    <section class="modal-panel modal-panel-route-picker" id="modal-route-library-picker"
+      data-modal="routeLibraryPicker" role="dialog" aria-modal="true" aria-label="Saved route picker" tabindex="-1"
+      aria-hidden="true" hidden>
+      <div class="modal-head">
+        <div class="modal-head-copy">
+          <div class="section-title">Saved Route</div>
+        </div>
+      </div>
+      <div class="modal-body modal-body-route-picker">
+        <label class="route-picker-field">Existing Scripts
+          <select id="route-library-quick-select"></select>
+        </label>
+        <div id="route-library-quick-meta" class="route-library-quick-meta">No saved cavebot files yet.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button id="load-route-quick" class="btn primary modal-save-button" type="button">Load</button>
+      </div>
+    </section>
+
+    <section class="modal-panel modal-panel-wide modal-panel-account-registry" id="modal-accounts"
+      data-modal="accounts" role="dialog" aria-modal="true" aria-label="Account registry" tabindex="-1"
+      aria-hidden="true" hidden>
+      <div class="modal-head">
+        <div class="modal-head-copy">
+          <div class="section-title">Accounts</div>
+        </div>
+      </div>
+      <div class="modal-body modal-body-accounts">
+        <label class="route-picker-field">
+          <span>Saved Accounts</span>
+          <select id="account-select"></select>
+          <div id="account-meta" class="route-library-quick-meta"></div>
+        </label>
+
+        <div class="account-registry-card">
+          <input id="account-id" type="hidden" />
+          <div class="form-grid two">
+            <label class="route-picker-field">
+              <span>Label</span>
+              <input id="account-label" type="text" placeholder="Main duo" />
+            </label>
+            <label class="route-picker-field">
+              <span>Login Method</span>
+              <select id="account-login-method">
+                <option value="account-password">Account + password</option>
+                <option value="google">Google</option>
+                <option value="discord">Discord</option>
+                <option value="manual">Manual only</option>
+              </select>
+            </label>
+            <label class="route-picker-field">
+              <span>Login Name</span>
+              <input id="account-login-name" type="text" placeholder="account@example.com" />
+            </label>
+            <label class="route-picker-field">
+              <span>Password</span>
+              <input id="account-password" type="password" placeholder="Stored separately from character configs" />
+            </label>
+            <label class="route-picker-field">
+              <span>Preferred Character</span>
+              <input id="account-preferred-character" type="text" placeholder="Knight Alpha" />
+            </label>
+            <label class="route-picker-field">
+              <span>Reconnect Policy</span>
+              <select id="account-reconnect-policy">
+                <option value="preferred-character">Resume preferred character</option>
+                <option value="last-character">Resume last used character</option>
+                <option value="manual">Stay manual after login</option>
+              </select>
+            </label>
+            <label class="route-picker-field">
+              <span>Secret Storage</span>
+              <select id="account-secret-storage">
+                <option value="local-file">Machine-local file</option>
+                <option value="portable-file">Portable bundle file</option>
+                <option value="none">No stored secret</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="route-picker-field account-registry-wide-field">
+            <span>Characters</span>
+            <textarea id="account-characters" rows="4"
+              placeholder="One character per line or comma-separated"></textarea>
+          </label>
+
+          <label class="route-picker-field account-registry-wide-field">
+            <span>Notes</span>
+            <textarea id="account-notes" rows="4"
+              placeholder="Reconnect intent, launcher notes, two-factor steps, or transfer warnings"></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button id="delete-account" class="btn danger" type="button">Delete</button>
+        <button id="new-account" class="btn" type="button">New Draft</button>
+        <button id="save-account" class="btn primary modal-save-button" type="button">Save Account</button>
+      </div>
+    </section>
+
+    <section class="modal-panel modal-panel-wide modal-panel-module" id="modal-module" data-modal="module" role="dialog"
+      aria-modal="true" aria-label="Module settings" tabindex="-1" aria-hidden="true" hidden>
+      <div class="modal-head">
+        <div class="modal-head-copy">
+          <div id="module-modal-title" class="section-title">Module</div>
+          <div id="module-modal-meta" class="section-meta" hidden>module settings</div>
+
+          <!-- Shared Group -->
+          <div id="shared-module-head-group">
+            <div id="module-card-title" class="section-title" hidden>Module</div>
+            <div id="module-state-line" class="module-state-line section-meta">no rules</div>
+            <div id="module-current-line" class="module-current-line">No live details yet.</div>
+            <div id="module-note" class="module-note" hidden></div>
+          </div>
+
+          <!-- Rune Group -->
+          <div id="rune-module-head-group" hidden>
+            <div id="rune-maker-state-line" class="module-state-line section-meta">Off - 0 active - 0 total</div>
+            <div id="rune-maker-current-line" class="module-current-line">No live details yet.</div>
+            <div id="rune-maker-note" class="module-note" hidden></div>
+          </div>
+        </div>
+
+        <div class="modal-head-tools">
+          <div id="shared-module-head-tools">
+            <button id="add-module-rule" type="button" class="btn compact mini">Add Rule</button>
+          </div>
+          <div id="rune-module-head-tools" hidden>
+            <button id="rune-maker-add-rule" type="button" class="btn primary compact mini">Add Rune</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body modal-body-module">
+        <div class="modal-module-card" data-module-panel="shared">
+          <div id="module-rule-list" class="module-rule-list"></div>
+          <div id="module-extra-fields" class="form-grid" hidden></div>
+        </div>
+        <div id="rune-maker-panel" class="rune-maker-panel rune-maker-panel-modal" data-module-panel="rune" hidden
+          aria-hidden="true">
+
+          <div class="rune-maker-layout">
+            <aside class="rune-maker-sidebar">
+              <section class="rune-maker-sidebar-card">
+                <div class="rune-maker-section-kicker">Live Gate Check</div>
+                <div id="rune-maker-live-summary" class="rune-maker-live-summary">No live snapshot yet.</div>
+                <div id="rune-maker-live-badges" class="rune-maker-live-badges"></div>
+              </section>
+              <section class="rune-maker-sidebar-card">
+                <div class="rune-maker-section-kicker">Quick Windows</div>
+                <div class="rune-maker-template-grid">
+                  <button type="button" class="rune-maker-template" data-add-rune-template="safe">
+                    <strong>Safe Idle</strong>
+                    <span>No target, idle only</span>
+                  </button>
+                  <button type="button" class="rune-maker-template" data-add-rune-template="moving">
+                    <strong>Moving OK</strong>
+                    <span>Keep no-target, allow movement</span>
+                  </button>
+                  <button type="button" class="rune-maker-template" data-add-rune-template="combat">
+                    <strong>Combat OK</strong>
+                    <span>Allow target and movement</span>
+                  </button>
+                  <button type="button" class="rune-maker-template" data-add-rune-template="clone">
+                    <strong>Clone Last</strong>
+                    <span>Duplicate the latest window</span>
+                  </button>
+                </div>
+              </section>
+              <section class="rune-maker-sidebar-card rune-maker-sidebar-card-note">
+                <div class="rune-maker-section-kicker">Workflow</div>
+                <p>Build the first rune window once, then duplicate it and only adjust the mana band or combat gates
+                  that actually change.</p>
+              </section>
+            </aside>
+            <div class="rune-maker-main">
+              <div class="rune-maker-list-head">
+                <div class="rune-maker-section-kicker">Rune Windows</div>
+                <div id="rune-maker-rule-meta" class="rune-maker-rule-meta">0 total / 0 active</div>
+              </div>
+              <div id="rune-maker-rule-list" class="module-rule-list rune-maker-rule-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn primary modal-save-button" type="button" data-save-modules>Save</button>
+      </div>
+    </section>
+
+    <section class="modal-panel modal-panel-wide modal-panel-console" id="modal-logs" data-modal="logs" role="dialog"
+      aria-modal="true" aria-label="Log output" tabindex="-1" aria-hidden="true" hidden>
+      <div class="modal-head">
+        <div class="modal-head-copy">
+          <div class="section-title">Logs</div>
+        </div>
+      </div>
+      <div class="modal-body modal-body-console">
+        <div id="runtime-metrics" class="runtime-metrics" aria-live="polite"></div>
+        <pre id="log-output" class="log-output"></pre>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+      </div>
+    </section>
+
+    <section class="modal-panel modal-panel-wide modal-panel-presets" id="modal-presets" data-modal="presets"
+      role="dialog" aria-modal="true" aria-label="Hunt presets" tabindex="-1" aria-hidden="true" hidden>
+      <div class="modal-head">
+        <div class="modal-head-copy">
+          <div class="section-title">Presets</div>
+        </div>
+      </div>
+      <div class="modal-body modal-body-presets">
+        <div class="hunt-preset-layout">
+          <section class="hunt-preset-browser">
+            <div class="hunt-preset-toolbar">
+              <label class="hunt-preset-search-field">Search<input id="hunt-preset-search" type="search"
+                  spellcheck="false" placeholder="Rotworm, task, beam, gold coin" /></label>
+              <div class="summary-cell hunt-preset-count-cell">
+                <span>Results</span>
+                <strong id="hunt-preset-count">-</strong>
+              </div>
+            </div>
+            <div id="hunt-preset-list" class="hunt-preset-list"></div>
+          </section>
+
+          <aside id="hunt-preset-detail" class="hunt-preset-detail"></aside>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script type="module" src="./renderer.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+{
+  "cavebotName": "rot-route-renamed",
+  "creatureLedger": {
+    "monsters": [],
+    "players": []
+  },
+  "cavebotPaused": true,
+  "stopAggroHold": false
+}

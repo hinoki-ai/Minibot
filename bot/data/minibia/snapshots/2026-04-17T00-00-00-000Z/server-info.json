@@ -1,0 +1,15 @@
+{
+  "deathSkillLossPercent": 5,
+  "experienceRate": 2,
+  "goldRate": 2,
+  "lootRate": 1,
+  "pvpEnabled": true,
+  "requireBlankRune": false,
+  "runeChargesRate": 2,
+  "skillRates": {
+    "distance": 1.5,
+    "magic": 1.5,
+    "melee": 1.5,
+    "shielding": 1.5
+  }
+}

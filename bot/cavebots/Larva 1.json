@@ -1,0 +1,144 @@
+{
+  "name": "Larva 1",
+  "port": 9224,
+  "pageUrlPrefix": "https://minibia.com/play",
+  "monster": "Rotworm",
+  "targetProfiles": [],
+  "intervalMs": 250,
+  "retargetMs": 1200,
+  "rangeX": 7,
+  "rangeY": 5,
+  "combatRangeX": 2,
+  "combatRangeY": 2,
+  "floorTolerance": 1,
+  "autowalkEnabled": true,
+  "autowalkLoop": true,
+  "routeStrictClear": false,
+  "routeRecording": false,
+  "routeRecordStep": 2,
+  "showWaypointOverlay": true,
+  "waypointRadius": 0,
+  "vocation": "",
+  "sustainEnabled": true,
+  "sustainCooldownMs": 900,
+  "preferHotbarConsumables": true,
+  "refillEnabled": false,
+  "refillSellRequests": [],
+  "lootingEnabled": false,
+  "lootWhitelist": [],
+  "lootBlacklist": [],
+  "lootPreferredContainers": [
+    "Backpack"
+  ],
+  "walkRepathMs": 1200,
+  "reconnectEnabled": false,
+  "reconnectRetryDelayMs": 4000,
+  "reconnectMaxAttempts": 0,
+  "avoidElementalFields": true,
+  "avoidFieldCategories": {
+    "fire": true,
+    "energy": true,
+    "poison": true,
+    "holes": true,
+    "stairsLadders": true,
+    "teleports": true,
+    "traps": true,
+    "invisibleWalls": true
+  },
+  "deathHealEnabled": true,
+  "deathHealVocation": "",
+  "deathHealWords": "",
+  "deathHealHealthPercent": 20,
+  "deathHealCooldownMs": 900,
+  "healerEnabled": true,
+  "healerWords": "exura vita",
+  "healerHealthPercent": 30,
+  "healerEmergencyHealthPercent": 30,
+  "healerMinMana": 80,
+  "healerMinManaPercent": 0,
+  "manaTrainerEnabled": true,
+  "manaTrainerWords": "utevo res ina",
+  "manaTrainerManaPercent": 85,
+  "manaTrainerMinHealthPercent": 95,
+  "autoLightEnabled": false,
+  "autoLightWords": "utevo lux",
+  "autoLightMinManaPercent": 20,
+  "autoConvertEnabled": true,
+  "convertCooldownMs": 4000,
+  "antiIdleEnabled": false,
+  "antiIdleIntervalMs": 60000,
+  "bankingEnabled": false,
+  "bankingRules": [],
+  "partyFollowEnabled": false,
+  "partyFollowMembers": [],
+  "partyFollowManualPlayers": [],
+  "partyFollowDistance": 2,
+  "runeMakerEnabled": false,
+  "runeMakerRules": [],
+  "spellCasterEnabled": false,
+  "spellCasterRules": [],
+  "distanceKeeperEnabled": false,
+  "distanceKeeperRules": [],
+  "rookillerEnabled": false,
+  "once": false,
+  "dryRun": false,
+  "healerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "exura vita",
+      "minHealthPercent": 0,
+      "maxHealthPercent": 30,
+      "minMana": 80,
+      "minManaPercent": 0,
+      "cooldownMs": 900
+    }
+  ],
+  "healerTiers": [
+    {
+      "words": "exura vita",
+      "healthPercent": 30,
+      "minMana": 80,
+      "minManaPercent": 0
+    }
+  ],
+  "manaTrainerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo res ina",
+      "minHealthPercent": 95,
+      "minManaPercent": 85,
+      "maxManaPercent": 100,
+      "cooldownMs": 1400,
+      "requireNoTargets": true,
+      "requireStationary": true
+    }
+  ],
+  "autoLightRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo lux",
+      "minManaPercent": 20,
+      "cooldownMs": 3000,
+      "requireNoLight": true,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "autoConvertRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "cooldownMs": 4000,
+      "requireNoTargets": true,
+      "requireStationary": true
+    }
+  ],
+  "monsterNames": [
+    "Rotworm"
+  ],
+  "waypoints": [],
+  "chaseMode": "aggressive"
+}

@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-vocation-pack",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "vocation": "paladin",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "spellCount": 24,
+  "spells": [
+    {
+      "id": 60,
+      "name": "Find Person",
+      "words": "exiva",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 5,
+      "name": "Light",
+      "words": "utevo lux",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 28,
+      "name": "Magic Rope",
+      "words": "exani tera",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 2,
+      "name": "Light Healing",
+      "words": "exura",
+      "level": 1,
+      "mana": 25,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 24,
+      "name": "Food",
+      "words": "exevo pan",
+      "level": 1,
+      "mana": 30,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 34,
+      "name": "Light Magic Missile",
+      "words": "adori",
+      "level": 1,
+      "mana": 120,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 12,
+      "name": "Antidote",
+      "words": "exana pox",
+      "level": 2,
+      "mana": 30,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 31,
+      "name": "Conjure Arrow",
+      "words": "exevo con",
+      "level": 2,
+      "mana": 40,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 10,
+      "name": "Intense Healing",
+      "words": "exura gran",
+      "level": 2,
+      "mana": 40,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 9,
+      "name": "Levitate",
+      "words": "exani hur",
+      "level": 3,
+      "mana": 50,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 19,
+      "name": "Great Light",
+      "words": "utevo gran lux",
+      "level": 3,
+      "mana": 60,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 35,
+      "name": "Heavy Magic Missile",
+      "words": "adori gran",
+      "level": 3,
+      "mana": 280,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 18,
+      "name": "Magic Shield",
+      "words": "utamo vita",
+      "level": 4,
+      "mana": 50,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 8,
+      "name": "Haste",
+      "words": "utani hur",
+      "level": 4,
+      "mana": 60,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 64,
+      "name": "Poisoned Arrow",
+      "words": "exevo con pox",
+      "level": 5,
+      "mana": 70,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 36,
+      "name": "Fireball",
+      "words": "adori flam",
+      "level": 5,
+      "mana": 160,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 32,
+      "name": "Conjure Bolt",
+      "words": "exevo con mort",
+      "level": 6,
+      "mana": 70,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 43,
+      "name": "Destroy Field",
+      "words": "adito grav",
+      "level": 6,
+      "mana": 120,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 11,
+      "name": "Ultimate Healing",
+      "words": "exura vita",
+      "level": 8,
+      "mana": 80,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 44,
+      "name": "Desintegrate",
+      "words": "adito tera",
+      "level": 8,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 63,
+      "name": "Explosive Arrow",
+      "words": "exevo con flam",
+      "level": 10,
+      "mana": 120,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 61,
+      "name": "Conjure Spear",
+      "words": "exeta con",
+      "level": 12,
+      "mana": 120,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 65,
+      "name": "Power Bolt",
+      "words": "exevo con vis",
+      "level": 14,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 3,
+      "name": "Invisible",
+      "words": "utana vid",
+      "level": 15,
+      "mana": 210,
+      "aggressive": false,
+      "area": false
+    }
+  ],
+  "attackSpells": [],
+  "supportSpells": [
+    "exiva",
+    "utevo lux",
+    "exani tera",
+    "exura",
+    "exevo pan",
+    "adori",
+    "exana pox",
+    "exevo con",
+    "exura gran",
+    "exani hur",
+    "utevo gran lux",
+    "adori gran",
+    "utamo vita",
+    "utani hur",
+    "exevo con pox",
+    "adori flam",
+    "exevo con mort",
+    "adito grav",
+    "exura vita",
+    "adito tera",
+    "exevo con flam",
+    "exeta con",
+    "exevo con vis",
+    "utana vid"
+  ]
+}

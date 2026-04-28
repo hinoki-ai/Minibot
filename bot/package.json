@@ -1,0 +1,119 @@
+{
+  "name": "minibot",
+  "productName": "Minibot",
+  "version": "0.1.0",
+  "description": "Local desktop control panel for the live Minibia client.",
+  "desktopName": "minibot.desktop",
+  "main": "desktop/main.mjs",
+  "type": "module",
+  "license": "UNLICENSED",
+  "author": "hinoki",
+  "private": true,
+  "bin": {
+    "bb": "./bb.mjs"
+  },
+  "files": [
+    "bb.mjs",
+    "onscreen_monster_bot.mjs",
+    "desktop/app-protocol.mjs",
+    "desktop/assets/**/*",
+    "desktop/index.html",
+    "desktop/linux-integration.mjs",
+    "desktop/main.mjs",
+    "desktop/power-save-blocker.mjs",
+    "desktop/preload.cjs",
+    "desktop/preload.mjs",
+    "desktop/renderer.js",
+    "desktop/styles.css",
+    "lib/**/*",
+    "data/**/*",
+    "scripts/**/*",
+    "cavebots/**/*",
+    "README.md",
+    "docs/**/*",
+    "CANONICAL.md",
+    "todo.md"
+  ],
+  "scripts": {
+    "start": "node ./bb.mjs",
+    "desktop": "node ./bb.mjs",
+    "generate:brand": "node scripts/generate-brand-icons.mjs",
+    "refresh:minibia-data": "node ./scripts/refresh-minibia-data.mjs",
+    "bundle:minibia": "node ./scripts/create-minibia-bundle.mjs",
+    "cli": "node onscreen_monster_bot.mjs",
+    "test": "node --test --test-concurrency=1",
+    "clean": "node -e \"import('node:fs').then((fs) => fs.rmSync('dist', { recursive: true, force: true }))\"",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
+    "jsdom": "^29.0.2"
+  },
+  "build": {
+    "appId": "com.hinoki.minibot",
+    "executableName": "Minibot",
+    "asar": true,
+    "npmRebuild": false,
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "desktop/assets"
+    },
+    "files": [
+      "desktop/app-protocol.mjs",
+      "desktop/assets/**/*",
+      "desktop/index.html",
+      "desktop/linux-integration.mjs",
+      "desktop/main.mjs",
+      "desktop/power-save-blocker.mjs",
+      "desktop/preload.cjs",
+      "desktop/preload.mjs",
+      "desktop/renderer.js",
+      "desktop/styles.css",
+      "lib/**/*",
+      "data/**/*",
+      "package.json",
+      "!desktop/**/*.map",
+      "!**/*.log"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "desktop/assets/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "category": "Game",
+      "icon": "desktop/assets/icon.png",
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ]
+    },
+    "win": {
+      "icon": "desktop/assets/icon.ico",
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

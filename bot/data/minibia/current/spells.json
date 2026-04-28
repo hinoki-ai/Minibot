@@ -1,0 +1,854 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-spells",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "count": 65,
+  "items": [
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 67,
+      "level": 1,
+      "mana": 0,
+      "name": "Summon Creature",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utevo res"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 60,
+      "level": 1,
+      "mana": 20,
+      "name": "Find Person",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exiva"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 5,
+      "level": 1,
+      "mana": 20,
+      "name": "Light",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utevo lux"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 28,
+      "level": 1,
+      "mana": 20,
+      "name": "Magic Rope",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exani tera"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 2,
+      "level": 1,
+      "mana": 25,
+      "name": "Light Healing",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exura"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 24,
+      "level": 1,
+      "mana": 30,
+      "name": "Food",
+      "vocations": [
+        "paladin",
+        "druid"
+      ],
+      "words": "exevo pan"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 34,
+      "level": 1,
+      "mana": 120,
+      "name": "Light Magic Missile",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adori"
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "id": 6,
+      "level": 2,
+      "mana": 20,
+      "name": "Force Strike",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exori mort"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 12,
+      "level": 2,
+      "mana": 30,
+      "name": "Antidote",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exana pox"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 31,
+      "level": 2,
+      "mana": 40,
+      "name": "Conjure Arrow",
+      "vocations": [
+        "paladin"
+      ],
+      "words": "exevo con"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 10,
+      "level": 2,
+      "mana": 40,
+      "name": "Intense Healing",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exura gran"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 47,
+      "level": 2,
+      "mana": 200,
+      "name": "Poison Field",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo grav pox"
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "id": 13,
+      "level": 3,
+      "mana": 20,
+      "name": "Energy Strike",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exori vis"
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "id": 14,
+      "level": 3,
+      "mana": 20,
+      "name": "Flame Strike",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exori flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 9,
+      "level": 3,
+      "mana": 50,
+      "name": "Levitate",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exani hur"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 19,
+      "level": 3,
+      "mana": 60,
+      "name": "Great Light",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utevo gran lux"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 46,
+      "level": 3,
+      "mana": 240,
+      "name": "Fire Field",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo grav flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 35,
+      "level": 3,
+      "mana": 280,
+      "name": "Heavy Magic Missile",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adori gran"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 18,
+      "level": 4,
+      "mana": 50,
+      "name": "Magic Shield",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utamo vita"
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "id": 29,
+      "level": 4,
+      "mana": 60,
+      "name": "Challenge",
+      "vocations": [
+        "knight"
+      ],
+      "words": "exeta res"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 8,
+      "level": 4,
+      "mana": 60,
+      "name": "Haste",
+      "vocations": [
+        "knight",
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utani hur"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 41,
+      "level": 4,
+      "mana": 240,
+      "name": "Intense Healing Rune",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adura gran"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 64,
+      "level": 5,
+      "mana": 70,
+      "name": "Poisoned Arrow",
+      "vocations": [
+        "paladin"
+      ],
+      "words": "exevo con pox"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 23,
+      "level": 5,
+      "mana": 100,
+      "name": "Berserk",
+      "vocations": [
+        "knight"
+      ],
+      "words": "exori"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 36,
+      "level": 5,
+      "mana": 160,
+      "name": "Fireball",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adori flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 42,
+      "level": 5,
+      "mana": 200,
+      "name": "Antidote Rune",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adana pox"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 45,
+      "level": 5,
+      "mana": 320,
+      "name": "Energy Field",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo grav vis"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 32,
+      "level": 6,
+      "mana": 70,
+      "name": "Conjure Bolt",
+      "vocations": [
+        "paladin"
+      ],
+      "words": "exevo con mort"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 43,
+      "level": 6,
+      "mana": 120,
+      "name": "Destroy Field",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adito grav"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 33,
+      "level": 7,
+      "mana": 70,
+      "name": "Heal Friend",
+      "vocations": [
+        "druid"
+      ],
+      "words": "exura sio"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 15,
+      "level": 7,
+      "mana": 80,
+      "name": "Fire Wave",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "exevo flam hur"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 59,
+      "level": 7,
+      "mana": 600,
+      "name": "Animate Dead",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adana mort"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 11,
+      "level": 8,
+      "mana": 80,
+      "name": "Ultimate Healing",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exura vita"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 17,
+      "level": 8,
+      "mana": 100,
+      "name": "Strong Haste",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utani gran hur"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 44,
+      "level": 8,
+      "mana": 200,
+      "name": "Desintegrate",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adito tera"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 53,
+      "level": 8,
+      "mana": 520,
+      "name": "Poison Bomb",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adevo mas pox"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 37,
+      "level": 9,
+      "mana": 480,
+      "name": "Great Fireball",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adori gran flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 52,
+      "level": 9,
+      "mana": 600,
+      "name": "Fire Bomb",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo mas flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 4,
+      "level": 10,
+      "mana": 100,
+      "name": "Creature Illusion",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utevo res ina"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 16,
+      "level": 10,
+      "mana": 100,
+      "name": "Energy Beam",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "exevo vis lux"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 63,
+      "level": 10,
+      "mana": 120,
+      "name": "Explosive Arrow",
+      "vocations": [
+        "paladin"
+      ],
+      "words": "exevo con flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 56,
+      "level": 10,
+      "mana": 200,
+      "name": "Convince Creature",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adeta sio"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 40,
+      "level": 11,
+      "mana": 400,
+      "name": "Ultimate Healing Rune",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adura vita"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 57,
+      "level": 11,
+      "mana": 600,
+      "name": "Chameleon",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adevo ina"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 50,
+      "level": 11,
+      "mana": 640,
+      "name": "Poison Wall",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo mas grav pox"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 61,
+      "level": 12,
+      "mana": 120,
+      "name": "Conjure Spear",
+      "vocations": [
+        "paladin"
+      ],
+      "words": "exeta con"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 27,
+      "level": 12,
+      "mana": 140,
+      "name": "Ultimate Light",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utevo vis lux"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 26,
+      "level": 12,
+      "mana": 200,
+      "name": "Cancel Invisibility",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "exana ina"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 39,
+      "level": 12,
+      "mana": 720,
+      "name": "Explosion Rune",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo mas hur"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 69,
+      "level": 13,
+      "mana": 220,
+      "name": "Wild Growth",
+      "vocations": [
+        "druid"
+      ],
+      "words": "exevo grav vita"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 58,
+      "level": 13,
+      "mana": 600,
+      "name": "Soulfire",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo res flam"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 49,
+      "level": 13,
+      "mana": 780,
+      "name": "Fire Wall",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo mas grav flam"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 20,
+      "level": 14,
+      "mana": 200,
+      "name": "Great Energy Beam",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "exevo gran vis lux"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 65,
+      "level": 14,
+      "mana": 200,
+      "name": "Power Bolt",
+      "vocations": [
+        "paladin"
+      ],
+      "words": "exevo con vis"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 54,
+      "level": 14,
+      "mana": 750,
+      "name": "Magic Wall",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "adevo grav tera"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 3,
+      "level": 15,
+      "mana": 210,
+      "name": "Invisible",
+      "vocations": [
+        "paladin",
+        "sorcerer",
+        "druid"
+      ],
+      "words": "utana vid"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 51,
+      "level": 18,
+      "mana": 880,
+      "name": "Energy Bomb",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "adevo mas vis"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 48,
+      "level": 18,
+      "mana": 1000,
+      "name": "Energy Wall",
+      "vocations": [
+        "sorcerer",
+        "druid"
+      ],
+      "words": "adevo mas grav vis"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 25,
+      "level": 19,
+      "mana": 150,
+      "name": "Mass Healing",
+      "vocations": [
+        "druid"
+      ],
+      "words": "exura gran mas res"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 21,
+      "level": 20,
+      "mana": 250,
+      "name": "Energy Wave",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "exevo mort hur"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 70,
+      "level": 21,
+      "mana": 400,
+      "name": "Envenom",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adevo res pox"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 38,
+      "level": 25,
+      "mana": 880,
+      "name": "Sudden Death",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "adori vita vis"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 30,
+      "level": 28,
+      "mana": 600,
+      "name": "Poison Storm",
+      "vocations": [
+        "druid"
+      ],
+      "words": "exevo gran mas pox"
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "id": 55,
+      "level": 35,
+      "mana": 1400,
+      "name": "Paralyze",
+      "vocations": [
+        "druid"
+      ],
+      "words": "adana ani"
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "id": 22,
+      "level": 40,
+      "mana": 1200,
+      "name": "Ultimate Explosion",
+      "vocations": [
+        "sorcerer"
+      ],
+      "words": "exevo gran mas vis"
+    }
+  ]
+}

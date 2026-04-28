@@ -1,0 +1,507 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-vocation-pack",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "vocation": "druid",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "spellCount": 49,
+  "spells": [
+    {
+      "id": 67,
+      "name": "Summon Creature",
+      "words": "utevo res",
+      "level": 1,
+      "mana": 0,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 60,
+      "name": "Find Person",
+      "words": "exiva",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 5,
+      "name": "Light",
+      "words": "utevo lux",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 28,
+      "name": "Magic Rope",
+      "words": "exani tera",
+      "level": 1,
+      "mana": 20,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 2,
+      "name": "Light Healing",
+      "words": "exura",
+      "level": 1,
+      "mana": 25,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 24,
+      "name": "Food",
+      "words": "exevo pan",
+      "level": 1,
+      "mana": 30,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 34,
+      "name": "Light Magic Missile",
+      "words": "adori",
+      "level": 1,
+      "mana": 120,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 6,
+      "name": "Force Strike",
+      "words": "exori mort",
+      "level": 2,
+      "mana": 20,
+      "aggressive": true,
+      "area": false
+    },
+    {
+      "id": 12,
+      "name": "Antidote",
+      "words": "exana pox",
+      "level": 2,
+      "mana": 30,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 10,
+      "name": "Intense Healing",
+      "words": "exura gran",
+      "level": 2,
+      "mana": 40,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 47,
+      "name": "Poison Field",
+      "words": "adevo grav pox",
+      "level": 2,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 13,
+      "name": "Energy Strike",
+      "words": "exori vis",
+      "level": 3,
+      "mana": 20,
+      "aggressive": true,
+      "area": false
+    },
+    {
+      "id": 14,
+      "name": "Flame Strike",
+      "words": "exori flam",
+      "level": 3,
+      "mana": 20,
+      "aggressive": true,
+      "area": false
+    },
+    {
+      "id": 9,
+      "name": "Levitate",
+      "words": "exani hur",
+      "level": 3,
+      "mana": 50,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 19,
+      "name": "Great Light",
+      "words": "utevo gran lux",
+      "level": 3,
+      "mana": 60,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 46,
+      "name": "Fire Field",
+      "words": "adevo grav flam",
+      "level": 3,
+      "mana": 240,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 35,
+      "name": "Heavy Magic Missile",
+      "words": "adori gran",
+      "level": 3,
+      "mana": 280,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 18,
+      "name": "Magic Shield",
+      "words": "utamo vita",
+      "level": 4,
+      "mana": 50,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 8,
+      "name": "Haste",
+      "words": "utani hur",
+      "level": 4,
+      "mana": 60,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 41,
+      "name": "Intense Healing Rune",
+      "words": "adura gran",
+      "level": 4,
+      "mana": 240,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 36,
+      "name": "Fireball",
+      "words": "adori flam",
+      "level": 5,
+      "mana": 160,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 42,
+      "name": "Antidote Rune",
+      "words": "adana pox",
+      "level": 5,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 45,
+      "name": "Energy Field",
+      "words": "adevo grav vis",
+      "level": 5,
+      "mana": 320,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 43,
+      "name": "Destroy Field",
+      "words": "adito grav",
+      "level": 6,
+      "mana": 120,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 33,
+      "name": "Heal Friend",
+      "words": "exura sio",
+      "level": 7,
+      "mana": 70,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 59,
+      "name": "Animate Dead",
+      "words": "adana mort",
+      "level": 7,
+      "mana": 600,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 11,
+      "name": "Ultimate Healing",
+      "words": "exura vita",
+      "level": 8,
+      "mana": 80,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 17,
+      "name": "Strong Haste",
+      "words": "utani gran hur",
+      "level": 8,
+      "mana": 100,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 44,
+      "name": "Desintegrate",
+      "words": "adito tera",
+      "level": 8,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 53,
+      "name": "Poison Bomb",
+      "words": "adevo mas pox",
+      "level": 8,
+      "mana": 520,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 37,
+      "name": "Great Fireball",
+      "words": "adori gran flam",
+      "level": 9,
+      "mana": 480,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 52,
+      "name": "Fire Bomb",
+      "words": "adevo mas flam",
+      "level": 9,
+      "mana": 600,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 4,
+      "name": "Creature Illusion",
+      "words": "utevo res ina",
+      "level": 10,
+      "mana": 100,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 56,
+      "name": "Convince Creature",
+      "words": "adeta sio",
+      "level": 10,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 40,
+      "name": "Ultimate Healing Rune",
+      "words": "adura vita",
+      "level": 11,
+      "mana": 400,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 57,
+      "name": "Chameleon",
+      "words": "adevo ina",
+      "level": 11,
+      "mana": 600,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 50,
+      "name": "Poison Wall",
+      "words": "adevo mas grav pox",
+      "level": 11,
+      "mana": 640,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 27,
+      "name": "Ultimate Light",
+      "words": "utevo vis lux",
+      "level": 12,
+      "mana": 140,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 26,
+      "name": "Cancel Invisibility",
+      "words": "exana ina",
+      "level": 12,
+      "mana": 200,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 39,
+      "name": "Explosion Rune",
+      "words": "adevo mas hur",
+      "level": 12,
+      "mana": 720,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 69,
+      "name": "Wild Growth",
+      "words": "exevo grav vita",
+      "level": 13,
+      "mana": 220,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 58,
+      "name": "Soulfire",
+      "words": "adevo res flam",
+      "level": 13,
+      "mana": 600,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 49,
+      "name": "Fire Wall",
+      "words": "adevo mas grav flam",
+      "level": 13,
+      "mana": 780,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 3,
+      "name": "Invisible",
+      "words": "utana vid",
+      "level": 15,
+      "mana": 210,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 48,
+      "name": "Energy Wall",
+      "words": "adevo mas grav vis",
+      "level": 18,
+      "mana": 1000,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 25,
+      "name": "Mass Healing",
+      "words": "exura gran mas res",
+      "level": 19,
+      "mana": 150,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 70,
+      "name": "Envenom",
+      "words": "adevo res pox",
+      "level": 21,
+      "mana": 400,
+      "aggressive": false,
+      "area": false
+    },
+    {
+      "id": 30,
+      "name": "Poison Storm",
+      "words": "exevo gran mas pox",
+      "level": 28,
+      "mana": 600,
+      "aggressive": true,
+      "area": true
+    },
+    {
+      "id": 55,
+      "name": "Paralyze",
+      "words": "adana ani",
+      "level": 35,
+      "mana": 1400,
+      "aggressive": false,
+      "area": false
+    }
+  ],
+  "attackSpells": [
+    "exori mort",
+    "exori vis",
+    "exori flam",
+    "exevo gran mas pox"
+  ],
+  "supportSpells": [
+    "utevo res",
+    "exiva",
+    "utevo lux",
+    "exani tera",
+    "exura",
+    "exevo pan",
+    "adori",
+    "exana pox",
+    "exura gran",
+    "adevo grav pox",
+    "exani hur",
+    "utevo gran lux",
+    "adevo grav flam",
+    "adori gran",
+    "utamo vita",
+    "utani hur",
+    "adura gran",
+    "adori flam",
+    "adana pox",
+    "adevo grav vis",
+    "adito grav",
+    "exura sio",
+    "adana mort",
+    "exura vita",
+    "utani gran hur",
+    "adito tera",
+    "adevo mas pox",
+    "adori gran flam",
+    "adevo mas flam",
+    "utevo res ina",
+    "adeta sio",
+    "adura vita",
+    "adevo ina",
+    "adevo mas grav pox",
+    "utevo vis lux",
+    "exana ina",
+    "adevo mas hur",
+    "exevo grav vita",
+    "adevo res flam",
+    "adevo mas grav flam",
+    "utana vid",
+    "adevo mas grav vis",
+    "exura gran mas res",
+    "adevo res pox",
+    "adana ani"
+  ]
+}

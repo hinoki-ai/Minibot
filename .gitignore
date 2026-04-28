@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+bot/node_modules/
+bot/dist/
+dist/
+
+# Logs and local editor state
+*.log
+.DS_Store
+.codex/
+bot/artifacts/
+
+# Local/generated runtime state
+bot/storage/runtime/
+bot/storage/home/.cache/
+bot/storage/home/.pki/
+bot/storage/home/.config/Minibot/
+bot/storage/home/.config/minibot/accounts/
+bot/storage/home/.config/minibot/claims/
+bot/storage/home/.config/minibot/route-spacing/
+bot/storage/home/.config/minibot/session-state.json
+bot/storage/home/WorkWire/
+
+# Optional local browser profile seed copied into transfer bundles.
+# The source-controlled contract is client/client-meta.json.
+client/chrome-profile/
+
+# Route learning scratch files
+bot/cavebots/*.knowledge.json

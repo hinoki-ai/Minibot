@@ -1,0 +1,1177 @@
+{
+  "name": "Dara Rotworms 1",
+  "port": 9224,
+  "pageUrlPrefix": "https://minibia.com/play",
+  "monster": "Rotworm, Larva, alpha larva, Amazon, alpha rotworm, Wild Warrior, Minotaur Guard, Minotaur Mage, Minotaur Archer",
+  "targetProfiles": [
+    {
+      "enabled": true,
+      "name": "alpha larva",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "alpha rotworm",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Amazon",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Larva",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur Archer",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur Guard",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur Mage",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Rotworm",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Wild Warrior",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 1,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "behavior": "kite",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    }
+  ],
+  "intervalMs": 250,
+  "retargetMs": 1200,
+  "rangeX": 7,
+  "rangeY": 5,
+  "combatRangeX": 2,
+  "combatRangeY": 2,
+  "floorTolerance": 1,
+  "autowalkEnabled": false,
+  "autowalkLoop": false,
+  "routeStrictClear": false,
+  "routeRecording": false,
+  "routeRecordStep": 3,
+  "showWaypointOverlay": false,
+  "waypointRadius": 0,
+  "vocation": "",
+  "sustainEnabled": true,
+  "sustainCooldownMs": 900,
+  "preferHotbarConsumables": true,
+  "refillEnabled": false,
+  "refillSellRequests": [],
+  "lootingEnabled": false,
+  "lootWhitelist": [],
+  "lootBlacklist": [],
+  "lootPreferredContainers": [
+    "Backpack"
+  ],
+  "walkRepathMs": 1200,
+  "reconnectEnabled": false,
+  "reconnectRetryDelayMs": 4000,
+  "reconnectMaxAttempts": 0,
+  "avoidElementalFields": true,
+  "avoidFieldCategories": {
+    "fire": true,
+    "energy": true,
+    "poison": true,
+    "holes": true,
+    "stairsLadders": true,
+    "teleports": true,
+    "traps": true,
+    "invisibleWalls": true
+  },
+  "deathHealEnabled": true,
+  "deathHealVocation": "",
+  "deathHealWords": "",
+  "deathHealHealthPercent": 20,
+  "deathHealCooldownMs": 900,
+  "healerEnabled": true,
+  "healerWords": "exura",
+  "healerHealthPercent": 80,
+  "healerEmergencyHealthPercent": 30,
+  "healerMinMana": 80,
+  "healerMinManaPercent": 0,
+  "manaTrainerEnabled": true,
+  "manaTrainerWords": "utani hur",
+  "manaTrainerManaPercent": 85,
+  "manaTrainerMinHealthPercent": 30,
+  "autoLightEnabled": false,
+  "autoLightWords": "utevo lux",
+  "autoLightMinManaPercent": 25,
+  "autoConvertEnabled": true,
+  "convertCooldownMs": 4000,
+  "antiIdleEnabled": false,
+  "antiIdleIntervalMs": 60000,
+  "bankingEnabled": false,
+  "bankingRules": [],
+  "partyFollowEnabled": false,
+  "partyFollowMembers": [],
+  "partyFollowManualPlayers": [],
+  "partyFollowDistance": 2,
+  "runeMakerEnabled": false,
+  "runeMakerRules": [],
+  "spellCasterEnabled": false,
+  "spellCasterRules": [],
+  "distanceKeeperEnabled": false,
+  "distanceKeeperRules": [],
+  "rookillerEnabled": false,
+  "once": false,
+  "dryRun": false,
+  "healerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "exura",
+      "minHealthPercent": 70,
+      "maxHealthPercent": 80,
+      "minMana": 80,
+      "minManaPercent": 0,
+      "cooldownMs": 900
+    }
+  ],
+  "healerTiers": [
+    {
+      "words": "exura",
+      "healthPercent": 80,
+      "minMana": 80,
+      "minManaPercent": 0
+    }
+  ],
+  "manaTrainerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utani hur",
+      "minHealthPercent": 30,
+      "minManaPercent": 85,
+      "maxManaPercent": 100,
+      "cooldownMs": 1400,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "autoLightRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo lux",
+      "minManaPercent": 25,
+      "cooldownMs": 3000,
+      "requireNoLight": true,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "autoConvertRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "cooldownMs": 4000,
+      "requireNoTargets": true,
+      "requireStationary": true
+    }
+  ],
+  "monsterNames": [
+    "Rotworm",
+    "Larva",
+    "alpha larva",
+    "Amazon",
+    "alpha rotworm",
+    "Wild Warrior",
+    "Minotaur Guard",
+    "Minotaur Mage",
+    "Minotaur Archer"
+  ],
+  "waypoints": [
+    {
+      "x": 33309,
+      "y": 32329,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 001"
+    },
+    {
+      "x": 33310,
+      "y": 32332,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 002"
+    },
+    {
+      "x": 33310,
+      "y": 32335,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 003"
+    },
+    {
+      "x": 33312,
+      "y": 32338,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 004"
+    },
+    {
+      "x": 33315,
+      "y": 32338,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 005"
+    },
+    {
+      "x": 33316,
+      "y": 32341,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 006"
+    },
+    {
+      "x": 33317,
+      "y": 32344,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 007"
+    },
+    {
+      "x": 33318,
+      "y": 32345,
+      "z": 8,
+      "type": "stand",
+      "label": "Waypoint 008"
+    },
+    {
+      "x": 33318,
+      "y": 32345,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 009"
+    },
+    {
+      "x": 33318,
+      "y": 32348,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 010"
+    },
+    {
+      "x": 33315,
+      "y": 32348,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 011"
+    },
+    {
+      "x": 33314,
+      "y": 32351,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 012"
+    },
+    {
+      "x": 33311,
+      "y": 32352,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 013"
+    },
+    {
+      "x": 33311,
+      "y": 32355,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 014"
+    },
+    {
+      "x": 33308,
+      "y": 32355,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 015"
+    },
+    {
+      "x": 33308,
+      "y": 32358,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 016"
+    },
+    {
+      "x": 33308,
+      "y": 32361,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 017"
+    },
+    {
+      "x": 33308,
+      "y": 32358,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 018"
+    },
+    {
+      "x": 33308,
+      "y": 32355,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 019"
+    },
+    {
+      "x": 33310,
+      "y": 32352,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 020"
+    },
+    {
+      "x": 33313,
+      "y": 32350,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 021"
+    },
+    {
+      "x": 33313,
+      "y": 32347,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 022"
+    },
+    {
+      "x": 33313,
+      "y": 32344,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 023"
+    },
+    {
+      "x": 33311,
+      "y": 32341,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 024"
+    },
+    {
+      "x": 33312,
+      "y": 32344,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 025"
+    },
+    {
+      "x": 33315,
+      "y": 32346,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 026"
+    },
+    {
+      "x": 33318,
+      "y": 32346,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 027"
+    },
+    {
+      "x": 33321,
+      "y": 32344,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 028"
+    },
+    {
+      "x": 33323,
+      "y": 32341,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 029"
+    },
+    {
+      "x": 33326,
+      "y": 32338,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 030"
+    },
+    {
+      "x": 33323,
+      "y": 32340,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 031"
+    },
+    {
+      "x": 33323,
+      "y": 32343,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 032"
+    },
+    {
+      "x": 33326,
+      "y": 32345,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 033"
+    },
+    {
+      "x": 33329,
+      "y": 32347,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 034"
+    },
+    {
+      "x": 33332,
+      "y": 32345,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 035"
+    },
+    {
+      "x": 33331,
+      "y": 32348,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 036"
+    },
+    {
+      "x": 33331,
+      "y": 32351,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 037"
+    },
+    {
+      "x": 33332,
+      "y": 32354,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 038"
+    },
+    {
+      "x": 33329,
+      "y": 32351,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 039"
+    },
+    {
+      "x": 33327,
+      "y": 32348,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 040"
+    },
+    {
+      "x": 33324,
+      "y": 32346,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 041"
+    },
+    {
+      "x": 33321,
+      "y": 32345,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 042"
+    },
+    {
+      "x": 33318,
+      "y": 32345,
+      "z": 9,
+      "type": "exani-tera",
+      "label": "Waypoint 043"
+    },
+    {
+      "x": 33318,
+      "y": 32346,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 044"
+    },
+    {
+      "x": 33317,
+      "y": 32343,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 045"
+    },
+    {
+      "x": 33315,
+      "y": 32340,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 046"
+    },
+    {
+      "x": 33312,
+      "y": 32339,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 047"
+    },
+    {
+      "x": 33312,
+      "y": 32336,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 048"
+    },
+    {
+      "x": 33312,
+      "y": 32333,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 049"
+    },
+    {
+      "x": 33311,
+      "y": 32329,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 050"
+    },
+    {
+      "x": 33311,
+      "y": 32326,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 051"
+    },
+    {
+      "x": 33312,
+      "y": 32323,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 052"
+    },
+    {
+      "x": 33315,
+      "y": 32321,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 053"
+    },
+    {
+      "x": 33317,
+      "y": 32318,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 054"
+    },
+    {
+      "x": 33317,
+      "y": 32315,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 055"
+    },
+    {
+      "x": 33319,
+      "y": 32313,
+      "z": 8,
+      "type": "stand",
+      "label": "Waypoint 056"
+    },
+    {
+      "x": 33319,
+      "y": 32313,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 057"
+    },
+    {
+      "x": 33316,
+      "y": 32314,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 058"
+    },
+    {
+      "x": 33319,
+      "y": 32314,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 059"
+    },
+    {
+      "x": 33322,
+      "y": 32314,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 060"
+    },
+    {
+      "x": 33325,
+      "y": 32315,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 061"
+    },
+    {
+      "x": 33327,
+      "y": 32318,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 062"
+    },
+    {
+      "x": 33330,
+      "y": 32319,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 063"
+    },
+    {
+      "x": 33333,
+      "y": 32319,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 064"
+    },
+    {
+      "x": 33336,
+      "y": 32319,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 065"
+    },
+    {
+      "x": 33333,
+      "y": 32319,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 066"
+    },
+    {
+      "x": 33330,
+      "y": 32319,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 067"
+    },
+    {
+      "x": 33327,
+      "y": 32319,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 068"
+    },
+    {
+      "x": 33325,
+      "y": 32317,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 069"
+    },
+    {
+      "x": 33323,
+      "y": 32314,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 070"
+    },
+    {
+      "x": 33320,
+      "y": 32314,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 071"
+    },
+    {
+      "x": 33319,
+      "y": 32313,
+      "z": 9,
+      "type": "exani-tera",
+      "label": "Waypoint 072"
+    },
+    {
+      "x": 33319,
+      "y": 32314,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 073"
+    },
+    {
+      "x": 33316,
+      "y": 32314,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 074"
+    },
+    {
+      "x": 33316,
+      "y": 32317,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 075"
+    },
+    {
+      "x": 33316,
+      "y": 32320,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 076"
+    },
+    {
+      "x": 33313,
+      "y": 32322,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 077"
+    },
+    {
+      "x": 33311,
+      "y": 32325,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 078"
+    },
+    {
+      "x": 33310,
+      "y": 32328,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 079"
+    },
+    {
+      "x": 33307,
+      "y": 32327,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 080"
+    },
+    {
+      "x": 33304,
+      "y": 32327,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 081"
+    },
+    {
+      "x": 33302,
+      "y": 32324,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 082"
+    },
+    {
+      "x": 33300,
+      "y": 32321,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 083"
+    },
+    {
+      "x": 33298,
+      "y": 32318,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 084"
+    },
+    {
+      "x": 33297,
+      "y": 32315,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 085"
+    },
+    {
+      "x": 33294,
+      "y": 32313,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 086"
+    },
+    {
+      "x": 33291,
+      "y": 32312,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 087"
+    },
+    {
+      "x": 33290,
+      "y": 32309,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 088"
+    },
+    {
+      "x": 33288,
+      "y": 32307,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 089"
+    },
+    {
+      "x": 33288,
+      "y": 32307,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 090"
+    },
+    {
+      "x": 33285,
+      "y": 32307,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 091"
+    },
+    {
+      "x": 33284,
+      "y": 32304,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 092"
+    },
+    {
+      "x": 33283,
+      "y": 32301,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 093"
+    },
+    {
+      "x": 33283,
+      "y": 32304,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 094"
+    },
+    {
+      "x": 33285,
+      "y": 32307,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 095"
+    },
+    {
+      "x": 33285,
+      "y": 32310,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 096"
+    },
+    {
+      "x": 33283,
+      "y": 32313,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 097"
+    },
+    {
+      "x": 33280,
+      "y": 32313,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 098"
+    },
+    {
+      "x": 33277,
+      "y": 32309,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 099"
+    },
+    {
+      "x": 33274,
+      "y": 32309,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 100"
+    },
+    {
+      "x": 33277,
+      "y": 32309,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 101"
+    },
+    {
+      "x": 33278,
+      "y": 32312,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 102"
+    },
+    {
+      "x": 33278,
+      "y": 32315,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 103"
+    },
+    {
+      "x": 33280,
+      "y": 32318,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 104"
+    },
+    {
+      "x": 33280,
+      "y": 32321,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 105"
+    },
+    {
+      "x": 33280,
+      "y": 32324,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 106"
+    },
+    {
+      "x": 33281,
+      "y": 32321,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 107"
+    },
+    {
+      "x": 33284,
+      "y": 32320,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 108"
+    },
+    {
+      "x": 33287,
+      "y": 32321,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 109"
+    },
+    {
+      "x": 33284,
+      "y": 32320,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 110"
+    },
+    {
+      "x": 33283,
+      "y": 32317,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 111"
+    },
+    {
+      "x": 33283,
+      "y": 32314,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 112"
+    },
+    {
+      "x": 33286,
+      "y": 32313,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 113"
+    },
+    {
+      "x": 33287,
+      "y": 32310,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 114"
+    },
+    {
+      "x": 33288,
+      "y": 32307,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 115"
+    },
+    {
+      "x": 33288,
+      "y": 32307,
+      "z": 9,
+      "type": "exani-tera",
+      "label": "Waypoint 116"
+    },
+    {
+      "x": 33288,
+      "y": 32308,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 117"
+    },
+    {
+      "x": 33291,
+      "y": 32310,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 118"
+    },
+    {
+      "x": 33291,
+      "y": 32313,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 119"
+    },
+    {
+      "x": 33294,
+      "y": 32314,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 120"
+    },
+    {
+      "x": 33297,
+      "y": 32314,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 121"
+    },
+    {
+      "x": 33297,
+      "y": 32317,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 122"
+    },
+    {
+      "x": 33299,
+      "y": 32320,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 123"
+    },
+    {
+      "x": 33300,
+      "y": 32323,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 124"
+    },
+    {
+      "x": 33303,
+      "y": 32323,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 125"
+    },
+    {
+      "x": 33304,
+      "y": 32326,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 126"
+    },
+    {
+      "x": 33306,
+      "y": 32329,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 127"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-04-15T20:18:45.987Z",
+  "sourceRepoDir": "/home/hinoki/Minibot",
+  "outputDir": "/home/hinoki/minibia-mirror-bundle",
+  "botTargetDir": "/home/hinoki/minibia-mirror-bundle/bot",
+  "clientTargetDir": "/home/hinoki/minibia-mirror-bundle/client",
+  "portableHomeDir": "/home/hinoki/minibia-mirror-bundle/bot/storage/home",
+  "portableRuntimeDir": "/home/hinoki/minibia-mirror-bundle/bot/storage/runtime",
+  "clientProfile": {
+    "profileDirectory": "Default",
+    "sourceDesktopEntryPath": null,
+    "sanitized": true
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-source-snapshot",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "baseUrl": "https://minibia.com",
+  "sources": [
+    "/api/library",
+    "/api/server-info",
+    "/api/status"
+  ],
+  "counts": {
+    "spells": 65,
+    "monsters": 132,
+    "npcs": 364,
+    "items": 333,
+    "runes": 22,
+    "achievements": 36
+  }
+}

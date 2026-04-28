@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-runes",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "count": 22,
+  "items": [
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 0,
+      "name": "Antidote",
+      "sid": 2266,
+      "vocations": null
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 0,
+      "name": "Hearth Rune",
+      "sid": 2300,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 0,
+      "name": "Light Magic Missile",
+      "sid": 2287,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 0,
+      "name": "Poison Field",
+      "sid": 2285,
+      "vocations": null
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 0,
+      "name": "Teleport",
+      "sid": 2312,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 1,
+      "name": "Fire Field",
+      "sid": 2301,
+      "vocations": null
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 1,
+      "name": "Intense Healing",
+      "sid": 2265,
+      "vocations": null
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 3,
+      "name": "Destroy Field",
+      "sid": 2261,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 3,
+      "name": "Energy Field",
+      "sid": 2277,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 3,
+      "name": "Heavy Magic Missile",
+      "sid": 2311,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "magicLevel": 4,
+      "name": "Fireball",
+      "sid": 2302,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "magicLevel": 4,
+      "name": "Great Fireball",
+      "sid": 2304,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "magicLevel": 4,
+      "name": "Poison Bomb",
+      "sid": 2286,
+      "vocations": null
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 4,
+      "name": "Ultimate Healing",
+      "sid": 2273,
+      "vocations": null
+    },
+    {
+      "aggressive": false,
+      "area": false,
+      "magicLevel": 5,
+      "name": "Convince Creature",
+      "sid": 2290,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "magicLevel": 5,
+      "name": "Firebomb",
+      "sid": 2305,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "magicLevel": 6,
+      "name": "Explosion",
+      "sid": 2313,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 7,
+      "name": "Soulfire",
+      "sid": 2308,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 9,
+      "name": "Magic Wall",
+      "sid": 2293,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": true,
+      "magicLevel": 10,
+      "name": "Energy Bomb",
+      "sid": 2262,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 15,
+      "name": "Sudden Death",
+      "sid": 2268,
+      "vocations": null
+    },
+    {
+      "aggressive": true,
+      "area": false,
+      "magicLevel": 18,
+      "name": "Paralyze",
+      "sid": 2278,
+      "vocations": [
+        "druid",
+        "elder druid"
+      ]
+    }
+  ]
+}

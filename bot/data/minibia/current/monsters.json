@@ -1,0 +1,9509 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-monsters",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/library"
+  },
+  "count": 132,
+  "items": [
+    {
+      "armor": 10,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "physical": -5
+      },
+      "experience": 60,
+      "health": 110,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "skull",
+          "probability": 0.8
+        },
+        {
+          "max": 20,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.4
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sabre",
+          "probability": 0.23
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.01005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small ruby",
+          "probability": 0.0012
+        }
+      ],
+      "name": "Amazon",
+      "speed": 46
+    },
+    {
+      "armor": 36,
+      "attacks": [
+        {
+          "element": null,
+          "max": 145,
+          "min": 15,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 140,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 110,
+          "min": 50,
+          "name": "poisoncondition"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "energy": 20,
+        "fire": -20,
+        "ice": -5,
+        "physical": 10
+      },
+      "experience": 720,
+      "health": 1000,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 87,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "magic lightwand",
+          "probability": 0.103
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.06
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.06
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.05
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "scarab coin",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ancient amulet",
+          "probability": 0.0267
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scarab coin",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scarab amulet",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scarab shield",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "daramanian waraxe",
+          "probability": 0.003
+        }
+      ],
+      "name": "Ancient Scarab",
+      "speed": 109
+    },
+    {
+      "armor": 74,
+      "attacks": [
+        {
+          "element": null,
+          "max": 400,
+          "min": 100,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 350,
+          "min": 200,
+          "name": "lifedrain"
+        },
+        {
+          "element": "lifedrain",
+          "max": 550,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 500,
+          "min": 250,
+          "name": "physical"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "earth": 25,
+        "energy": 20,
+        "fire": -5,
+        "holy": -10,
+        "ice": 20,
+        "physical": 10
+      },
+      "experience": 9300,
+      "health": 5000,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 90,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.8
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "might ring",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "silver brooch",
+          "probability": 0.08
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crown armor",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "hammer of wrath",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "holy scarab",
+          "probability": 0.001
+        }
+      ],
+      "name": "Ashmunrah",
+      "speed": 215
+    },
+    {
+      "armor": 17,
+      "attacks": [
+        {
+          "element": null,
+          "max": 124,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 38,
+          "min": 28,
+          "name": "physical"
+        },
+        {
+          "element": null,
+          "max": 160,
+          "min": 120,
+          "name": "poisoncondition"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "physical": -10
+      },
+      "experience": 105,
+      "health": 175,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 50,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.83
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.3
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knife",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "combat knife",
+          "probability": 0.04
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.0323
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate shield",
+          "probability": 0.019
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.016
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel shield",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leopard armor",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small diamond",
+          "probability": 0.0022
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "horseman helmet",
+          "probability": 0.002
+        }
+      ],
+      "name": "Assassin",
+      "speed": 112
+    },
+    {
+      "armor": 11,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "physical": -10
+      },
+      "experience": 65,
+      "health": 245,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.48956
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe",
+          "probability": 0.29905
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass shield",
+          "probability": 0.16794
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather legs",
+          "probability": 0.14967
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mace",
+          "probability": 0.10342
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "tomato",
+          "probability": 0.07692
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain helmet",
+          "probability": 0.04956
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass armor",
+          "probability": 0.02376
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "iron helmet",
+          "probability": 0.00544
+        }
+      ],
+      "name": "Bandit",
+      "speed": 90
+    },
+    {
+      "armor": 25,
+      "attacks": [
+        {
+          "element": null,
+          "max": 350,
+          "min": 55,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 200,
+          "min": 100,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "holy": -25
+      },
+      "experience": 900,
+      "health": 1000,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "fire": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "simple dress",
+          "probability": 0.6
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.3
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dirty cape",
+          "probability": 0.199
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "silver amulet",
+          "probability": 0.09
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "candlestick",
+          "probability": 0.07
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mirror",
+          "probability": 0.07
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "black pearl",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.015
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "silver brooch",
+          "probability": 0.015
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "lyre",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "white pearl",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ring of healing",
+          "probability": 0.008
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stone skin amulet",
+          "probability": 0.008
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue robe",
+          "probability": 0.006
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spellbook",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wedding ring",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal ring",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life crystal",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "red robe",
+          "probability": 0.001
+        }
+      ],
+      "name": "Banshee",
+      "speed": 110
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 8,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": -10
+      },
+      "experience": 10,
+      "health": 30,
+      "immunities": {},
+      "loot": [],
+      "name": "Bat",
+      "speed": 100
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 25,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "holy": 10,
+        "ice": -10
+      },
+      "experience": 23,
+      "health": 80,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.39964
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.19987
+        }
+      ],
+      "name": "Bear",
+      "speed": 38
+    },
+    {
+      "armor": 50,
+      "attacks": [
+        {
+          "element": null,
+          "max": 455,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 200,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 80,
+        "energy": 10,
+        "fire": 30,
+        "holy": 30,
+        "ice": -10,
+        "physical": 10
+      },
+      "experience": 2500,
+      "health": 4000,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 200,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 1
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "platinum coin",
+          "probability": 0.60256
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.29641
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.10039
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.06054
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.06019
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dark armor",
+          "probability": 0.04174
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.0411
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal necklace",
+          "probability": 0.02549
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "giant sword",
+          "probability": 0.00966
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "strange symbol",
+          "probability": 0.0083
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "big bone",
+          "probability": 0.00691
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "pick",
+          "probability": 0.00619
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel boots",
+          "probability": 0.00434
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crowbar",
+          "probability": 0.00128
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "amphora",
+          "probability": 0.00097
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "war axe",
+          "probability": 0.0007
+        }
+      ],
+      "name": "Behemoth",
+      "speed": 130
+    },
+    {
+      "armor": 5,
+      "attacks": [
+        {
+          "element": null,
+          "max": 50,
+          "min": 5,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 50,
+          "min": 30,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 45,
+          "min": 5,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 45,
+          "min": 15,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 45,
+          "min": 25,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 45,
+          "min": 0,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 35,
+          "min": 5,
+          "name": "manadrain"
+        },
+        {
+          "element": null,
+          "max": 5,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 170,
+      "health": 260,
+      "immunities": {
+        "invisible": true,
+        "lifedrain": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 48,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.99
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "longsword",
+          "probability": 0.09
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "morning star",
+          "probability": 0.07
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spellbook",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.0395
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "beholder shield",
+          "probability": 0.005
+        }
+      ],
+      "name": "Beholder",
+      "speed": 75
+    },
+    {
+      "armor": 42,
+      "attacks": [
+        {
+          "element": null,
+          "max": 300,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 200,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": 20,
+        "energy": 80,
+        "fire": 95,
+        "holy": -8,
+        "physical": 10
+      },
+      "experience": 1600,
+      "health": 1800,
+      "immunities": {
+        "ice": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 143,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.48586
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.29429
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "brown bread",
+          "probability": 0.206
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "rope",
+          "probability": 0.14426
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass legs",
+          "probability": 0.1307
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "halberd",
+          "probability": 0.12522
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.10935
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.10531
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.09608
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle hammer",
+          "probability": 0.06896
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "warrior helmet",
+          "probability": 0.04703
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight axe",
+          "probability": 0.02654
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dark helmet",
+          "probability": 0.02424
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dark armor",
+          "probability": 0.0202
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight legs",
+          "probability": 0.01039
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight armor",
+          "probability": 0.0075
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ruby necklace",
+          "probability": 0.0075
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "boots of haste",
+          "probability": 0.00404
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon lance",
+          "probability": 0.00289
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "piggy bank",
+          "probability": 0.00115
+        }
+      ],
+      "name": "Black Knight",
+      "speed": 155
+    },
+    {
+      "armor": 1,
+      "attacks": [],
+      "elements": {
+        "fire": -5
+      },
+      "experience": 0,
+      "health": 20,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 5,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.5538
+        }
+      ],
+      "name": "Black Sheep",
+      "speed": 116
+    },
+    {
+      "armor": 20,
+      "attacks": [
+        {
+          "element": null,
+          "max": 105,
+          "min": 60,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "djinn cancel invisibility"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "djinn electrify"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 45,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 110,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        }
+      ],
+      "elements": {
+        "death": -13,
+        "energy": 50,
+        "fire": 80,
+        "holy": 20,
+        "ice": -10
+      },
+      "experience": 190,
+      "health": 330,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.43
+        },
+        {
+          "max": 15,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.43
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "carrot",
+          "probability": 0.2348
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.0256
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "book",
+          "probability": 0.0245
+        }
+      ],
+      "name": "Blue Djinn",
+      "speed": 110
+    },
+    {
+      "armor": 40,
+      "attacks": [
+        {
+          "element": null,
+          "max": 90,
+          "min": 50,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 47,
+          "min": 25,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 200,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 60,
+          "min": 50,
+          "name": "poisoncondition"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 70,
+          "name": "poisoncondition"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "fire": -10,
+        "holy": -25
+      },
+      "experience": 580,
+      "health": 515,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone",
+          "probability": 0.4975
+        },
+        {
+          "max": 90,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.3
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.08
+        }
+      ],
+      "name": "Bonebeast",
+      "speed": 109
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 23,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -10
+      },
+      "experience": 18,
+      "health": 29,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 6,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "cherry",
+          "probability": 0.03
+        }
+      ],
+      "name": "Bug",
+      "speed": 40
+    },
+    {
+      "armor": 0,
+      "attacks": [],
+      "elements": {},
+      "experience": 0,
+      "health": 2,
+      "immunities": {},
+      "loot": [],
+      "name": "Butterfly",
+      "speed": 320
+    },
+    {
+      "armor": 22,
+      "attacks": [
+        {
+          "element": null,
+          "max": 130,
+          "min": 40,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 95,
+          "min": 60,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "energy": 10,
+        "fire": -20,
+        "ice": 20
+      },
+      "experience": 150,
+      "health": 255,
+      "immunities": {
+        "invisible": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 40,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.87
+        }
+      ],
+      "name": "Carniphila",
+      "speed": 110
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 10,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -10
+      },
+      "experience": 10,
+      "health": 30,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.85
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cheese",
+          "probability": 0.3
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cookie",
+          "probability": 0.0094
+        }
+      ],
+      "name": "Cave Rat",
+      "speed": 35
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": 10,
+        "fire": -15,
+        "ice": 20
+      },
+      "experience": 34,
+      "health": 70,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 15,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.8
+        }
+      ],
+      "name": "Centipede",
+      "speed": 83
+    },
+    {
+      "armor": 1,
+      "attacks": [],
+      "elements": {},
+      "experience": 0,
+      "health": 15,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.0212
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "egg",
+          "probability": 0.01
+        }
+      ],
+      "name": "Chicken",
+      "speed": 64
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 40,
+          "min": 20,
+          "name": "poisoncondition"
+        }
+      ],
+      "elements": {
+        "fire": -10
+      },
+      "experience": 30,
+      "health": 65,
+      "immunities": {
+        "drunk": true,
+        "poison": true
+      },
+      "loot": [],
+      "name": "Cobra",
+      "speed": 60
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": -10,
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 30,
+      "health": 55,
+      "immunities": {
+        "drown": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 10,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.8
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fish",
+          "probability": 0.2
+        }
+      ],
+      "name": "Crab",
+      "speed": 100
+    },
+    {
+      "armor": 13,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": 20,
+        "energy": -5,
+        "fire": -10,
+        "ice": 10,
+        "physical": -10
+      },
+      "experience": 40,
+      "health": 105,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 10,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.49805
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.39795
+        }
+      ],
+      "name": "Crocodile",
+      "speed": 78
+    },
+    {
+      "armor": 25,
+      "attacks": [
+        {
+          "element": null,
+          "max": 55,
+          "min": 28,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 140,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "holy": -25
+      },
+      "experience": 195,
+      "health": 330,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 55,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.58
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "iron helmet",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.0195
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "throwing star",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small diamond",
+          "probability": 0.005
+        }
+      ],
+      "name": "Crypt Shambler",
+      "speed": 30
+    },
+    {
+      "armor": 17,
+      "attacks": [
+        {
+          "element": null,
+          "max": 105,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 25,
+        "holy": 20
+      },
+      "experience": 150,
+      "health": 260,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 47,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.82276
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.29087
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "short sword",
+          "probability": 0.07795
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate shield",
+          "probability": 0.02442
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.01462
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "halberd",
+          "probability": 0.00892
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wolf tooth chain",
+          "probability": 0.00322
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dark helmet",
+          "probability": 0.00234
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "club ring",
+          "probability": 0.00044
+        }
+      ],
+      "name": "Cyclops",
+      "speed": 55
+    },
+    {
+      "armor": 22,
+      "attacks": [
+        {
+          "element": null,
+          "max": 50,
+          "min": 20,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 40,
+        "holy": -10,
+        "physical": -10
+      },
+      "experience": 145,
+      "health": 190,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bread",
+          "probability": 0.2055
+        },
+        {
+          "max": 18,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.146
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "lamp",
+          "probability": 0.0055
+        }
+      ],
+      "name": "Dark Monk",
+      "speed": 75
+    },
+    {
+      "armor": 199,
+      "attacks": [
+        {
+          "element": null,
+          "max": 200,
+          "min": 100,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 400,
+          "min": 200,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 500,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 1,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "energy": true,
+        "fire": true,
+        "holy": true,
+        "ice": true,
+        "invisible": true,
+        "lifedrain": true,
+        "manadrain": true,
+        "outfit": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [],
+      "name": "Deathslicer",
+      "speed": 200
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 1,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 25,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.80405
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.5111
+        }
+      ],
+      "name": "Deer",
+      "speed": 58
+    },
+    {
+      "armor": 40,
+      "attacks": [
+        {
+          "element": null,
+          "max": 300,
+          "min": 210,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 250,
+          "min": 150,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "firefield"
+        },
+        {
+          "element": null,
+          "max": 480,
+          "min": 300,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 120,
+          "min": 30,
+          "name": "manadrain"
+        },
+        {
+          "element": null,
+          "max": 500,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "death": 20,
+        "holy": -12,
+        "ice": -12,
+        "physical": 25
+      },
+      "experience": 6000,
+      "health": 8200,
+      "immunities": {
+        "drown": true,
+        "earth": true,
+        "energy": true,
+        "fire": true,
+        "invisible": true,
+        "lifedrain": true,
+        "outfit": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.8
+        },
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.6
+        },
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.2
+        },
+        {
+          "max": 6,
+          "min": 1,
+          "name": "fire mushroom",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.11
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fire axe",
+          "probability": 0.04
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "talon",
+          "probability": 0.035
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "orb",
+          "probability": 0.03
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "giant sword",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "golden sickle",
+          "probability": 0.015
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stealth ring",
+          "probability": 0.014
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "purple tome",
+          "probability": 0.013
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "devil helmet",
+          "probability": 0.012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "gold ring",
+          "probability": 0.011
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "demon shield",
+          "probability": 0.007
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "platinum amulet",
+          "probability": 0.007
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ice rapier",
+          "probability": 0.006
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mastermind shield",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ring of healing",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "golden legs",
+          "probability": 0.004
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "might ring",
+          "probability": 0.002
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "magic plate armor",
+          "probability": 0.001
+        }
+      ],
+      "name": "Demon",
+      "speed": 128
+    },
+    {
+      "armor": 25,
+      "attacks": [
+        {
+          "element": null,
+          "max": 50,
+          "min": 30,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 185,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "holy": -25
+      },
+      "experience": 240,
+      "health": 400,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "fire": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 75,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.97515
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "throwing star",
+          "probability": 0.09982
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.0496
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.04861
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle hammer",
+          "probability": 0.04061
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "iron helmet",
+          "probability": 0.03377
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "black pearl",
+          "probability": 0.02976
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small ruby",
+          "probability": 0.01531
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mysterious fetish",
+          "probability": 0.00535
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mind stone",
+          "probability": 0.00469
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "guardian shield",
+          "probability": 0.00113
+        }
+      ],
+      "name": "Demon Skeleton",
+      "speed": 90
+    },
+    {
+      "armor": 65,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "dipthrah skill reducer"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 350,
+          "min": 150,
+          "name": "manadrain"
+        },
+        {
+          "element": "lifedrain",
+          "max": 600,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "earth": 20,
+        "energy": 20,
+        "holy": -10
+      },
+      "experience": 8700,
+      "health": 4200,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ornamented ankh",
+          "probability": 1
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "energy ring",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue gem",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mind stone",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ankh",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull staff",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "pharaoh sword",
+          "probability": 0.001
+        }
+      ],
+      "name": "Dipthrah",
+      "speed": 240
+    },
+    {
+      "armor": 1,
+      "attacks": [],
+      "elements": {},
+      "experience": 0,
+      "health": 20,
+      "immunities": {},
+      "loot": [],
+      "name": "Dog",
+      "speed": 62
+    },
+    {
+      "armor": 25,
+      "attacks": [
+        {
+          "element": null,
+          "max": 140,
+          "min": 60,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 170,
+          "min": 100,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 120,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": 80,
+        "energy": 20,
+        "ice": -10
+      },
+      "experience": 700,
+      "health": 1000,
+      "immunities": {
+        "fire": true,
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 105,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.90082
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon ham",
+          "probability": 0.65143
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel shield",
+          "probability": 0.14893
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crossbow",
+          "probability": 0.10085
+        },
+        {
+          "max": 10,
+          "min": 1,
+          "name": "burst arrow",
+          "probability": 0.07976
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "longsword",
+          "probability": 0.04027
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.03005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "broadsword",
+          "probability": 0.01995
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate legs",
+          "probability": 0.01909
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.01008
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon hammer",
+          "probability": 0.00517
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "serpent sword",
+          "probability": 0.00504
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small diamond",
+          "probability": 0.00384
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon shield",
+          "probability": 0.00301
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life crystal",
+          "probability": 0.00113
+        }
+      ],
+      "name": "Dragon",
+      "speed": 45
+    },
+    {
+      "armor": 35,
+      "attacks": [
+        {
+          "element": null,
+          "max": 200,
+          "min": 100,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 230,
+          "min": 150,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "firefield"
+        },
+        {
+          "element": null,
+          "max": 230,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": 80,
+        "energy": 20,
+        "ice": -10
+      },
+      "experience": 2100,
+      "health": 1900,
+      "immunities": {
+        "fire": true,
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 246,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.95258
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon ham",
+          "probability": 0.79757
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green mushroom",
+          "probability": 0.1212
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "book (gemmed)",
+          "probability": 0.0909
+        },
+        {
+          "max": 7,
+          "min": 1,
+          "name": "power bolt",
+          "probability": 0.06565
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "energy ring",
+          "probability": 0.05072
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.04968
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "golden mug",
+          "probability": 0.03072
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life crystal",
+          "probability": 0.00629
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "strange helmet",
+          "probability": 0.00382
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fire sword",
+          "probability": 0.00286
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "tower shield",
+          "probability": 0.00268
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "royal helmet",
+          "probability": 0.00233
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon scale mail",
+          "probability": 0.00142
+        }
+      ],
+      "name": "Dragon Lord",
+      "speed": 60
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 30,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 10,
+        "fire": -5
+      },
+      "experience": 45,
+      "health": 90,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "white mushroom",
+          "probability": 0.5014
+        },
+        {
+          "max": 8,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.35361
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "hatchet",
+          "probability": 0.24739
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe",
+          "probability": 0.14596
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "pick",
+          "probability": 0.10143
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "copper shield",
+          "probability": 0.10098
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather legs",
+          "probability": 0.09682
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded armor",
+          "probability": 0.08017
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "letter",
+          "probability": 0.07929
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dwarven ring",
+          "probability": 0.00095
+        }
+      ],
+      "name": "Dwarf",
+      "speed": 45
+    },
+    {
+      "armor": 15,
+      "attacks": [
+        {
+          "element": null,
+          "max": 110,
+          "min": 50,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 25,
+          "name": "manadrain"
+        },
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": 20,
+        "energy": 10,
+        "fire": 60,
+        "holy": 10,
+        "ice": -5
+      },
+      "experience": 245,
+      "health": 380,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 45,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.75
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "white mushroom",
+          "probability": 0.6
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blank rune",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "magic lightwand",
+          "probability": 0.14
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "clerical mace",
+          "probability": 0.0112
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.0058
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spellbook",
+          "probability": 0.005
+        }
+      ],
+      "name": "Dwarf Geomancer",
+      "speed": 200
+    },
+    {
+      "armor": 15,
+      "attacks": [
+        {
+          "element": null,
+          "max": 140,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 20,
+        "fire": -5,
+        "physical": 20
+      },
+      "experience": 165,
+      "health": 245,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "white mushroom",
+          "probability": 0.55243
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather boots",
+          "probability": 0.40075
+        },
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.39985
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scale armor",
+          "probability": 0.09009
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.06014
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle hammer",
+          "probability": 0.03849
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.01549
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.00592
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe ring",
+          "probability": 0.00198
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.0012
+        }
+      ],
+      "name": "Dwarf Guard",
+      "speed": 63
+    },
+    {
+      "armor": 9,
+      "attacks": [
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 60,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 10,
+        "fire": -5
+      },
+      "experience": 70,
+      "health": 135,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "white mushroom",
+          "probability": 0.39924
+        },
+        {
+          "max": 7,
+          "min": 1,
+          "name": "bolt",
+          "probability": 0.37815
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.28337
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "soldier helmet",
+          "probability": 0.1182
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "shovel",
+          "probability": 0.10026
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.07525
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dwarven shield",
+          "probability": 0.03056
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crossbow",
+          "probability": 0.03023
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle axe",
+          "probability": 0.02481
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe ring",
+          "probability": 0.00121
+        }
+      ],
+      "name": "Dwarf Soldier",
+      "speed": 48
+    },
+    {
+      "armor": 3,
+      "attacks": [
+        {
+          "element": null,
+          "max": 25,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 15,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -13,
+        "fire": -8,
+        "ice": -10
+      },
+      "experience": 40,
+      "health": 85,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 13,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.74874
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather armor",
+          "probability": 0.10817
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cleaver",
+          "probability": 0.08991
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.05553
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "skull (item)",
+          "probability": 0.03027
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.02061
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone shield",
+          "probability": 0.01035
+        }
+      ],
+      "name": "Dworc Fleshhunter",
+      "speed": 148
+    },
+    {
+      "armor": 3,
+      "attacks": [
+        {
+          "element": null,
+          "max": 15,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 40,
+          "min": 20,
+          "name": "poisoncondition"
+        }
+      ],
+      "elements": {
+        "death": -8,
+        "fire": -13,
+        "holy": 15,
+        "ice": -13
+      },
+      "experience": 35,
+      "health": 80,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 13,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.74992
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather armor",
+          "probability": 0.10048
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "throwing knife",
+          "probability": 0.07906
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.05486
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "poison arrow",
+          "probability": 0.04957
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.015
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "skull (item)",
+          "probability": 0.00983
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bronze amulet",
+          "probability": 0.00097
+        }
+      ],
+      "name": "Dworc Venomsniper",
+      "speed": 152
+    },
+    {
+      "armor": 3,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 18,
+          "min": 6,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "poisonfield"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "fire": -15,
+        "holy": 35,
+        "ice": -10
+      },
+      "experience": 55,
+      "health": 80,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 17,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.74835
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather armor",
+          "probability": 0.10093
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone",
+          "probability": 0.05812
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.05547
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "big bone",
+          "probability": 0.03066
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "skull (item)",
+          "probability": 0.01973
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.01009
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "strange symbol",
+          "probability": 0.00503
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "voodoo doll",
+          "probability": 0.0012
+        }
+      ],
+      "name": "Dworc Voodoomaster",
+      "speed": 150
+    },
+    {
+      "armor": 24,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "djinn electrify"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 30,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 120,
+          "min": 65,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 110,
+          "min": 40,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 110,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "death": 20,
+        "earth": 10,
+        "energy": 60,
+        "fire": 90,
+        "holy": -8,
+        "ice": -5
+      },
+      "experience": 300,
+      "health": 550,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.47
+        },
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.47
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.072
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green tapestry",
+          "probability": 0.022
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green gem",
+          "probability": 0.0015
+        }
+      ],
+      "name": "Efreet",
+      "speed": 117
+    },
+    {
+      "armor": 13,
+      "attacks": [
+        {
+          "element": null,
+          "max": 90,
+          "min": 45,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 40,
+          "min": 20,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 60,
+          "min": 45,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 40,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 85,
+          "min": 45,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "manadrain"
+        },
+        {
+          "element": null,
+          "max": 55,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "death": 30,
+        "energy": 20,
+        "fire": -10,
+        "ice": 30
+      },
+      "experience": 280,
+      "health": 500,
+      "immunities": {
+        "invisible": true,
+        "lifedrain": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 90,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.99
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.03
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel shield",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spellbook",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bonelord shield",
+          "probability": 0.001
+        }
+      ],
+      "name": "Elder Beholder",
+      "speed": 170
+    },
+    {
+      "armor": 20,
+      "attacks": [
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": -10,
+        "ice": 20,
+        "physical": 25
+      },
+      "experience": 160,
+      "health": 320,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.40494
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.29278
+        }
+      ],
+      "name": "Elephant",
+      "speed": 95
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 15,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 25,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "holy": 20
+      },
+      "experience": 42,
+      "health": 100,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.44661
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded helmet",
+          "probability": 0.15055
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather boots",
+          "probability": 0.11113
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "longsword",
+          "probability": 0.10918
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded armor",
+          "probability": 0.0901
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate shield",
+          "probability": 0.08957
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "arrow",
+          "probability": 0.07026
+        }
+      ],
+      "name": "Elf",
+      "speed": 95
+    },
+    {
+      "armor": 15,
+      "attacks": [
+        {
+          "element": null,
+          "max": 85,
+          "min": 70,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 50,
+          "min": 30,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 35,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": 20,
+        "energy": 20,
+        "fire": 50,
+        "holy": -10
+      },
+      "experience": 175,
+      "health": 220,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 49,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.37127
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "melon",
+          "probability": 0.21814
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blank rune",
+          "probability": 0.17953
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bread",
+          "probability": 0.13899
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green tunic",
+          "probability": 0.07294
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "arrow",
+          "probability": 0.06127
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sling herb",
+          "probability": 0.04846
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "candlestick",
+          "probability": 0.02192
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "elven amulet",
+          "probability": 0.02047
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life crystal",
+          "probability": 0.01059
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sandals",
+          "probability": 0.00974
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "inkwell",
+          "probability": 0.00951
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "grave flower",
+          "probability": 0.00803
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "yellow gem",
+          "probability": 0.00048
+        }
+      ],
+      "name": "Elf Arcanist",
+      "speed": 100
+    },
+    {
+      "armor": 7,
+      "attacks": [
+        {
+          "element": null,
+          "max": 30,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "holy": 20
+      },
+      "experience": 75,
+      "health": 160,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 25,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.75
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "arrow",
+          "probability": 0.3071
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "poison arrow",
+          "probability": 0.154
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bow",
+          "probability": 0.04
+        }
+      ],
+      "name": "Elf Scout",
+      "speed": 120
+    },
+    {
+      "armor": 13,
+      "attacks": [
+        {
+          "element": null,
+          "max": 50,
+          "min": 20,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 60,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 35,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 5,
+        "earth": 20,
+        "energy": 30,
+        "holy": -10,
+        "ice": -20,
+        "physical": -5
+      },
+      "experience": 110,
+      "health": 200,
+      "immunities": {
+        "fire": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blank rune",
+          "probability": 0.11
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scimitar",
+          "probability": 0.03
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.0137
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.0028
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "guardian shield",
+          "probability": 0.0021
+        }
+      ],
+      "name": "Fire Devil",
+      "speed": 90
+    },
+    {
+      "armor": 18,
+      "attacks": [
+        {
+          "element": null,
+          "max": 160,
+          "min": 45,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "firefield"
+        },
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "ice": -25
+      },
+      "experience": 220,
+      "health": 280,
+      "immunities": {
+        "death": true,
+        "fire": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true
+      },
+      "loot": [],
+      "name": "Fire Elemental",
+      "speed": 55
+    },
+    {
+      "armor": 0,
+      "attacks": [
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "fire"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 1,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "energy": true,
+        "fire": true,
+        "holy": true,
+        "ice": true,
+        "invisible": true,
+        "lifedrain": true,
+        "manadrain": true,
+        "outfit": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [],
+      "name": "Flamethrower",
+      "speed": 0
+    },
+    {
+      "armor": 1,
+      "attacks": [],
+      "elements": {},
+      "experience": 0,
+      "health": 25,
+      "immunities": {},
+      "loot": [],
+      "name": "Flamingo",
+      "speed": 84
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": -15,
+        "fire": 40,
+        "holy": 10
+      },
+      "experience": 23,
+      "health": 55,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 12,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.50404
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.20343
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fish",
+          "probability": 0.18162
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "rapier",
+          "probability": 0.15591
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wooden shield",
+          "probability": 0.15508
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "twigs",
+          "probability": 0.08229
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "coat",
+          "probability": 0.01126
+        }
+      ],
+      "name": "Frost Troll",
+      "speed": 70
+    },
+    {
+      "armor": 26,
+      "attacks": [
+        {
+          "element": null,
+          "max": 65,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 40,
+        "fire": -10,
+        "physical": 20
+      },
+      "experience": 150,
+      "health": 250,
+      "immunities": {
+        "lifedrain": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.88
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "morning star",
+          "probability": 0.015
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.013
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.0085
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "club ring",
+          "probability": 0.0026
+        }
+      ],
+      "name": "Gargoyle",
+      "speed": 100
+    },
+    {
+      "armor": 0,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 20,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 120,
+      "health": 150,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "morning star",
+          "probability": 0.1061
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "book",
+          "probability": 0.0131
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stealth ring",
+          "probability": 0.0018
+        }
+      ],
+      "name": "Ghost",
+      "speed": 80
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 27,
+          "min": 15,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": 20,
+        "energy": 30,
+        "holy": -25,
+        "ice": 10
+      },
+      "experience": 85,
+      "health": 100,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.69832
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.05171
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scale armor",
+          "probability": 0.01012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "viking helmet",
+          "probability": 0.01012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knife",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull (item)",
+          "probability": 0.0032
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life ring",
+          "probability": 0.00181
+        }
+      ],
+      "name": "Ghoul",
+      "speed": 32
+    },
+    {
+      "armor": 30,
+      "attacks": [
+        {
+          "element": null,
+          "max": 70,
+          "min": 40,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 300,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "poisonfield"
+        }
+      ],
+      "elements": {
+        "energy": 20,
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 900,
+      "health": 1300,
+      "immunities": {
+        "drunk": true,
+        "invisible": true,
+        "outfit": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "poison arrow",
+          "probability": 0.125
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate legs",
+          "probability": 0.08
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight legs",
+          "probability": 0.0087
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "time ring",
+          "probability": 0.0071
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight armor",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "platinum amulet",
+          "probability": 0.0028
+        }
+      ],
+      "name": "Giant Spider",
+      "speed": 90
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 10,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 25,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 20,
+        "holy": 20
+      },
+      "experience": 25,
+      "health": 50,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 9,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5025
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small stone",
+          "probability": 0.15265
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fish",
+          "probability": 0.13004
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small axe",
+          "probability": 0.09863
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "short sword",
+          "probability": 0.08832
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone club",
+          "probability": 0.04934
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather armor",
+          "probability": 0.02514
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather helmet",
+          "probability": 0.01947
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dagger",
+          "probability": 0.01795
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone",
+          "probability": 0.01065
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mouldy cheese",
+          "probability": 0.00999
+        }
+      ],
+      "name": "Goblin",
+      "speed": 60
+    },
+    {
+      "armor": 20,
+      "attacks": [
+        {
+          "element": null,
+          "max": 105,
+          "min": 50,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "djinn cancel invisibility"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "djinn electrify"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 45,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 110,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        }
+      ],
+      "elements": {
+        "death": 20,
+        "energy": 50,
+        "fire": 80,
+        "holy": -13,
+        "ice": -10,
+        "physical": 20
+      },
+      "experience": 190,
+      "health": 330,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 115,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.88234
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cheese",
+          "probability": 0.24327
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.02933
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "book (green)",
+          "probability": 0.02295
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "grave flower",
+          "probability": 0.00953
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small oil lamp",
+          "probability": 0.0087
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mystic turban",
+          "probability": 0.00116
+        }
+      ],
+      "name": "Green Djinn",
+      "speed": 110
+    },
+    {
+      "armor": 35,
+      "attacks": [
+        {
+          "element": null,
+          "max": 240,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 120,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -20,
+        "earth": 50,
+        "energy": 40,
+        "fire": 30,
+        "holy": 50,
+        "ice": 10,
+        "physical": 10
+      },
+      "experience": 1200,
+      "health": 1400,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.60324
+        },
+        {
+          "max": 13,
+          "min": 1,
+          "name": "arrow",
+          "probability": 0.27005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "red rose",
+          "probability": 0.20384
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "grapes",
+          "probability": 0.20164
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bow",
+          "probability": 0.13005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.08585
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green tunic",
+          "probability": 0.07964
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wedding ring",
+          "probability": 0.05153
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "rope",
+          "probability": 0.02079
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.01612
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "lyre",
+          "probability": 0.01577
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scarf",
+          "probability": 0.0112
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "war hammer",
+          "probability": 0.00959
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crown armor",
+          "probability": 0.00614
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crown legs",
+          "probability": 0.00586
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "might ring",
+          "probability": 0.00527
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fire sword",
+          "probability": 0.00478
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crown helmet",
+          "probability": 0.0045
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crown shield",
+          "probability": 0.00202
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "piggy bank",
+          "probability": 0.00073
+        }
+      ],
+      "name": "Hero",
+      "speed": 100
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 67,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "holy": 20,
+        "physical": -5
+      },
+      "experience": 150,
+      "health": 150,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 22,
+          "min": 1,
+          "name": "arrow",
+          "probability": 0.82
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "orange",
+          "probability": 0.203
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bow",
+          "probability": 0.0577
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "burst arrow",
+          "probability": 0.0536
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass armor",
+          "probability": 0.0507
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass helmet",
+          "probability": 0.0505
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "poison arrow",
+          "probability": 0.045
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.033
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small ruby",
+          "probability": 0.0017
+        }
+      ],
+      "name": "Hunter",
+      "speed": 105
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 20,
+      "health": 60,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.3086
+        }
+      ],
+      "name": "Hyaena",
+      "speed": 98
+    },
+    {
+      "armor": 27,
+      "attacks": [
+        {
+          "element": null,
+          "max": 320,
+          "min": 66,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 155,
+          "min": 80,
+          "name": "ice"
+        },
+        {
+          "element": null,
+          "max": 250,
+          "min": 100,
+          "name": "ice"
+        },
+        {
+          "element": null,
+          "max": 270,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "energy": -10,
+        "holy": 30,
+        "ice": 50,
+        "physical": -5
+      },
+      "experience": 2100,
+      "health": 2350,
+      "immunities": {
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 246,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.87759
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.60233
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "platinum coin",
+          "probability": 0.49522
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.04949
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ring of healing",
+          "probability": 0.01215
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight armor",
+          "probability": 0.01098
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stone skin amulet",
+          "probability": 0.00902
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "warrior helmet",
+          "probability": 0.00823
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life crystal",
+          "probability": 0.00512
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "medusa shield",
+          "probability": 0.00223
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "royal helmet",
+          "probability": 0.00223
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "boots of haste",
+          "probability": 0.00095
+        }
+      ],
+      "name": "Hydra",
+      "speed": 60
+    },
+    {
+      "armor": 18,
+      "attacks": [
+        {
+          "element": null,
+          "max": 60,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 10,
+        "energy": 5,
+        "fire": 20,
+        "ice": -15
+      },
+      "experience": 110,
+      "health": 340,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 40,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.88003
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "banana",
+          "probability": 0.30813
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "protection amulet",
+          "probability": 0.01012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.01007
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "power ring",
+          "probability": 0.0031
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "club ring",
+          "probability": 0.00196
+        }
+      ],
+      "name": "Kongra",
+      "speed": 92
+    },
+    {
+      "armor": 5,
+      "attacks": [
+        {
+          "element": null,
+          "max": 35,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": 10,
+        "fire": -10,
+        "ice": -5
+      },
+      "experience": 44,
+      "health": 70,
+      "immunities": {
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 15,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.65
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.15
+        }
+      ],
+      "name": "Larva",
+      "speed": 62
+    },
+    {
+      "armor": 50,
+      "attacks": [
+        {
+          "element": null,
+          "max": 195,
+          "min": 130,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 190,
+          "min": 140,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 245,
+          "min": 200,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 75,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "energy": 80,
+        "holy": -20
+      },
+      "experience": 900,
+      "health": 880,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 139,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "platinum coin",
+          "probability": 0.19628
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spellbook",
+          "probability": 0.10351
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "black pearl",
+          "probability": 0.05252
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "white pearl",
+          "probability": 0.04886
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.0237
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ancient shield",
+          "probability": 0.02072
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ring of healing",
+          "probability": 0.01637
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "yellow gem",
+          "probability": 0.00759
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "strange helmet",
+          "probability": 0.00716
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mind stone",
+          "probability": 0.00418
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "platinum amulet",
+          "probability": 0.00401
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull staff",
+          "probability": 0.00273
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue robe",
+          "probability": 0.00205
+        }
+      ],
+      "name": "Lich",
+      "speed": 65
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -8,
+        "earth": 20,
+        "holy": 20,
+        "ice": -15
+      },
+      "experience": 30,
+      "health": 80,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.45327
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.19265
+        }
+      ],
+      "name": "Lion",
+      "speed": 95
+    },
+    {
+      "armor": 17,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "energy": 10,
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 110,
+      "health": 265,
+      "immunities": {
+        "invisible": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 54,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.86497
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.101
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.09189
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scale armor",
+          "probability": 0.08069
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "halberd",
+          "probability": 0.01504
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "obsidian lance",
+          "probability": 0.01317
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small diamond",
+          "probability": 0.00088
+        }
+      ],
+      "name": "Lizard Sentinel",
+      "speed": 90
+    },
+    {
+      "armor": 22,
+      "attacks": [
+        {
+          "element": null,
+          "max": 110,
+          "min": 50,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 30,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 200,
+          "min": 100,
+          "name": "poisoncondition"
+        }
+      ],
+      "elements": {
+        "energy": 20,
+        "fire": -10,
+        "ice": 20,
+        "physical": -10
+      },
+      "experience": 210,
+      "health": 325,
+      "immunities": {
+        "invisible": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 55,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.8374
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dead snake",
+          "probability": 0.45
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.0037
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life ring",
+          "probability": 0.0019
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "yellow gem",
+          "probability": 0.0003
+        }
+      ],
+      "name": "Lizard Snakecharmer",
+      "speed": 172
+    },
+    {
+      "armor": 26,
+      "attacks": [
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": 20,
+        "fire": -10,
+        "ice": 10
+      },
+      "experience": 155,
+      "health": 410,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 60,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.84
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "short sword",
+          "probability": 0.095
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword",
+          "probability": 0.048
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "morning star",
+          "probability": 0.0199
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.0026
+        }
+      ],
+      "name": "Lizard Templar",
+      "speed": 87
+    },
+    {
+      "armor": 0,
+      "attacks": [
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "energy"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 1,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "energy": true,
+        "fire": true,
+        "holy": true,
+        "ice": true,
+        "invisible": true,
+        "lifedrain": true,
+        "manadrain": true,
+        "outfit": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [],
+      "name": "Magicthrower",
+      "speed": 0
+    },
+    {
+      "armor": 40,
+      "attacks": [
+        {
+          "element": null,
+          "max": 450,
+          "min": 150,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 450,
+          "min": 350,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "firefield"
+        },
+        {
+          "element": null,
+          "max": 450,
+          "min": 50,
+          "name": "ice"
+        },
+        {
+          "element": null,
+          "max": 550,
+          "min": 250,
+          "name": "ice"
+        },
+        {
+          "element": "lifedrain",
+          "max": 400,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "earth": 20,
+        "energy": 20,
+        "holy": -20,
+        "ice": -10
+      },
+      "experience": 9150,
+      "health": 3900,
+      "immunities": {
+        "death": true,
+        "fire": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "burning heart",
+          "probability": 1
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small ruby",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life ring",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "red gem",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fire axe",
+          "probability": 0.002
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "holy falcon",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "phoenix shield",
+          "probability": 0.001
+        }
+      ],
+      "name": "Mahrdis",
+      "speed": 340
+    },
+    {
+      "armor": 24,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "djinn electrify"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 30,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 250,
+          "min": 100,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 30,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "death": -8,
+        "earth": 10,
+        "energy": 60,
+        "fire": 90,
+        "holy": 10,
+        "ice": -5
+      },
+      "experience": 300,
+      "health": 550,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 100,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.49
+        },
+        {
+          "max": 29,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.49
+        },
+        {
+          "max": 25,
+          "min": 1,
+          "name": "blueberry",
+          "probability": 0.25
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.062
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue tapestry",
+          "probability": 0.0256
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wooden flute",
+          "probability": 0.0026
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue gem",
+          "probability": 0.0008
+        }
+      ],
+      "name": "Marid",
+      "speed": 117
+    },
+    {
+      "armor": 16,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 15,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 60,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 30,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "poisonfield"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "energy": 10,
+        "fire": 20,
+        "holy": 10,
+        "ice": -15
+      },
+      "experience": 135,
+      "health": 235,
+      "immunities": {
+        "drunk": true,
+        "invisible": true,
+        "outfit": true
+      },
+      "loot": [
+        {
+          "max": 45,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.82947
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "banana",
+          "probability": 0.3043
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "magic light wand",
+          "probability": 0.0302
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "orange",
+          "probability": 0.0101
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.0031
+        }
+      ],
+      "name": "Merlkin",
+      "speed": 97
+    },
+    {
+      "armor": 11,
+      "attacks": [
+        {
+          "element": null,
+          "max": 45,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "fire": 20,
+        "holy": 10,
+        "ice": -10
+      },
+      "experience": 50,
+      "health": 100,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 25,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.675
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate shield",
+          "probability": 0.2002
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mace",
+          "probability": 0.1284
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass helmet",
+          "probability": 0.077
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword",
+          "probability": 0.05
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe",
+          "probability": 0.04
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "shovel",
+          "probability": 0.0031
+        }
+      ],
+      "name": "Minotaur",
+      "speed": 44
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 25,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "fire": 20,
+        "holy": 10,
+        "ice": -10
+      },
+      "experience": 65,
+      "health": 100,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 20,
+          "min": 1,
+          "name": "bolt",
+          "probability": 0.90124
+        },
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.75036
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.04952
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crossbow",
+          "probability": 0.00877
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scale armor",
+          "probability": 0.00539
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass armor",
+          "probability": 0.00519
+        }
+      ],
+      "name": "Minotaur Archer",
+      "speed": 40
+    },
+    {
+      "armor": 15,
+      "attacks": [
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "fire": 20,
+        "holy": 10,
+        "ice": -10
+      },
+      "experience": 160,
+      "health": 185,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 20,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.59686
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass armor",
+          "probability": 0.04125
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.02983
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.02093
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fishing rod",
+          "probability": 0.00481
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.00434
+        }
+      ],
+      "name": "Minotaur Guard",
+      "speed": 55
+    },
+    {
+      "armor": 18,
+      "attacks": [
+        {
+          "element": null,
+          "max": 58,
+          "min": 20,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "energyfield"
+        },
+        {
+          "element": null,
+          "max": 105,
+          "min": 50,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 20,
+        "energy": 20,
+        "holy": 10,
+        "ice": -10
+      },
+      "experience": 150,
+      "health": 155,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 35,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.85291
+        },
+        {
+          "max": 8,
+          "min": 1,
+          "name": "carrot",
+          "probability": 0.1469
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.05008
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather legs",
+          "probability": 0.04908
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather helmet",
+          "probability": 0.03197
+        }
+      ],
+      "name": "Minotaur Mage",
+      "speed": 45
+    },
+    {
+      "armor": 30,
+      "attacks": [
+        {
+          "element": null,
+          "max": 130,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 50,
+        "holy": 50,
+        "physical": -5
+      },
+      "experience": 200,
+      "health": 240,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bread",
+          "probability": 0.2
+        },
+        {
+          "max": 18,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.15
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "lamp",
+          "probability": 0.0084
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "staff",
+          "probability": 0.0044
+        }
+      ],
+      "name": "Monk",
+      "speed": 80
+    },
+    {
+      "armor": 75,
+      "attacks": [
+        {
+          "element": "lifedrain",
+          "max": 400,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 450,
+          "min": 150,
+          "name": "physical"
+        },
+        {
+          "element": null,
+          "max": 600,
+          "min": 150,
+          "name": "physical"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "earth": -10,
+        "energy": 20,
+        "fire": 20,
+        "holy": -20,
+        "ice": 20,
+        "physical": 20
+      },
+      "experience": 9000,
+      "health": 4800,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword hilt",
+          "probability": 1
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "black pearl",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knight axe",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stone skin amulet",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "demonbone amulet",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ravager's axe",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel boots",
+          "probability": 0.001
+        }
+      ],
+      "name": "Morguthis",
+      "speed": 320
+    },
+    {
+      "armor": 15,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 30,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 85,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "holy": -25,
+        "ice": 20
+      },
+      "experience": 150,
+      "health": 240,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.38
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "magic lightwand",
+          "probability": 0.058
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal ring",
+          "probability": 0.015
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "silver amulet",
+          "probability": 0.001
+        }
+      ],
+      "name": "Mummy",
+      "speed": 35
+    },
+    {
+      "armor": 50,
+      "attacks": [
+        {
+          "element": null,
+          "max": 120,
+          "min": 60,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 120,
+          "min": 65,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 80,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 50,
+        "energy": 20,
+        "fire": -5,
+        "holy": -5,
+        "ice": 10,
+        "physical": -5
+      },
+      "experience": 580,
+      "health": 580,
+      "immunities": {
+        "drown": true,
+        "invisible": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 90,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.3005
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "poison arrow",
+          "probability": 0.15
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "clerical mace",
+          "probability": 0.0039
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "boots of haste",
+          "probability": 0.0021
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull staff",
+          "probability": 0.001
+        }
+      ],
+      "name": "Necromancer",
+      "speed": 94
+    },
+    {
+      "armor": 60,
+      "attacks": [
+        {
+          "element": null,
+          "max": 350,
+          "min": 150,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 250,
+          "min": 200,
+          "name": "fire"
+        },
+        {
+          "element": "lifedrain",
+          "max": 200,
+          "min": 150,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 300,
+          "min": 100,
+          "name": "physical"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "earth": 20,
+        "energy": 5,
+        "fire": 20,
+        "holy": -10,
+        "ice": 5
+      },
+      "experience": 8850,
+      "health": 4300,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal arrow",
+          "probability": 1
+        },
+        {
+          "max": 15,
+          "min": 1,
+          "name": "burst arrow",
+          "probability": 0.8
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "red apple",
+          "probability": 0.8
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 20,
+          "min": 1,
+          "name": "poison arrow",
+          "probability": 0.6
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 25,
+          "min": 1,
+          "name": "arrow",
+          "probability": 0.4
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "power bolt",
+          "probability": 0.2
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small diamond",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stealth ring",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "yellow gem",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "boots of haste",
+          "probability": 0.001
+        }
+      ],
+      "name": "Omruc",
+      "speed": 370
+    },
+    {
+      "armor": 4,
+      "attacks": [
+        {
+          "element": null,
+          "max": 35,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 20,
+        "holy": 10
+      },
+      "experience": 25,
+      "health": 70,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 14,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.84724
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.09613
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded armor",
+          "probability": 0.08232
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded shield",
+          "probability": 0.06685
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sabre",
+          "probability": 0.0558
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe",
+          "probability": 0.05442
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded helmet",
+          "probability": 0.02873
+        }
+      ],
+      "name": "Orc",
+      "speed": 35
+    },
+    {
+      "armor": 12,
+      "attacks": [
+        {
+          "element": null,
+          "max": 200,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 15,
+        "holy": 10
+      },
+      "experience": 195,
+      "health": 210,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 25,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.54944
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.09754
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "halberd",
+          "probability": 0.06943
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle axe",
+          "probability": 0.0574
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.00982
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "lamp",
+          "probability": 0.0084
+        }
+      ],
+      "name": "Orc Berserker",
+      "speed": 85
+    },
+    {
+      "armor": 20,
+      "attacks": [
+        {
+          "element": null,
+          "max": 185,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 20,
+        "holy": 20
+      },
+      "experience": 270,
+      "health": 450,
+      "immunities": {
+        "fire": true,
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fish",
+          "probability": 0.30075
+        },
+        {
+          "max": 35,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.28207
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate shield",
+          "probability": 0.1014
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "throwing knife",
+          "probability": 0.10007
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brown mushroom",
+          "probability": 0.09833
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword ring",
+          "probability": 0.03778
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "longsword",
+          "probability": 0.0297
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass legs",
+          "probability": 0.02435
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scimitar",
+          "probability": 0.02191
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.01597
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "broadsword",
+          "probability": 0.00748
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate legs",
+          "probability": 0.00396
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "warrior helmet",
+          "probability": 0.00114
+        }
+      ],
+      "name": "Orc Leader",
+      "speed": 75
+    },
+    {
+      "armor": 9,
+      "attacks": [
+        {
+          "element": null,
+          "max": 130,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 20,
+        "holy": 10
+      },
+      "experience": 110,
+      "health": 180,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 81,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.48261
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.24151
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wolf tooth chain",
+          "probability": 0.10159
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "orcish axe",
+          "probability": 0.06969
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.01049
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "battle shield",
+          "probability": 0.01019
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "obsidian lance",
+          "probability": 0.01007
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scale armor",
+          "probability": 0.00615
+        }
+      ],
+      "name": "Orc Rider",
+      "speed": 260
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 35,
+          "min": 20,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 45,
+          "min": 5,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 15,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": -10,
+        "energy": 50,
+        "holy": 10
+      },
+      "experience": 110,
+      "health": 115,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 5,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.8975
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "corncob",
+          "probability": 0.10877
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.08658
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.0517
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "book (grey)",
+          "probability": 0.00465
+        }
+      ],
+      "name": "Orc Shaman",
+      "speed": 30
+    },
+    {
+      "armor": 10,
+      "attacks": [
+        {
+          "element": null,
+          "max": 25,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 30,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 20,
+        "holy": 20
+      },
+      "experience": 38,
+      "health": 105,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.30387
+        },
+        {
+          "max": 11,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.24846
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.17907
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded legs",
+          "probability": 0.0921
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded helmet",
+          "probability": 0.08239
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "machete",
+          "probability": 0.03027
+        }
+      ],
+      "name": "Orc Spearman",
+      "speed": 88
+    },
+    {
+      "armor": 28,
+      "attacks": [
+        {
+          "element": null,
+          "max": 250,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 200,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": -10,
+        "energy": 20,
+        "fire": 80,
+        "holy": 10
+      },
+      "experience": 670,
+      "health": 950,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 45,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.18998
+        },
+        {
+          "max": 18,
+          "min": 1,
+          "name": "throwing star",
+          "probability": 0.14658
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "fish",
+          "probability": 0.10484
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.05526
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "orcish axe",
+          "probability": 0.05426
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate legs",
+          "probability": 0.03907
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "scimitar",
+          "probability": 0.02972
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "two handed sword",
+          "probability": 0.01953
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "protection amulet",
+          "probability": 0.01853
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dark helmet",
+          "probability": 0.01285
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass armor",
+          "probability": 0.00935
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crusader helmet",
+          "probability": 0.00301
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dragon hammer",
+          "probability": 0.00234
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stealth ring",
+          "probability": 0.00117
+        }
+      ],
+      "name": "Orc Warlord",
+      "speed": 77
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 60,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 30,
+        "holy": 10
+      },
+      "experience": 50,
+      "health": 125,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 15,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.64165
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.15373
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.07516
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "copper shield",
+          "probability": 0.00506
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.00041
+        }
+      ],
+      "name": "Orc Warrior",
+      "speed": 55
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -10
+      },
+      "experience": 23,
+      "health": 80,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.69144
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.36695
+        }
+      ],
+      "name": "Panda",
+      "speed": 156
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 5,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 25,
+      "immunities": {},
+      "loot": [],
+      "name": "Parrot",
+      "speed": 160
+    },
+    {
+      "armor": 2,
+      "attacks": [],
+      "elements": {},
+      "experience": 0,
+      "health": 25,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 4,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.65
+        }
+      ],
+      "name": "Pig",
+      "speed": 57
+    },
+    {
+      "armor": 0,
+      "attacks": [
+        {
+          "element": null,
+          "max": 100,
+          "min": 0,
+          "name": "earth"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 1,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "energy": true,
+        "fire": true,
+        "holy": true,
+        "ice": true,
+        "invisible": true,
+        "lifedrain": true,
+        "manadrain": true,
+        "outfit": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [],
+      "name": "Plaguethrower",
+      "speed": 0
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -10
+      },
+      "experience": 22,
+      "health": 26,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 4,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.75
+        }
+      ],
+      "name": "Poison Spider",
+      "speed": 40
+    },
+    {
+      "armor": 7,
+      "attacks": [
+        {
+          "element": null,
+          "max": 30,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "energy": -5,
+        "fire": 10,
+        "ice": 20
+      },
+      "experience": 28,
+      "health": 85,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.50363
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.50166
+        }
+      ],
+      "name": "Polar Bear",
+      "speed": 78
+    },
+    {
+      "armor": 30,
+      "attacks": [
+        {
+          "element": null,
+          "max": 120,
+          "min": 0,
+          "name": "death"
+        },
+        {
+          "element": null,
+          "max": 170,
+          "min": 2,
+          "name": "manadrain"
+        },
+        {
+          "element": null,
+          "max": 75,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 200,
+          "name": "poisoncondition"
+        }
+      ],
+      "elements": {
+        "death": 10,
+        "earth": 70,
+        "fire": 40,
+        "holy": -10,
+        "physical": -10
+      },
+      "experience": 420,
+      "health": 390,
+      "immunities": {
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sling herb",
+          "probability": 0.13494
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "goat grass",
+          "probability": 0.12093
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "red apple",
+          "probability": 0.07403
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "powder herb",
+          "probability": 0.06183
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wood mushroom",
+          "probability": 0.03343
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "clerical mace",
+          "probability": 0.01484
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wooden flute",
+          "probability": 0.01425
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal ball",
+          "probability": 0.01132
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "book (orange)",
+          "probability": 0.00932
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "talon",
+          "probability": 0.00717
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal necklace",
+          "probability": 0.00615
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "black shield",
+          "probability": 0.0021
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "piggy bank",
+          "probability": 0.00068
+        }
+      ],
+      "name": "Priestess",
+      "speed": 85
+    },
+    {
+      "armor": 1,
+      "attacks": [],
+      "elements": {},
+      "experience": 0,
+      "health": 15,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.82
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "carrot",
+          "probability": 0.1
+        }
+      ],
+      "name": "Rabbit",
+      "speed": 50
+    },
+    {
+      "armor": 40,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "drunk"
+        },
+        {
+          "element": null,
+          "max": 400,
+          "min": 200,
+          "name": "energy"
+        },
+        {
+          "element": "lifedrain",
+          "max": 400,
+          "min": 350,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        },
+        {
+          "element": null,
+          "max": 400,
+          "min": 200,
+          "name": "physical"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "holy": -10
+      },
+      "experience": 9300,
+      "health": 3700,
+      "immunities": {
+        "death": true,
+        "energy": true,
+        "fire": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ancient rune",
+          "probability": 1
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ring of healing",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "magician hat",
+          "probability": 0.04
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "violet gem",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "orb",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal wand",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "twin axe",
+          "probability": 0.001
+        }
+      ],
+      "name": "Rahemos",
+      "speed": 220
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 8,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": 20,
+        "holy": 20,
+        "ice": -10
+      },
+      "experience": 5,
+      "health": 20,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 4,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cheese",
+          "probability": 0.3941
+        }
+      ],
+      "name": "Rat",
+      "speed": 27
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 40,
+      "health": 65,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 17,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.71834
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bag",
+          "probability": 0.33
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.20104
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.20006
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mace",
+          "probability": 0.04441
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword",
+          "probability": 0.03047
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "copper shield",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "katana",
+          "probability": 0.005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "legion helmet",
+          "probability": 0.005
+        }
+      ],
+      "name": "Rotworm",
+      "speed": 18
+    },
+    {
+      "armor": 21,
+      "attacks": [
+        {
+          "element": null,
+          "max": 35,
+          "min": 0,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 75,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "poisonfield"
+        }
+      ],
+      "elements": {
+        "energy": 10,
+        "fire": -18,
+        "ice": 20,
+        "physical": 5
+      },
+      "experience": 120,
+      "health": 320,
+      "immunities": {
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 52,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.87
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.4
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small amethyst",
+          "probability": 0.0054
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.004
+        }
+      ],
+      "name": "Scarab",
+      "speed": 80
+    },
+    {
+      "armor": 14,
+      "attacks": [
+        {
+          "element": null,
+          "max": 50,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": 20,
+        "fire": -10,
+        "ice": -10
+      },
+      "experience": 45,
+      "health": 45,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [],
+      "name": "Scorpion",
+      "speed": 35
+    },
+    {
+      "armor": 35,
+      "attacks": [
+        {
+          "element": null,
+          "max": 300,
+          "min": 80,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 500,
+          "min": 200,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 500,
+          "min": 200,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 250,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "energy": -10,
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 3050,
+      "health": 3000,
+      "immunities": {
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 245,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.97236
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green mushroom",
+          "probability": 0.183
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.12132
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "power bolt",
+          "probability": 0.06107
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life ring",
+          "probability": 0.06058
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "energy ring",
+          "probability": 0.05968
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "golden mug",
+          "probability": 0.02958
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "tower shield",
+          "probability": 0.00855
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "life crystal",
+          "probability": 0.00789
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "strange helmet",
+          "probability": 0.00633
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "warrior helmet",
+          "probability": 0.00564
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crown armor",
+          "probability": 0.00504
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "royal helmet",
+          "probability": 0.00124
+        }
+      ],
+      "name": "Serpent Spawn",
+      "speed": 117
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 1,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -5
+      },
+      "experience": 0,
+      "health": 20,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 4,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.7
+        }
+      ],
+      "name": "Sheep",
+      "speed": 58
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 110,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {},
+      "experience": 0,
+      "health": 1,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "energy": true,
+        "fire": true,
+        "holy": true,
+        "ice": true,
+        "invisible": true,
+        "lifedrain": true,
+        "manadrain": true,
+        "outfit": true,
+        "paralyze": true,
+        "physical": true,
+        "poison": true
+      },
+      "loot": [],
+      "name": "Shredderthrower",
+      "speed": 0
+    },
+    {
+      "armor": 15,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 55,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "fire": 25,
+        "holy": 10,
+        "ice": -15
+      },
+      "experience": 105,
+      "health": 225,
+      "immunities": {
+        "drunk": true,
+        "invisible": true,
+        "outfit": true
+      },
+      "loot": [
+        {
+          "max": 35,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.88771
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "banana",
+          "probability": 0.30452
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small stone",
+          "probability": 0.29967
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "orange",
+          "probability": 0.19971
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "coconut",
+          "probability": 0.01968
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "melon",
+          "probability": 0.01001
+        }
+      ],
+      "name": "Sibang",
+      "speed": 107
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 13,
+          "min": 7,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 17,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "holy": -25
+      },
+      "experience": 35,
+      "health": 50,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "lifedrain": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bone",
+          "probability": 0.50915
+        },
+        {
+          "max": 10,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.44978
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.10285
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "viking helmet",
+          "probability": 0.07687
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "hatchet",
+          "probability": 0.05375
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mace",
+          "probability": 0.04625
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword",
+          "probability": 0.02107
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass shield",
+          "probability": 0.0092
+        }
+      ],
+      "name": "Skeleton",
+      "speed": 37
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 3,
+          "min": 1,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 5,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {},
+      "experience": 3,
+      "health": 20,
+      "immunities": {},
+      "loot": [],
+      "name": "Skunk",
+      "speed": 68
+    },
+    {
+      "armor": 3,
+      "attacks": [
+        {
+          "element": null,
+          "max": 110,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": -10,
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 160,
+      "health": 150,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [],
+      "name": "Slime",
+      "speed": 27
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 60,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "physical": -5
+      },
+      "experience": 48,
+      "health": 130,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 10,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.79815
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.30203
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather legs",
+          "probability": 0.14782
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.10185
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "short sword",
+          "probability": 0.10051
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather helmet",
+          "probability": 0.10036
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "knife",
+          "probability": 0.10012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sword",
+          "probability": 0.05012
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "combat knife",
+          "probability": 0.04042
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "deer trophy",
+          "probability": 0.00112
+        }
+      ],
+      "name": "Smuggler",
+      "speed": 70
+    },
+    {
+      "armor": 0,
+      "attacks": [
+        {
+          "element": null,
+          "max": 8,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": 40,
+        "energy": 20,
+        "fire": -10,
+        "ice": -10
+      },
+      "experience": 10,
+      "health": 15,
+      "immunities": {},
+      "loot": [],
+      "name": "Snake",
+      "speed": 20
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 9,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -20
+      },
+      "experience": 12,
+      "health": 20,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 5,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.65
+        }
+      ],
+      "name": "Spider",
+      "speed": 36
+    },
+    {
+      "armor": 12,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 15,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 100,
+          "min": 40,
+          "name": "poisoncondition"
+        }
+      ],
+      "elements": {
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 20,
+      "health": 150,
+      "immunities": {
+        "energy": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "shadow herb",
+          "probability": 0.10954
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.10703
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "sling herb",
+          "probability": 0.05556
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "grave flower",
+          "probability": 0.00989
+        }
+      ],
+      "name": "Spit Nettle",
+      "speed": 0
+    },
+    {
+      "armor": 14,
+      "attacks": [
+        {
+          "element": null,
+          "max": 30,
+          "min": 20,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 5,
+        "holy": -5,
+        "physical": -20
+      },
+      "experience": 90,
+      "health": 120,
+      "immunities": {
+        "invisible": true,
+        "lifedrain": true
+      },
+      "loot": [
+        {
+          "max": 8,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.13123
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "throwing knife",
+          "probability": 0.11116
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blank rune",
+          "probability": 0.08811
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass shield",
+          "probability": 0.05617
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass legs",
+          "probability": 0.03531
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "obsidian lance",
+          "probability": 0.01198
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "katana",
+          "probability": 0.00519
+        }
+      ],
+      "name": "Stalker",
+      "speed": 42
+    },
+    {
+      "armor": 30,
+      "attacks": [
+        {
+          "element": null,
+          "max": 110,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": 20,
+        "energy": 15,
+        "fire": 20,
+        "ice": -10,
+        "physical": 10
+      },
+      "experience": 160,
+      "health": 270,
+      "immunities": {
+        "drown": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 40,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.95794
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "small stone",
+          "probability": 0.12849
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "power ring",
+          "probability": 0.05137
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "carlin sword",
+          "probability": 0.02572
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal ring",
+          "probability": 0.00181
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "red gem",
+          "probability": 0.00048
+        }
+      ],
+      "name": "Stone Golem",
+      "speed": 90
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 13,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "earth": 15,
+        "fire": -5
+      },
+      "experience": 25,
+      "health": 55,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fish",
+          "probability": 0.6
+        },
+        {
+          "max": 5,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.503
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "torch",
+          "probability": 0.15
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.13
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather boots",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "fishing rod",
+          "probability": 0.0008
+        }
+      ],
+      "name": "Swamp Troll",
+      "speed": 64
+    },
+    {
+      "armor": 20,
+      "attacks": [
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 90,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "energy": 10,
+        "fire": -15,
+        "ice": -10
+      },
+      "experience": 120,
+      "health": 225,
+      "immunities": {
+        "drunk": true,
+        "outfit": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 40,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.79114
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass legs",
+          "probability": 0.03021
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate shield",
+          "probability": 0.01966
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel helmet",
+          "probability": 0.00925
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "time ring",
+          "probability": 0.00112
+        }
+      ],
+      "name": "Tarantula",
+      "speed": 107
+    },
+    {
+      "armor": 13,
+      "attacks": [
+        {
+          "element": null,
+          "max": 90,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": -10,
+        "energy": 20,
+        "fire": -10,
+        "ice": 20
+      },
+      "experience": 150,
+      "health": 300,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.825
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.48
+        }
+      ],
+      "name": "Terror Bird",
+      "speed": 106
+    },
+    {
+      "armor": 40,
+      "attacks": [
+        {
+          "element": null,
+          "max": 550,
+          "min": 150,
+          "name": "earth"
+        },
+        {
+          "element": null,
+          "max": 400,
+          "min": 150,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 475,
+          "min": 175,
+          "name": "energy"
+        },
+        {
+          "element": "lifedrain",
+          "max": 650,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 700,
+          "min": 600,
+          "name": "poisoncondition"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "energy": 20,
+        "fire": -10,
+        "holy": -20,
+        "ice": -10
+      },
+      "experience": 8850,
+      "health": 4100,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cobrafang dagger",
+          "probability": 1
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.4
+        },
+        {
+          "max": 3,
+          "min": 1,
+          "name": "small emerald",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "time ring",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "serpent sword",
+          "probability": 0.04
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "djinn blade",
+          "probability": 0.03
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "green gem",
+          "probability": 0.02
+        }
+      ],
+      "name": "Thalas",
+      "speed": 320
+    },
+    {
+      "armor": 5,
+      "attacks": [
+        {
+          "element": null,
+          "max": 40,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "ice": -10
+      },
+      "experience": 40,
+      "health": 75,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 4,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.3519
+        }
+      ],
+      "name": "Tiger",
+      "speed": 100
+    },
+    {
+      "armor": 6,
+      "attacks": [
+        {
+          "element": null,
+          "max": 15,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": -10,
+        "energy": 20,
+        "holy": 10
+      },
+      "experience": 20,
+      "health": 50,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 12,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.65542
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "hand axe",
+          "probability": 0.1969
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.15431
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.12998
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather helmet",
+          "probability": 0.11892
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather boots",
+          "probability": 0.09983
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "rope",
+          "probability": 0.08131
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "studded club",
+          "probability": 0.05448
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wooden shield",
+          "probability": 0.05448
+        }
+      ],
+      "name": "Troll",
+      "speed": 23
+    },
+    {
+      "armor": 12,
+      "attacks": [
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 50,
+          "min": 0,
+          "name": "physical"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "fire": 10,
+        "holy": 5,
+        "ice": 10,
+        "physical": -10
+      },
+      "experience": 85,
+      "health": 190,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 3,
+          "min": 1,
+          "name": "spear",
+          "probability": 0.55
+        },
+        {
+          "max": 12,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.32
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.301
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain armor",
+          "probability": 0.1
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "plate armor",
+          "probability": 0.0082
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull",
+          "probability": 0.0074
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "double axe",
+          "probability": 0.0042
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small diamond",
+          "probability": 0.002
+        }
+      ],
+      "name": "Valkyrie",
+      "speed": 48
+    },
+    {
+      "armor": 30,
+      "attacks": [
+        {
+          "element": null,
+          "max": 200,
+          "min": 50,
+          "name": "lifedrain"
+        },
+        {
+          "element": null,
+          "max": 150,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "fire": -10,
+        "holy": -25,
+        "physical": 25
+      },
+      "experience": 290,
+      "health": 475,
+      "immunities": {
+        "death": true,
+        "drown": true,
+        "drunk": true,
+        "invisible": true,
+        "lifedrain": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 60,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.9023
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "grave flower",
+          "probability": 0.0191
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "spike sword",
+          "probability": 0.01
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ice rapier",
+          "probability": 0.0047
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "vampire shield",
+          "probability": 0.002
+        }
+      ],
+      "name": "Vampire",
+      "speed": 70
+    },
+    {
+      "armor": 40,
+      "attacks": [
+        {
+          "element": null,
+          "max": 400,
+          "min": 150,
+          "name": "death"
+        },
+        {
+          "element": "lifedrain",
+          "max": 400,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        }
+      ],
+      "elements": {
+        "earth": 20,
+        "energy": 20,
+        "fire": 20,
+        "holy": -10,
+        "ice": 20
+      },
+      "experience": 8850,
+      "health": 4000,
+      "immunities": {
+        "death": true,
+        "invisible": true,
+        "paralyze": true,
+        "poison": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue note",
+          "probability": 1
+        },
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 95,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.7
+        },
+        {
+          "max": 85,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.5
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "lute",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "white pearl",
+          "probability": 0.2
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal ring",
+          "probability": 0.03
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue robe",
+          "probability": 0.02
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "panpipes",
+          "probability": 0.002
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ancient tiara",
+          "probability": 0.001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal mace",
+          "probability": 0.001
+        }
+      ],
+      "name": "Vashresamun",
+      "speed": 340
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 50,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "earth": 20,
+        "holy": 10,
+        "ice": -10
+      },
+      "experience": 55,
+      "health": 140,
+      "immunities": {
+        "outfit": true
+      },
+      "loot": [
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ham",
+          "probability": 0.3917
+        }
+      ],
+      "name": "War Wolf",
+      "speed": 132
+    },
+    {
+      "armor": 33,
+      "attacks": [
+        {
+          "element": null,
+          "max": 180,
+          "min": 90,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 230,
+          "min": 150,
+          "name": "energy"
+        },
+        {
+          "element": null,
+          "max": 180,
+          "min": 50,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "firefield"
+        },
+        {
+          "element": null,
+          "max": 120,
+          "min": 0,
+          "name": "manadrain"
+        },
+        {
+          "element": null,
+          "max": 130,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "speed"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "warlock skill reducer"
+        }
+      ],
+      "elements": {
+        "earth": 95,
+        "holy": -8,
+        "physical": -5
+      },
+      "experience": 4000,
+      "health": 3500,
+      "immunities": {
+        "energy": true,
+        "fire": true,
+        "ice": true,
+        "invisible": true,
+        "paralyze": true
+      },
+      "loot": [
+        {
+          "max": 80,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.30006
+        },
+        {
+          "max": 4,
+          "min": 1,
+          "name": "cherry",
+          "probability": 0.1963
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "bread",
+          "probability": 0.08925
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "poison dagger",
+          "probability": 0.07693
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "skull staff",
+          "probability": 0.06088
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "dark mushroom",
+          "probability": 0.02934
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mind stone",
+          "probability": 0.02128
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "energy ring",
+          "probability": 0.01967
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "candlestick",
+          "probability": 0.01573
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "blue robe",
+          "probability": 0.01561
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "small sapphire",
+          "probability": 0.01283
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "talon",
+          "probability": 0.01051
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "inkwell",
+          "probability": 0.00935
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "crystal ring",
+          "probability": 0.00742
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "ring of the sky",
+          "probability": 0.00406
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "stone skin amulet",
+          "probability": 0.00355
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "red tome",
+          "probability": 0.00239
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "golden armor",
+          "probability": 0.00206
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "piggy bank",
+          "probability": 0.00077
+        }
+      ],
+      "name": "Warlock",
+      "speed": 75
+    },
+    {
+      "armor": 4,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "fire": -10
+      },
+      "experience": 24,
+      "health": 35,
+      "immunities": {
+        "poison": true
+      },
+      "loot": [],
+      "name": "Wasp",
+      "speed": 120
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 70,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "holy": 10,
+        "physical": -5
+      },
+      "experience": 55,
+      "health": 135,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 30,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.65608
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "axe",
+          "probability": 0.2094
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass shield",
+          "probability": 0.17483
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "mace",
+          "probability": 0.13081
+        },
+        {
+          "max": 2,
+          "min": 1,
+          "name": "egg",
+          "probability": 0.12596
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "chain helmet",
+          "probability": 0.05204
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "brass armor",
+          "probability": 0.02779
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "steel shield",
+          "probability": 0.01314
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "iron helmet",
+          "probability": 0.01032
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "doll",
+          "probability": 0.00529
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "war hammer",
+          "probability": 0.005
+        }
+      ],
+      "name": "Wild Warrior",
+      "speed": 95
+    },
+    {
+      "armor": 2,
+      "attacks": [
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -10,
+        "energy": -5,
+        "fire": 10,
+        "holy": 10,
+        "ice": 20
+      },
+      "experience": 20,
+      "health": 30,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.3
+        }
+      ],
+      "name": "Winter Wolf",
+      "speed": 85
+    },
+    {
+      "armor": 8,
+      "attacks": [
+        {
+          "element": null,
+          "max": 75,
+          "min": 30,
+          "name": "fire"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "firefield"
+        },
+        {
+          "element": null,
+          "max": 20,
+          "min": 0,
+          "name": "melee"
+        },
+        {
+          "element": null,
+          "max": 0,
+          "min": 0,
+          "name": "outfit"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "earth": 20,
+        "physical": -5
+      },
+      "experience": 120,
+      "health": 300,
+      "immunities": {
+        "energy": true,
+        "invisible": true
+      },
+      "loot": [
+        {
+          "max": 40,
+          "min": 1,
+          "name": "gold coin",
+          "probability": 0.63913
+        },
+        {
+          "max": 8,
+          "min": 1,
+          "name": "cookie",
+          "probability": 0.30001
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "wolf tooth chain",
+          "probability": 0.10121
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "star herb",
+          "probability": 0.09005
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "leather boots",
+          "probability": 0.05017
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "cape",
+          "probability": 0.04958
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "sickle",
+          "probability": 0.03892
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "garlic necklace",
+          "probability": 0.02515
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "coat",
+          "probability": 0.02008
+        },
+        {
+          "max": 1,
+          "min": 1,
+          "name": "silver dagger",
+          "probability": 0.00556
+        }
+      ],
+      "name": "Witch",
+      "speed": 62
+    },
+    {
+      "armor": 1,
+      "attacks": [
+        {
+          "element": null,
+          "max": 17,
+          "min": 0,
+          "name": "melee"
+        }
+      ],
+      "elements": {
+        "death": -5,
+        "holy": 30,
+        "ice": -10
+      },
+      "experience": 18,
+      "health": 25,
+      "immunities": {},
+      "loot": [
+        {
+          "max": 2,
+          "min": 1,
+          "name": "meat",
+          "probability": 0.7
+        }
+      ],
+      "name": "Wolf",
+      "speed": 42
+    }
+  ]
+}

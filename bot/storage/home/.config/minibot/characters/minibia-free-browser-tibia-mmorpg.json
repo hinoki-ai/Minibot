@@ -1,0 +1,30 @@
+{
+  "cavebotName": "Dark Cathedral -1",
+  "creatureLedger": {
+    "monsters": [
+      "Yberius",
+      "Marcus",
+      "Viperek",
+      "Rat",
+      "Troll",
+      "Cave Rat",
+      "Larva",
+      "Kasmir",
+      "Scarab",
+      "Obi",
+      "Dixi",
+      "Lord Larva",
+      "Chorogro",
+      "Holy Rat",
+      "Starkiller",
+      "Arnold",
+      "Spells Of Regret",
+      "Hector",
+      "Surrillas",
+      "Kuh"
+    ],
+    "players": []
+  },
+  "cavebotPaused": false,
+  "stopAggroHold": false
+}

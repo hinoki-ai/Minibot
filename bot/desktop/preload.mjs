@@ -1,0 +1,44 @@
+import { contextBridge, ipcRenderer } from "electron";
+
+contextBridge.exposeInMainWorld("bbApi", {
+  getState: () => ipcRenderer.invoke("bb:get-state"),
+  refresh: () => ipcRenderer.invoke("bb:refresh"),
+  newSession: () => ipcRenderer.invoke("bb:new-session"),
+  startTrainerRoster: (reference) => ipcRenderer.invoke("bb:start-trainer-roster", reference),
+  saveTrainerDuo: (duo) => ipcRenderer.invoke("bb:save-trainer-duo", duo),
+  deleteTrainerDuo: (duo) => ipcRenderer.invoke("bb:delete-trainer-duo", duo),
+  closeWindow: () => ipcRenderer.invoke("bb:close-window"),
+  killSession: (sessionId) => ipcRenderer.invoke("bb:kill-session", sessionId),
+  selectSession: (sessionId) => ipcRenderer.invoke("bb:select-session", sessionId),
+  toggleRun: (sessionId) => ipcRenderer.invoke("bb:toggle-run", sessionId),
+  toggleCavebotPause: (sessionId) => ipcRenderer.invoke("bb:toggle-cavebot-pause", sessionId),
+  stopAllBots: () => ipcRenderer.invoke("bb:stop-all-bots"),
+  stopAggro: (sessionId) => ipcRenderer.invoke("bb:stop-aggro", sessionId),
+  reconnectSession: (sessionId) => ipcRenderer.invoke("bb:reconnect-session", sessionId),
+  updateOptions: (partial) => ipcRenderer.invoke("bb:update-options", partial),
+  saveAccount: (account) => ipcRenderer.invoke("bb:save-account", account),
+  deleteAccount: (accountId) => ipcRenderer.invoke("bb:delete-account", accountId),
+  testAntiIdle: (partial) => ipcRenderer.invoke("bb:test-anti-idle", partial),
+  setSessionWaypointOverlays: (value) => ipcRenderer.invoke("bb:set-session-waypoint-overlays", value),
+  loadRoute: (name) => ipcRenderer.invoke("bb:load-route", name),
+  deleteRoute: (name) => ipcRenderer.invoke("bb:delete-route", name),
+  setAlwaysOnTop: (value) => ipcRenderer.invoke("bb:set-always-on-top", value),
+  setViewMode: (mode) => ipcRenderer.invoke("bb:set-view-mode", mode),
+  setOverlayFocus: (index) => ipcRenderer.invoke("bb:set-overlay-focus", index),
+  addCurrentWaypoint: (type = "walk") => ipcRenderer.invoke("bb:add-current-waypoint", type),
+  insertCurrentWaypoint: (index, type = "walk") => ipcRenderer.invoke("bb:insert-current-waypoint", index, type),
+  updateWaypoint: (index, patch) => ipcRenderer.invoke("bb:update-waypoint", index, patch),
+  removeWaypoint: (index) => ipcRenderer.invoke("bb:remove-waypoint", index),
+  moveWaypoint: (index, delta) => ipcRenderer.invoke("bb:move-waypoint", index, delta),
+  addCurrentTileRule: (policy = "avoid") => ipcRenderer.invoke("bb:add-current-tile-rule", policy),
+  updateTileRule: (index, patch) => ipcRenderer.invoke("bb:update-tile-rule", index, patch),
+  removeTileRule: (index) => ipcRenderer.invoke("bb:remove-tile-rule", index),
+  moveTileRule: (index, delta) => ipcRenderer.invoke("bb:move-tile-rule", index, delta),
+  resetRoute: (index) => ipcRenderer.invoke("bb:reset-route", index),
+  returnToStart: () => ipcRenderer.invoke("bb:return-to-start"),
+  onEvent: (handler) => {
+    const listener = (_event, payload) => handler(payload);
+    ipcRenderer.on("bb:event", listener);
+    return () => ipcRenderer.removeListener("bb:event", listener);
+  },
+});

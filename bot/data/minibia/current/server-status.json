@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-server-status",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "source": {
+    "baseUrl": "https://minibia.com",
+    "path": "/api/status"
+  },
+  "data": {
+    "game": true,
+    "login": true
+  }
+}

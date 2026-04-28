@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "kind": "minibia-status-schema",
+  "generatedAt": "2026-04-17T00:00:00.000Z",
+  "sources": [
+    {
+      "name": "serverStatus",
+      "baseUrl": "https://minibia.com",
+      "path": "/api/status"
+    },
+    {
+      "name": "serverInfo",
+      "baseUrl": "https://minibia.com",
+      "path": "/api/server-info"
+    }
+  ],
+  "serverStatus": {
+    "fields": [
+      {
+        "name": "game",
+        "type": "boolean",
+        "example": true
+      },
+      {
+        "name": "login",
+        "type": "boolean",
+        "example": true
+      }
+    ]
+  },
+  "serverInfo": {
+    "fields": [
+      {
+        "name": "deathSkillLossPercent",
+        "type": "number",
+        "example": 5
+      },
+      {
+        "name": "experienceRate",
+        "type": "number",
+        "example": 2
+      },
+      {
+        "name": "goldRate",
+        "type": "number",
+        "example": 2
+      },
+      {
+        "name": "lootRate",
+        "type": "number",
+        "example": 1
+      },
+      {
+        "name": "pvpEnabled",
+        "type": "boolean",
+        "example": true
+      },
+      {
+        "name": "requireBlankRune",
+        "type": "boolean",
+        "example": false
+      },
+      {
+        "name": "runeChargesRate",
+        "type": "number",
+        "example": 2
+      },
+      {
+        "name": "skillRates",
+        "type": "object",
+        "fields": [
+          {
+            "name": "distance",
+            "type": "number",
+            "example": 1.5
+          },
+          {
+            "name": "magic",
+            "type": "number",
+            "example": 1.5
+          },
+          {
+            "name": "melee",
+            "type": "number",
+            "example": 1.5
+          },
+          {
+            "name": "shielding",
+            "type": "number",
+            "example": 1.5
+          }
+        ]
+      }
+    ]
+  }
+}

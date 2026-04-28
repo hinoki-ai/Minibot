@@ -1,0 +1,46 @@
+{
+  "cavebotName": "Hydras",
+  "creatureLedger": {
+    "monsters": [
+      "Rat",
+      "Bug",
+      "Troll",
+      "Cave Rat",
+      "Spider",
+      "Alpha Rat",
+      "Hyaena",
+      "Bandit",
+      "Bat",
+      "Snake",
+      "Wasp",
+      "Elephant",
+      "Butterfly",
+      "Skunk",
+      "Flamingo",
+      "Centipede"
+    ],
+    "players": [
+      "Golden Aim",
+      "Dark Knight",
+      "Black Shot",
+      "Czarnobrat",
+      "Zlocimir Wielkoportf",
+      "Archer",
+      "Mordzia",
+      "minibia.com/play?pwa=1&amp",
+      "session=1776677694049",
+      "Rasta Jelen",
+      "Butthole Fucker",
+      "Dedzior",
+      "Venator",
+      "Minibia — Free Browser Tibia MMORPG",
+      "Lord Larva",
+      "Lady Larva",
+      "Yind"
+    ],
+    "npcs": []
+  },
+  "cavebotPaused": false,
+  "trainerPartnerName": "",
+  "stopAggroHold": false
+}

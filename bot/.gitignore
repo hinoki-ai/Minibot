@@ -1,0 +1,7 @@
+node_modules/
+dist/
+artifacts/
+*.log
+.codex
+.DS_Store
+cavebots/*.knowledge.json

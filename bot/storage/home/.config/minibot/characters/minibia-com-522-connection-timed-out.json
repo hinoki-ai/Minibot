@@ -1,0 +1,114 @@
+{
+  "port": 9224,
+  "pageUrlPrefix": "https://minibia.com/play",
+  "cavebotName": "",
+  "monster": "Rotworm",
+  "creatureLedger": {
+    "monsters": [],
+    "players": []
+  },
+  "targetProfiles": [],
+  "intervalMs": 250,
+  "retargetMs": 1200,
+  "rangeX": 7,
+  "rangeY": 5,
+  "combatRangeX": 2,
+  "combatRangeY": 2,
+  "floorTolerance": 1,
+  "autowalkEnabled": false,
+  "autowalkLoop": true,
+  "routeStrictClear": false,
+  "routeRecording": true,
+  "routeRecordStep": 3,
+  "showWaypointOverlay": true,
+  "waypointRadius": 0,
+  "walkRepathMs": 1200,
+  "reconnectEnabled": false,
+  "reconnectRetryDelayMs": 4000,
+  "reconnectMaxAttempts": 0,
+  "avoidElementalFields": true,
+  "waypoints": [],
+  "tileRules": [],
+  "healerEnabled": true,
+  "healerWords": "exura vita",
+  "healerHealthPercent": 30,
+  "healerEmergencyHealthPercent": 30,
+  "healerMinMana": 80,
+  "healerMinManaPercent": 0,
+  "manaTrainerEnabled": true,
+  "manaTrainerWords": "utevo res ina",
+  "manaTrainerManaPercent": 85,
+  "manaTrainerMinHealthPercent": 95,
+  "autoLightEnabled": true,
+  "autoLightWords": "utevo lux",
+  "autoLightMinManaPercent": 25,
+  "autoConvertEnabled": true,
+  "convertCooldownMs": 4000,
+  "runeMakerEnabled": false,
+  "runeMakerRules": [],
+  "spellCasterEnabled": false,
+  "spellCasterRules": [],
+  "distanceKeeperEnabled": false,
+  "distanceKeeperRules": [],
+  "stopAggroHold": false,
+  "rookillerEnabled": false,
+  "once": false,
+  "dryRun": false,
+  "healerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "exura vita",
+      "minHealthPercent": 0,
+      "maxHealthPercent": 30,
+      "minMana": 80,
+      "minManaPercent": 0,
+      "cooldownMs": 900
+    }
+  ],
+  "healerTiers": [
+    {
+      "words": "exura vita",
+      "healthPercent": 30,
+      "minMana": 80,
+      "minManaPercent": 0
+    }
+  ],
+  "manaTrainerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo res ina",
+      "minHealthPercent": 95,
+      "minManaPercent": 85,
+      "maxManaPercent": 100,
+      "cooldownMs": 1400,
+      "requireNoTargets": true,
+      "requireStationary": true
+    }
+  ],
+  "autoLightRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo lux",
+      "minManaPercent": 25,
+      "cooldownMs": 3000,
+      "requireNoLight": true,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "autoConvertRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "cooldownMs": 4000,
+      "requireNoTargets": true,
+      "requireStationary": true
+    }
+  ],
+  "monsterNames": [
+    "Rotworm"
+  ]
+}

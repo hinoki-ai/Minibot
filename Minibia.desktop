@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=Minibia
+Exec=sh -lc 'DIR="$(dirname "$1")"; exec "$DIR/start-client.sh"' dummy %k
+Icon=applications-internet
+StartupWMClass=crx_bljemjimnpmhmoepcibjlbkldejdbeob

@@ -1,0 +1,1793 @@
+{
+  "name": "Larvas 4",
+  "port": 9224,
+  "pageUrlPrefix": "https://minibia.com/play",
+  "monster": "Alpha Larva, Alpha Scarab, Amazon, Ancient Scarab, Bear, Beholder, Black Knight, Bug, Deer, Dragon, Dragon Lord, Efreet, Fire Devil, Fire Elemental, Gargoyle, Green Djinn, Hyaena, Larva, Lion, Minotaur, Minotaur Archer, Minotaur Guard, Minotaur Mage, Orc, Orc Berserker, Orc Leader, Orc Shaman, Orc Spearman, Orc Warlord, Orc Warrior, Poison Spider, Rabbit, Rotworm, Scarab, Scorpion, Skeleton, Slime, Snake, Spider, Stalker, Stone Golem, Valkyrie, Wild Warrior",
+  "targetProfiles": [
+    {
+      "enabled": true,
+      "name": "alpha larva",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Alpha Scarab",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Amazon",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Ancient Scarab",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Bear",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Beholder",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Black Knight",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Bug",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Deer",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Dragon",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Dragon Lord",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Efreet",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Fire Devil",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Fire Elemental",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Gargoyle",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Green Djinn",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Hyaena",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Larva",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Lion",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur Archer",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur Guard",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Minotaur Mage",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc Berserker",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc Leader",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc Shaman",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc Spearman",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc Warlord",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Orc Warrior",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Poison Spider",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Rabbit",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Rotworm",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Scarab",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Scorpion",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Skeleton",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Slime",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Snake",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Spider",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Stalker",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Stone Golem",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Valkyrie",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    },
+    {
+      "enabled": true,
+      "name": "Wild Warrior",
+      "priority": 100,
+      "dangerLevel": 0,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
+      "killMode": "normal",
+      "chaseMode": "auto",
+      "behavior": "hold",
+      "preferShootable": true,
+      "stickToTarget": true,
+      "avoidBeam": false,
+      "avoidWave": false
+    }
+  ],
+  "sharedSpawnMode": "attack-all",
+  "intervalMs": 250,
+  "retargetMs": 1200,
+  "rangeX": 7,
+  "rangeY": 5,
+  "combatRangeX": 2,
+  "combatRangeY": 2,
+  "floorTolerance": 1,
+  "autowalkEnabled": true,
+  "autowalkLoop": true,
+  "routeStrictClear": false,
+  "routeFollowExactWaypoints": true,
+  "routeRecording": false,
+  "routeRecordStep": 3,
+  "showWaypointOverlay": false,
+  "waypointRadius": 0,
+  "vocation": "",
+  "sustainEnabled": true,
+  "sustainCooldownMs": 900,
+  "preferHotbarConsumables": true,
+  "ammoEnabled": true,
+  "ammoRestockEnabled": true,
+  "ammoReloadEnabled": true,
+  "ammoPreferredNames": [],
+  "ammoMinimumCount": 0,
+  "ammoWarningCount": 0,
+  "ammoReloadAtOrBelow": 25,
+  "ammoReloadCooldownMs": 900,
+  "ammoRequireNoTargets": false,
+  "ammoRequireStationary": false,
+  "refillEnabled": false,
+  "refillSellRequests": [],
+  "lootingEnabled": true,
+  "lootWhitelist": [],
+  "lootBlacklist": [],
+  "lootPreferredContainers": [
+    "Backpack"
+  ],
+  "corpseReturnEnabled": true,
+  "walkRepathMs": 1200,
+  "reconnectEnabled": false,
+  "reconnectRetryDelayMs": 4000,
+  "reconnectMaxAttempts": 0,
+  "avoidElementalFields": true,
+  "avoidFieldCategories": {
+    "fire": true,
+    "energy": true,
+    "poison": true,
+    "holes": true,
+    "stairsLadders": true,
+    "teleports": true,
+    "traps": true,
+    "invisibleWalls": true
+  },
+  "deathHealEnabled": true,
+  "deathHealVocation": "",
+  "deathHealWords": "",
+  "deathHealHealthPercent": 20,
+  "deathHealCooldownMs": 900,
+  "healerEnabled": true,
+  "healerWords": "exura",
+  "healerHealthPercent": 80,
+  "healerEmergencyHealthPercent": 30,
+  "healerRuneName": "Ultimate Healing Rune",
+  "healerRuneHealthPercent": 50,
+  "healerMinMana": 80,
+  "healerMinManaPercent": 0,
+  "potionHealerEnabled": false,
+  "potionHealerRules": [],
+  "conditionHealerEnabled": false,
+  "conditionHealerRules": [],
+  "manaTrainerEnabled": true,
+  "manaTrainerWords": "utani hur",
+  "manaTrainerManaPercent": 85,
+  "manaTrainerMinHealthPercent": 30,
+  "trainerManaTrainerEnabled": false,
+  "trainerManaTrainerWords": "utevo res ina",
+  "trainerManaTrainerManaPercent": 85,
+  "trainerManaTrainerMinHealthPercent": 95,
+  "autoLightEnabled": false,
+  "autoLightWords": "utevo lux",
+  "autoLightMinManaPercent": 25,
+  "autoConvertEnabled": true,
+  "convertCooldownMs": 4000,
+  "antiIdleEnabled": false,
+  "antiIdleIntervalMs": 60000,
+  "alarmsEnabled": true,
+  "alarmsPlayerEnabled": true,
+  "alarmsPlayerRadiusSqm": 8,
+  "alarmsPlayerFloorRange": 0,
+  "alarmsStaffEnabled": true,
+  "alarmsStaffRadiusSqm": 9,
+  "alarmsStaffFloorRange": 1,
+  "alarmsBlacklistEnabled": true,
+  "alarmsBlacklistNames": [],
+  "alarmsBlacklistRadiusSqm": 9,
+  "alarmsBlacklistFloorRange": 1,
+  "trainerEnabled": false,
+  "trainerConfigured": false,
+  "trainerReconnectEnabled": true,
+  "trainerAutoPartyEnabled": true,
+  "trainerPartnerDistance": 1,
+  "trainerEscapeHealthPercent": 20,
+  "trainerEscapeDistance": 4,
+  "trainerEscapeCooldownMs": 600,
+  "autoEatEnabled": false,
+  "autoEatFoodName": [
+    "brown mushroom"
+  ],
+  "autoEatForbiddenFoodNames": [],
+  "autoEatCooldownMs": 55000,
+  "autoEatRequireNoTargets": true,
+  "autoEatRequireStationary": true,
+  "ringAutoReplaceEnabled": false,
+  "ringAutoReplaceItemName": "stealth ring",
+  "ringAutoReplaceCooldownMs": 1000,
+  "ringAutoReplaceRequireNoTargets": false,
+  "ringAutoReplaceRequireStationary": false,
+  "amuletAutoReplaceEnabled": false,
+  "amuletAutoReplaceItemName": "amulet",
+  "amuletAutoReplaceCooldownMs": 1000,
+  "amuletAutoReplaceRequireNoTargets": false,
+  "amuletAutoReplaceRequireStationary": false,
+  "bankingEnabled": false,
+  "bankingRules": [],
+  "partyFollowEnabled": false,
+  "partyFollowMembers": [
+    "Lord Larva",
+    "Dark Knight"
+  ],
+  "partyFollowManualPlayers": [],
+  "partyFollowMemberRoles": {
+    "Dark Knight": "attack-and-follow"
+  },
+  "partyFollowMemberChaseModes": {
+    "Lord Larva": "aggressive"
+  },
+  "partyFollowDistance": 1,
+  "partyFollowCombatMode": "follow-and-fight",
+  "chaseMode": "aggressive",
+  "runeMakerEnabled": false,
+  "runeMakerRules": [],
+  "spellCasterEnabled": false,
+  "spellCasterRules": [],
+  "distanceKeeperEnabled": false,
+  "distanceKeeperRules": [],
+  "rookillerEnabled": false,
+  "once": false,
+  "dryRun": false,
+  "healerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "exura",
+      "minHealthPercent": 70,
+      "maxHealthPercent": 80,
+      "minMana": 80,
+      "minManaPercent": 0,
+      "cooldownMs": 900
+    }
+  ],
+  "healerTiers": [
+    {
+      "words": "exura",
+      "healthPercent": 80,
+      "minMana": 80,
+      "minManaPercent": 0
+    }
+  ],
+  "manaTrainerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utani hur",
+      "minHealthPercent": 30,
+      "minManaPercent": 85,
+      "maxManaPercent": 100,
+      "cooldownMs": 1400,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "trainerManaTrainerRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo res ina",
+      "minHealthPercent": 95,
+      "minManaPercent": 85,
+      "maxManaPercent": 100,
+      "cooldownMs": 1400,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "autoLightRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "words": "utevo lux",
+      "minManaPercent": 25,
+      "cooldownMs": 3000,
+      "requireNoLight": true,
+      "requireNoTargets": false,
+      "requireStationary": false
+    }
+  ],
+  "autoConvertRules": [
+    {
+      "enabled": true,
+      "label": "",
+      "cooldownMs": 4000,
+      "requireNoTargets": true,
+      "requireStationary": true
+    }
+  ],
+  "monsterNames": [
+    "Alpha Larva",
+    "Alpha Scarab",
+    "Amazon",
+    "Ancient Scarab",
+    "Bear",
+    "Beholder",
+    "Black Knight",
+    "Bug",
+    "Deer",
+    "Dragon",
+    "Dragon Lord",
+    "Efreet",
+    "Fire Devil",
+    "Fire Elemental",
+    "Gargoyle",
+    "Green Djinn",
+    "Hyaena",
+    "Larva",
+    "Lion",
+    "Minotaur",
+    "Minotaur Archer",
+    "Minotaur Guard",
+    "Minotaur Mage",
+    "Orc",
+    "Orc Berserker",
+    "Orc Leader",
+    "Orc Shaman",
+    "Orc Spearman",
+    "Orc Warlord",
+    "Orc Warrior",
+    "Poison Spider",
+    "Rabbit",
+    "Rotworm",
+    "Scarab",
+    "Scorpion",
+    "Skeleton",
+    "Slime",
+    "Snake",
+    "Spider",
+    "Stalker",
+    "Stone Golem",
+    "Valkyrie",
+    "Wild Warrior"
+  ],
+  "targetingEnabled": true,
+  "waypoints": [
+    {
+      "x": 33153,
+      "y": 32686,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 001"
+    },
+    {
+      "x": 33152,
+      "y": 32683,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 002"
+    },
+    {
+      "x": 33151,
+      "y": 32680,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 003"
+    },
+    {
+      "x": 33148,
+      "y": 32680,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 004"
+    },
+    {
+      "x": 33145,
+      "y": 32680,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 005"
+    },
+    {
+      "x": 33144,
+      "y": 32677,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 006"
+    },
+    {
+      "x": 33148,
+      "y": 32680,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 007"
+    },
+    {
+      "x": 33150,
+      "y": 32676,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 008"
+    },
+    {
+      "x": 33153,
+      "y": 32674,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 009"
+    },
+    {
+      "x": 33154,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 010"
+    },
+    {
+      "x": 33151,
+      "y": 32669,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 011"
+    },
+    {
+      "x": 33149,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 012"
+    },
+    {
+      "x": 33146,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 013"
+    },
+    {
+      "x": 33143,
+      "y": 32667,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 014"
+    },
+    {
+      "x": 33146,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 015"
+    },
+    {
+      "x": 33149,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 016"
+    },
+    {
+      "x": 33149,
+      "y": 32669,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 017"
+    },
+    {
+      "x": 33152,
+      "y": 32669,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 018"
+    },
+    {
+      "x": 33155,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 019"
+    },
+    {
+      "x": 33157,
+      "y": 32668,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 020"
+    },
+    {
+      "x": 33154,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 021"
+    },
+    {
+      "x": 33154,
+      "y": 32663,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 022"
+    },
+    {
+      "x": 33154,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 023"
+    },
+    {
+      "x": 33157,
+      "y": 32666,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 024"
+    },
+    {
+      "x": 33160,
+      "y": 32667,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 025"
+    },
+    {
+      "x": 33160,
+      "y": 32664,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 026"
+    },
+    {
+      "x": 33160,
+      "y": 32661,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 027"
+    },
+    {
+      "x": 33158,
+      "y": 32658,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 028"
+    },
+    {
+      "x": 33159,
+      "y": 32661,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 029"
+    },
+    {
+      "x": 33160,
+      "y": 32664,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 030"
+    },
+    {
+      "x": 33160,
+      "y": 32667,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 031"
+    },
+    {
+      "x": 33157,
+      "y": 32667,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 032"
+    },
+    {
+      "x": 33157,
+      "y": 32670,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 033"
+    },
+    {
+      "x": 33154,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 034"
+    },
+    {
+      "x": 33154,
+      "y": 32674,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 035"
+    },
+    {
+      "x": 33157,
+      "y": 32674,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 036"
+    },
+    {
+      "x": 33157,
+      "y": 32677,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 037"
+    },
+    {
+      "x": 33160,
+      "y": 32678,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 038"
+    },
+    {
+      "x": 33166,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 039"
+    },
+    {
+      "x": 33169,
+      "y": 32672,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 040"
+    },
+    {
+      "x": 33172,
+      "y": 32672,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 041"
+    },
+    {
+      "x": 33175,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 042"
+    },
+    {
+      "x": 33178,
+      "y": 32670,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 043"
+    },
+    {
+      "x": 33181,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 044"
+    },
+    {
+      "x": 33184,
+      "y": 32673,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 045"
+    },
+    {
+      "x": 33185,
+      "y": 32676,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 046"
+    },
+    {
+      "x": 33184,
+      "y": 32673,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 047"
+    },
+    {
+      "x": 33181,
+      "y": 32672,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 048"
+    },
+    {
+      "x": 33178,
+      "y": 32670,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 049"
+    },
+    {
+      "x": 33175,
+      "y": 32670,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 050"
+    },
+    {
+      "x": 33174,
+      "y": 32673,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 051"
+    },
+    {
+      "x": 33172,
+      "y": 32673,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 052"
+    },
+    {
+      "x": 33169,
+      "y": 32672,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 053"
+    },
+    {
+      "x": 33166,
+      "y": 32671,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 054"
+    },
+    {
+      "x": 33163,
+      "y": 32672,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 055"
+    },
+    {
+      "x": 33162,
+      "y": 32675,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 056"
+    },
+    {
+      "x": 33162,
+      "y": 32678,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 057"
+    },
+    {
+      "x": 33165,
+      "y": 32680,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 058"
+    },
+    {
+      "x": 33165,
+      "y": 32683,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 059"
+    },
+    {
+      "x": 33166,
+      "y": 32686,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 060"
+    },
+    {
+      "x": 33169,
+      "y": 32688,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 061"
+    },
+    {
+      "x": 33173,
+      "y": 32685,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 062"
+    },
+    {
+      "x": 33172,
+      "y": 32688,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 063"
+    },
+    {
+      "x": 33175,
+      "y": 32690,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 064"
+    },
+    {
+      "x": 33172,
+      "y": 32688,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 065"
+    },
+    {
+      "x": 33169,
+      "y": 32688,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 066"
+    },
+    {
+      "x": 33168,
+      "y": 32691,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 067"
+    },
+    {
+      "x": 33165,
+      "y": 32692,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 068"
+    },
+    {
+      "x": 33162,
+      "y": 32693,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 069"
+    },
+    {
+      "x": 33162,
+      "y": 32696,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 070"
+    },
+    {
+      "x": 33165,
+      "y": 32698,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 071"
+    },
+    {
+      "x": 33168,
+      "y": 32699,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 072"
+    },
+    {
+      "x": 33170,
+      "y": 32702,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 073"
+    },
+    {
+      "x": 33173,
+      "y": 32703,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 074"
+    },
+    {
+      "x": 33170,
+      "y": 32703,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 075"
+    },
+    {
+      "x": 33169,
+      "y": 32700,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 076"
+    },
+    {
+      "x": 33166,
+      "y": 32699,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 077"
+    },
+    {
+      "x": 33163,
+      "y": 32697,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 078"
+    },
+    {
+      "x": 33160,
+      "y": 32697,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 079"
+    },
+    {
+      "x": 33158,
+      "y": 32700,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 080"
+    },
+    {
+      "x": 33155,
+      "y": 32700,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 081"
+    },
+    {
+      "x": 33152,
+      "y": 32699,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 082"
+    },
+    {
+      "x": 33150,
+      "y": 32702,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 083"
+    },
+    {
+      "x": 33149,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 084"
+    },
+    {
+      "x": 33152,
+      "y": 32706,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 085"
+    },
+    {
+      "x": 33153,
+      "y": 32709,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 086"
+    },
+    {
+      "x": 33152,
+      "y": 32712,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 087"
+    },
+    {
+      "x": 33152,
+      "y": 32709,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 088"
+    },
+    {
+      "x": 33154,
+      "y": 32706,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 089"
+    },
+    {
+      "x": 33157,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 090"
+    },
+    {
+      "x": 33160,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 091"
+    },
+    {
+      "x": 33163,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 092"
+    },
+    {
+      "x": 33164,
+      "y": 32708,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 093"
+    },
+    {
+      "x": 33163,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 094"
+    },
+    {
+      "x": 33160,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 095"
+    },
+    {
+      "x": 33157,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 096"
+    },
+    {
+      "x": 33154,
+      "y": 32705,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 097"
+    },
+    {
+      "x": 33151,
+      "y": 32706,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 098"
+    },
+    {
+      "x": 33149,
+      "y": 32703,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 099"
+    },
+    {
+      "x": 33146,
+      "y": 32702,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 100"
+    },
+    {
+      "x": 33140,
+      "y": 32706,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 101"
+    },
+    {
+      "x": 33143,
+      "y": 32702,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 102"
+    },
+    {
+      "x": 33148,
+      "y": 32702,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 103"
+    },
+    {
+      "x": 33150,
+      "y": 32699,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 104"
+    },
+    {
+      "x": 33148,
+      "y": 32696,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 105"
+    },
+    {
+      "x": 33147,
+      "y": 32693,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 106"
+    },
+    {
+      "x": 33149,
+      "y": 32690,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 107"
+    },
+    {
+      "x": 33147,
+      "y": 32687,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 108"
+    },
+    {
+      "x": 33144,
+      "y": 32685,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 109"
+    },
+    {
+      "x": 33141,
+      "y": 32684,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 110"
+    },
+    {
+      "x": 33138,
+      "y": 32686,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 111"
+    },
+    {
+      "x": 33134,
+      "y": 32686,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 112"
+    },
+    {
+      "x": 33138,
+      "y": 32691,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 113"
+    },
+    {
+      "x": 33139,
+      "y": 32687,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 114"
+    },
+    {
+      "x": 33141,
+      "y": 32684,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 115"
+    },
+    {
+      "x": 33144,
+      "y": 32684,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 116"
+    },
+    {
+      "x": 33145,
+      "y": 32687,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 117"
+    },
+    {
+      "x": 33148,
+      "y": 32687,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 118"
+    },
+    {
+      "x": 33151,
+      "y": 32687,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 119"
+    }
+  ]
+}
