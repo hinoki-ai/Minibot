@@ -4525,6 +4525,145 @@ test("regular player alarms stay silent when the player is only one floor away u
   assert.equal(beepLog.filter((entry) => entry.type === "start").length, 0);
 });
 
+test("session tab player alarm audio uses each session alarm settings", async () => {
+  const beepLog = [];
+
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        alarmsEnabled: true,
+        alarmsPlayerEnabled: true,
+        alarmsPlayerRadiusSqm: 8,
+        alarmsPlayerFloorRange: 0,
+      },
+      sessions: [
+        {
+          id: "page-1",
+          profileKey: "knight-alpha",
+          pageId: "page-1",
+          title: "Minibia",
+          url: "https://minibia.com/play",
+          characterName: "Knight Alpha",
+          displayName: "Knight Alpha",
+          label: "Knight Alpha",
+          playerPosition: { x: 100, y: 200, z: 7 },
+          playerStats: {
+            health: 870,
+            maxHealth: 1000,
+            mana: 320,
+            maxMana: 500,
+            healthPercent: 87,
+            manaPercent: 64,
+          },
+          visiblePlayers: [],
+          visiblePlayerNames: [],
+          alarmOptions: {
+            alarmsEnabled: true,
+            alarmsPlayerEnabled: true,
+            alarmsPlayerRadiusSqm: 8,
+            alarmsPlayerFloorRange: 0,
+          },
+          running: false,
+          connected: true,
+          ready: true,
+          present: true,
+          claimed: false,
+          claimedBySelf: true,
+          available: true,
+          routeIndex: 1,
+          routeComplete: false,
+          overlayFocusIndex: 1,
+          routeName: "dararotworms",
+          page: {
+            id: "page-1",
+            title: "Minibia",
+            url: "https://minibia.com/play",
+          },
+        },
+        {
+          id: "page-2",
+          profileKey: "scout-beta",
+          pageId: "page-2",
+          title: "Minibia",
+          url: "https://minibia.com/play?client=2",
+          characterName: "Scout Beta",
+          displayName: "Scout Beta",
+          label: "Scout Beta",
+          playerPosition: { x: 105, y: 205, z: 7 },
+          playerStats: {
+            health: 520,
+            maxHealth: 1000,
+            mana: 210,
+            maxMana: 500,
+            healthPercent: 52,
+            manaPercent: 42,
+          },
+          visiblePlayers: [
+            {
+              id: 42,
+              name: "PK Two",
+              position: { x: 106, y: 205, z: 7 },
+            },
+          ],
+          visiblePlayerNames: ["PK Two"],
+          alarmOptions: {
+            alarmsEnabled: false,
+            alarmsPlayerEnabled: true,
+            alarmsPlayerRadiusSqm: 8,
+            alarmsPlayerFloorRange: 0,
+          },
+          running: false,
+          connected: true,
+          ready: true,
+          present: true,
+          claimed: false,
+          claimedBySelf: true,
+          available: true,
+          routeIndex: 0,
+          routeComplete: false,
+          overlayFocusIndex: null,
+          routeName: "dararotworms",
+          page: {
+            id: "page-2",
+            title: "Minibia",
+            url: "https://minibia.com/play?client=2",
+          },
+        },
+      ],
+    }),
+    beforeEval(window) {
+      installFakeAudioContext(window, beepLog);
+    },
+  });
+  const { currentState, emit } = desk;
+
+  await waitFor(430);
+  await flush(4);
+  assert.equal(beepLog.filter((entry) => entry.type === "start").length, 0);
+
+  const nextState = clone(currentState());
+  nextState.sessions = nextState.sessions.map((session) => (
+    session.id === "page-2"
+      ? {
+          ...session,
+          alarmOptions: {
+            ...session.alarmOptions,
+            alarmsEnabled: true,
+          },
+        }
+      : session
+  ));
+
+  emit("state", { sessionId: "page-2" }, nextState);
+  await flush(8);
+  await waitFor(430);
+  await flush(4);
+
+  const startedAfterSessionAlarmEnabled = beepLog.filter((entry) => entry.type === "start");
+  assert.ok(startedAfterSessionAlarmEnabled.length > 0);
+  assert.deepEqual([...new Set(startedAfterSessionAlarmEnabled.map((entry) => entry.wave))], ["sine"]);
+});
+
 test("session tabs run a continuous GM/GOD alarm when a healthy session sees God Minibia", async () => {
   const beepLog = [];
 

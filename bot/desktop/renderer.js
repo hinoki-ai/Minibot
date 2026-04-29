@@ -5477,6 +5477,17 @@ function getAlarmSettings(source = state?.options || {}) {
   };
 }
 
+function getSessionAlarmSettings(session) {
+  const activeSessionId = String(state?.activeSessionId || "");
+  const sessionId = String(session?.id || "");
+  const source = session?.alarmOptions && typeof session.alarmOptions === "object"
+    ? session.alarmOptions
+    : sessionId && sessionId === activeSessionId
+      ? state?.options || {}
+      : {};
+  return getAlarmSettings(source);
+}
+
 function classifyAlarmPlayerEntry(entry, settings = getAlarmSettings()) {
   const nameKey = String(entry?.name || "").trim().toLowerCase();
   if (nameKey && settings.blacklist.nameKeys.has(nameKey)) {
@@ -5794,7 +5805,7 @@ function getSessionAlertFlags(session) {
   const healthPercent = getSessionHealthPercent(session);
   const visiblePlayerEntries = getSessionVisiblePlayers(session);
   const visiblePlayers = visiblePlayerEntries.map((entry) => entry.name);
-  const alarmSettings = getAlarmSettings();
+  const alarmSettings = getSessionAlarmSettings(session);
   const staffPlayers = getSessionStaffPlayerNames(session);
   const playersTargetingSelf = visiblePlayerEntries
     .filter((entry) => entry?.isTargetingSelf === true)

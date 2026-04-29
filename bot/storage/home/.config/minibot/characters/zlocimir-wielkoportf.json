@@ -1,5 +1,5 @@
 {
-  "cavebotName": "Trainer",
+  "cavebotName": "RotwormsFibula",
   "creatureLedger": {
     "monsters": [
       "Larva",
@@ -19,7 +19,10 @@
       "Scorpion",
       "Ancient Scarab",
       "Bonebeast",
-      "Dragon"
+      "Dragon",
+      "Rotworm",
+      "Rat",
+      "Alpha Rotworm"
     ],
     "players": [
       "Czarnobrat",
@@ -50,6 +53,6 @@
     "npcs": []
   },
   "cavebotPaused": false,
-  "trainerPartnerName": "Czarnobrat",
+  "trainerPartnerName": "",
   "stopAggroHold": false
 }

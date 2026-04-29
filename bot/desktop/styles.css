@@ -122,10 +122,7 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(247, 213, 138, 0.12), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(143, 190, 100, 0.08), transparent 26%),
-    linear-gradient(180deg, #080706, #110f0c 36%, #0b0907);
+  background: transparent;
   color: var(--text);
   font-family: var(--font);
   font-size: var(--text-md);
@@ -216,6 +213,7 @@ button {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 6px;
   border: 1px solid var(--line);
+  border-radius: 6px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 12%),
     linear-gradient(180deg, var(--bg-3), var(--bg));
@@ -224,6 +222,7 @@ button {
     inset -1px -1px 0 rgba(0, 0, 0, 0.68),
     0 24px 56px rgba(0, 0, 0, 0.42);
   -webkit-app-region: no-drag;
+  overflow: hidden;
 }
 
 .bot-strip,
@@ -13380,6 +13379,69 @@ select[data-feedback="success"] {
   .modal-panel-route-picker {
     height: auto;
   }
+}
+
+/* Modal toggle cleanup: keep toggles compact and stop checked labels from reading as large badges. */
+.modal-panel,
+.modal-panel-wide,
+.modal-panel-targeting,
+.route-modal-panel,
+.modal-panel-module,
+.modal-panel-console,
+.modal-panel-presets,
+.modal-panel-account-registry,
+#modal-targeting,
+#modal-autowalk {
+  --toggle-width: 28px;
+  --toggle-height: 16px;
+  --toggle-pad: 2px;
+  --toggle-surface-radius: 5px;
+}
+
+.modal-panel :is(.checks label, .route-checks label, .module-rule-check) {
+  min-height: 22px;
+  padding: 2px 4px;
+  grid-template-columns: var(--toggle-width) minmax(0, 1fr);
+  gap: 5px;
+  border-color: rgba(169, 141, 99, 0.14);
+  border-radius: var(--toggle-surface-radius);
+  background: transparent;
+  box-shadow: none;
+}
+
+.modal-panel :is(.checks label, .route-checks label, .module-rule-check):hover {
+  border-color: rgba(201, 169, 112, 0.34);
+  background: rgba(255, 255, 255, 0.018);
+  box-shadow: none;
+  transform: none;
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+):has(input[type="checkbox"]:checked) {
+  border-color: rgba(247, 213, 138, 0.28);
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.modal-panel .route-hunt-head-check {
+  min-height: 20px;
+  padding: 1px 4px;
+}
+
+.modal-panel :is(.route-avoid-toggle, .equipment-replace-toggle) {
+  padding: 3px 5px;
+  gap: 6px;
+  border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .modal-layer {
