@@ -80,7 +80,9 @@
       "Orc Warlord",
       "Orc Rider",
       "Pig",
-      "Fire Elemental"
+      "Fire Elemental",
+      "Wolf",
+      "Alpha Dragon"
     ],
     "players": [
       "Lord Larva",
@@ -132,7 +134,11 @@
       "Ulduren",
       "Afonso Penialis",
       "Bubber",
-      "God Minibia"
+      "God Minibia",
+      "Erno",
+      "Nudzgor",
+      "Jexleft",
+      "Ricky"
     ],
     "npcs": []
   },

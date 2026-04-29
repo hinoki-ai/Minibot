@@ -7709,9 +7709,20 @@ function renderModuleRuleSummary(moduleKey, rule = {}, context = {}) {
   }
 
   const pills = renderModuleRulePills(getModuleRuleSummaryItems(moduleKey, rule, context));
+  const tierLine = moduleKey === "healer"
+    ? (() => {
+      const minHp = Math.max(0, Math.round(Number(rule?.minHealthPercent) || 0));
+      const maxHp = Math.max(minHp, Math.round(Number(rule?.maxHealthPercent) || 0));
+      const manaParts = [];
+      if (Number(rule?.minMana) > 0) manaParts.push(`mana ${Math.round(Number(rule.minMana))}+`);
+      if (Number(rule?.minManaPercent) > 0) manaParts.push(`MP ${Math.round(Number(rule.minManaPercent))}%+`);
+      return `<div class="module-rule-tier-line">HP ${escapeHtml(formatPercent(minHp))}-${escapeHtml(formatPercent(maxHp))}${manaParts.length ? ` / ${escapeHtml(manaParts.join(" / "))}` : ""}</div>`;
+    })()
+    : "";
 
   return `
     <div class="module-rule-action-line">${escapeHtml(formatModuleRuleAction(moduleKey, rule))}</div>
+    ${tierLine}
     <div class="module-rule-pills">${pills}</div>
   `;
 }
@@ -11135,7 +11146,16 @@ function renderModuleRuleList(moduleKey, rules = []) {
     return '<div class="empty-state">No rules yet</div>';
   }
 
-  return rules
+  const listHead = moduleKey === "healer"
+    ? `
+      <div class="module-rule-list-head healer-priority-head">
+        <span>Applied Healing Priority</span>
+        <strong>Top rule runs first</strong>
+      </div>
+    `
+    : "";
+
+  return listHead + rules
     .map((rule, index) => {
       const enabled = rule?.enabled !== false;
       const ui = MODULE_RULE_UI[moduleKey] || {};
@@ -11153,8 +11173,8 @@ function renderModuleRuleList(moduleKey, rules = []) {
               <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
             </div>
             <div class="module-rule-actions">
-              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Raise priority for ${escapeHtml(title)}">Higher</button>
-              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Lower priority for ${escapeHtml(title)}">Lower</button>
+              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} up">Move Up</button>
+              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} down">Move Down</button>
               <button type="button" class="btn mini danger" data-delete-module-rule="${moduleKey}" data-rule-index="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
             </div>
           </div>
@@ -15601,9 +15621,9 @@ function readTargetProfilesFromDom() {
     return normalizeTargetProfiles(targetProfilesDraft || []);
   }
 
-  return normalizeTargetProfiles(rows.map((row) => {
+  const renderedProfiles = new Map(rows.map((row) => {
     const getField = (field) => row.querySelector(`[data-target-profile-field="${field}"]`);
-    return normalizeTargetProfile({
+    const profile = normalizeTargetProfile({
       name: row.dataset.targetProfileName || "",
       enabled: getField("enabled")?.checked,
       priority: getField("priority")?.value,
@@ -15619,7 +15639,13 @@ function readTargetProfilesFromDom() {
       avoidBeam: getField("avoidBeam")?.checked,
       avoidWave: getField("avoidWave")?.checked,
     });
+    return [profile.name.toLowerCase(), profile];
   }));
+
+  return normalizeTargetProfiles(
+    syncTargetProfilesToNames(getMonsterInputNames(), targetProfilesDraft || [])
+      .map((profile) => renderedProfiles.get(profile.name.toLowerCase()) || profile),
+  );
 }
 
 function captureTargetProfilesDraftFromDom() {
@@ -15636,6 +15662,31 @@ function sortTargetProfilesByPriority(profiles = []) {
     (Number(right?.priority) || 0) - (Number(left?.priority) || 0)
     || compareDisplayNames(left?.name, right?.name)
   ));
+}
+
+function rebalanceTargetProfilePriorities(profiles = []) {
+  const step = 100;
+  return profiles.map((profile, index) => ({
+    ...profile,
+    priority: Math.max(step, (profiles.length - index) * step),
+  }));
+}
+
+function moveTargetProfilePriority(profileName, delta) {
+  const nameKey = String(profileName || "").trim().toLowerCase();
+  const direction = Math.trunc(Number(delta));
+  if (!nameKey || !direction) return;
+
+  const ordered = sortTargetProfilesByPriority(readTargetProfilesFromDom());
+  const currentIndex = ordered.findIndex((profile) => profile.name.toLowerCase() === nameKey);
+  const nextIndex = currentIndex + direction;
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= ordered.length) return;
+
+  [ordered[currentIndex], ordered[nextIndex]] = [ordered[nextIndex], ordered[currentIndex]];
+  targetProfilesDraft = rebalanceTargetProfilePriorities(ordered);
+  targetProfilesRenderedKey = "";
+  markTargetingDirty();
+  renderTargetProfiles({ force: true });
 }
 
 function getTargetProfilesRenderKey(profiles, visibleCreatures, searchQuery = "") {
@@ -15773,19 +15824,25 @@ function renderTargetProfiles({ force = false } = {}) {
     const visibleEntries = visibleCreatures.filter((entry) => String(entry?.name || "").trim().toLowerCase() === profile.name.toLowerCase());
     const summary = formatTargetProfileSummary(profile, visibleEntries);
     const activeBadge = profile.enabled ? "Active" : "Off";
+    const rankedIndex = profiles.findIndex((entry) => entry.name.toLowerCase() === profile.name.toLowerCase());
+    const priorityIndex = rankedIndex >= 0 ? rankedIndex : index;
 
     return `
-      <section class="target-profile-row ${profile.enabled ? "" : "off"}" data-target-profile-name="${escapeHtml(profile.name)}" data-target-profile-index="${index}">
+      <section class="target-profile-row ${profile.enabled ? "" : "off"}" data-target-profile-name="${escapeHtml(profile.name)}" data-target-profile-index="${priorityIndex}">
         <div class="target-profile-head">
           <div class="target-profile-title">
-            <span class="target-profile-priority">${escapeHtml(formatPriorityRankLabel(index))}</span>
+            <span class="target-profile-priority">${escapeHtml(formatPriorityRankLabel(priorityIndex))}</span>
             <strong>${escapeHtml(profile.name)}</strong>
             <span class="target-profile-badge ${profile.enabled ? "active" : ""}">${activeBadge}</span>
           </div>
-          <label class="module-rule-control module-rule-check target-profile-check">
-            <input type="checkbox" data-target-profile-field="enabled" ${profile.enabled ? "checked" : ""} />
-            <span>Enabled</span>
-          </label>
+          <div class="target-profile-actions">
+            <button type="button" class="btn mini" data-move-target-profile="${escapeHtml(profile.name)}" data-profile-delta="-1" ${priorityIndex === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(profile.name)} up">Move Up</button>
+            <button type="button" class="btn mini" data-move-target-profile="${escapeHtml(profile.name)}" data-profile-delta="1" ${priorityIndex === profiles.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(profile.name)} down">Move Down</button>
+            <label class="module-rule-control module-rule-check target-profile-check">
+              <input type="checkbox" data-target-profile-field="enabled" ${profile.enabled ? "checked" : ""} />
+              <span>Enabled</span>
+            </label>
+          </div>
         </div>
         <div class="target-profile-summary">${escapeHtml(summary)}</div>
         <div class="target-profile-grid compact-profile-grid">
@@ -18684,6 +18741,12 @@ targetProfileList?.addEventListener("input", (event) => {
   if (!event.target.matches("[data-target-profile-field]")) return;
   markTargetingDirty();
   captureTargetProfilesDraftFromDom();
+});
+
+targetProfileList?.addEventListener("click", (event) => {
+  const moveButton = event.target.closest("[data-move-target-profile]");
+  if (!moveButton) return;
+  moveTargetProfilePriority(moveButton.dataset.moveTargetProfile, Number(moveButton.dataset.profileDelta));
 });
 
 targetProfileList?.addEventListener("change", (event) => {

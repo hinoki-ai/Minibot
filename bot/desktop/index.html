@@ -756,6 +756,11 @@
           </label>
         </div>
         <div class="route-hunt-grid route-hunt-grid-3col">
+          <section class="target-profile-card target-profile-workbench route-hunt-profile-panel">
+            <div class="targeting-column-kicker">Applied Target Priority</div>
+            <div id="target-profile-list" class="target-profile-list"></div>
+          </section>
+
           <section class="targeting-config-card route-hunt-config-panel">
             <label class="monster-field target-queue-field route-hunt-queue-field"
               title="Top line is highest queue priority. One monster per line. Comma-separated names also work.">Queue priority<textarea id="monster" rows="4"
@@ -790,10 +795,6 @@
               <label title="Previews targeting, casts, movement, and route tools without sending live inputs."><input
                   id="dryRun" type="checkbox" /> Dry Run</label>
             </div>
-          </section>
-
-          <section class="target-profile-card target-profile-workbench route-hunt-profile-panel">
-            <div id="target-profile-list" class="target-profile-list"></div>
           </section>
 
           <section class="target-set-card targeting-combat-card route-hunt-combat-panel">

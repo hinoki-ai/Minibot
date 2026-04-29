@@ -602,6 +602,7 @@ const URGENT_CONVERT_RETRY_BACKOFF_MAX_MS = 10_000;
 const COMBAT_BOX_PADDING = 1;
 const COMBAT_BEAM_LENGTH = 8;
 const COMBAT_WAVE_WIDTHS = Object.freeze([1, 3, 3, 5]);
+const TARGET_PROFILE_STICK_TO_TARGET_SCORE = 4_200;
 const COMBAT_MODE_PERSIST_RETRY_MS = 500;
 const FIGHT_MODE_DESCRIPTOR_BY_RAW_VALUE = Object.freeze({
   0: Object.freeze({ key: "offensive", label: "Offensive" }),
@@ -778,6 +779,9 @@ export const SHARED_SPAWN_MODES = Object.freeze([
 ]);
 
 export const DEFAULT_SHARED_SPAWN_MODE = "respect-others";
+const SHARED_SPAWN_ADJACENT_CLAIM_DISTANCE = 1;
+const SHARED_SPAWN_NEARBY_CLAIM_DISTANCE = 2;
+const SHARED_SPAWN_DAMAGED_HEALTH_PERCENT = 99.5;
 
 export const DEFAULT_RUNE_MAKER_RULE = Object.freeze({
   enabled: true,
@@ -6922,6 +6926,7 @@ function buildBackpackEquipmentSlotIndexExpression(
 function buildTargetExpression(targetIds, {
   sharedSpawnMode = DEFAULT_SHARED_SPAWN_MODE,
   trustedPlayerNames = [],
+  foreignPlayers = [],
 } = {}) {
   const queuedIds = Array.isArray(targetIds)
     ? targetIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
@@ -6933,6 +6938,15 @@ function buildTargetExpression(targetIds, {
     ? trustedPlayerNames
       .map((name) => String(name || "").trim().toLowerCase())
       .filter(Boolean)
+    : [];
+  const serializedForeignPlayers = Array.isArray(foreignPlayers)
+    ? foreignPlayers
+      .map((entry) => ({
+        id: entry?.id == null ? "" : String(entry.id).trim(),
+        name: String(entry?.name || "").trim(),
+        position: normalizePosition(entry?.position),
+      }))
+      .filter((entry) => entry.id || entry.name || entry.position)
     : [];
 
   return `(() => {
@@ -6986,6 +7000,7 @@ function buildTargetExpression(targetIds, {
     };
     const playerId = readEntityId(player);
     const trustedNameKeys = new Set(${JSON.stringify(trustedPlayerNameKeys)});
+    const snapshotForeignPlayers = ${JSON.stringify(serializedForeignPlayers)};
     const trustedIds = new Set(playerId ? [playerId] : []);
     const playerNameKey = String(readEntityName(player) || player?.name || "").trim().toLowerCase();
     if (playerNameKey) {
@@ -7068,6 +7083,89 @@ function buildTargetExpression(targetIds, {
         || (ref.nameKey && trustedNameKeys.has(ref.nameKey))
       )
     );
+    const getPosition = (entry) => {
+      const position = entry?.__position || entry?.position || entry?.state?.position || null;
+      if (!position) return null;
+      const x = Number(position.x);
+      const y = Number(position.y);
+      const z = Number(position.z);
+      return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)
+        ? { x, y, z }
+        : null;
+    };
+    const getDistance = (from, to) => {
+      if (!from || !to || Number(from.z) !== Number(to.z)) return Number.POSITIVE_INFINITY;
+      return Math.max(Math.abs(Number(from.x) - Number(to.x)), Math.abs(Number(from.y) - Number(to.y)));
+    };
+    const findLiveCreatureBySnapshotRef = (entry) => {
+      const entryId = entry?.id ? String(entry.id) : "";
+      const entryNameKey = String(entry?.name || "").trim().toLowerCase();
+      return creatures.find((creature) => {
+        const creatureId = readEntityId(creature);
+        if (entryId && creatureId && String(creatureId) === entryId) return true;
+        return Boolean(entryNameKey && String(readEntityName(creature) || creature?.name || "").trim().toLowerCase() === entryNameKey);
+      }) || null;
+    };
+    const getForeignPlayerEntries = () => {
+      const entries = [];
+      const seen = new Set();
+      for (const snapshotPlayer of Array.isArray(snapshotForeignPlayers) ? snapshotForeignPlayers : []) {
+        const livePlayer = findLiveCreatureBySnapshotRef(snapshotPlayer);
+        const name = readEntityName(livePlayer) || snapshotPlayer.name || "";
+        const nameKey = String(name || "").trim().toLowerCase();
+        if (nameKey && trustedNameKeys.has(nameKey)) continue;
+        const id = readEntityId(livePlayer) || snapshotPlayer.id || "";
+        if (id && trustedIds.has(String(id))) continue;
+        const position = getPosition(livePlayer) || snapshotPlayer.position || null;
+        if (!position) continue;
+        const key = id ? "id:" + id : "name:" + nameKey + ":" + [position.x, position.y, position.z].join(",");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        entries.push({ id, name, nameKey, position });
+      }
+      return entries;
+    };
+    const describeProximitySharedSpawnBlock = (target) => {
+      if (${JSON.stringify(normalizedSharedSpawnMode)} === "attack-all") return null;
+      const targetPosition = getPosition(target);
+      if (!targetPosition) return null;
+
+      const selfPosition = getPosition(player);
+      const selfDistance = getDistance(targetPosition, selfPosition);
+      const healthPercent = Number(
+        target?.healthPercent
+        ?? target?.hppc
+        ?? target?.hpPercent
+        ?? target?.state?.healthPercent
+        ?? target?.stats?.healthPercent,
+      );
+      for (const foreignPlayer of getForeignPlayerEntries()) {
+        const foreignDistance = getDistance(targetPosition, foreignPlayer.position);
+        if (!Number.isFinite(foreignDistance)) continue;
+        const adjacentClaim = foreignDistance <= ${SHARED_SPAWN_ADJACENT_CLAIM_DISTANCE};
+        const nearbyClaim = foreignDistance <= ${SHARED_SPAWN_NEARBY_CLAIM_DISTANCE}
+          && (
+            !Number.isFinite(selfDistance)
+            || foreignDistance < selfDistance
+            || (Number.isFinite(healthPercent) && healthPercent < ${SHARED_SPAWN_DAMAGED_HEALTH_PERCENT})
+          );
+        if (!adjacentClaim && !nearbyClaim) continue;
+        return {
+          target: {
+            id: target?.id ?? readEntityId(target),
+            name: target?.name || "",
+          },
+          engagedPlayer: {
+            id: foreignPlayer.id || null,
+            name: foreignPlayer.name || "",
+            nameKey: foreignPlayer.nameKey || "",
+            distance: foreignDistance,
+            inferred: true,
+          },
+        };
+      }
+      return null;
+    };
     const describeSharedSpawnBlock = (target) => {
       const targetId = readEntityId(target);
       const targetNameKey = String(readEntityName(target) || target?.name || "").trim().toLowerCase();
@@ -7085,7 +7183,7 @@ function buildTargetExpression(targetIds, {
             },
             engagedPlayer: foreignRef,
           }
-        : null;
+        : describeProximitySharedSpawnBlock(target);
     };
     const targets = ${JSON.stringify(queuedIds)}
       .map((id) => targetById.get(Number(id)))
@@ -13066,16 +13164,12 @@ export class MinibiaTargetBot {
     const ids = new Set();
     const names = new Set();
 
-    for (const entry of Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : []) {
-      const nameKey = this.getNameKey(entry?.name);
-      if (nameKey && trustedNames.has(nameKey)) {
-        continue;
-      }
-
+    for (const entry of this.getSharedSpawnForeignPlayers(snapshot)) {
       const id = entry?.id == null ? "" : String(entry.id);
       if (id) {
         ids.add(id);
       }
+      const nameKey = this.getNameKey(entry?.name);
       if (nameKey) {
         names.add(nameKey);
       }
@@ -13088,8 +13182,83 @@ export class MinibiaTargetBot {
     };
   }
 
+  getSharedSpawnForeignPlayers(snapshot = this.lastSnapshot) {
+    const trustedNames = this.getSharedSpawnTrustedPlayerKeys(snapshot);
+    const trustedIds = new Set();
+    const addTrustedId = (value) => {
+      const id = value == null ? "" : String(value).trim();
+      if (id) {
+        trustedIds.add(id);
+      }
+    };
+
+    addTrustedId(snapshot?.playerId);
+    for (const entry of Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : []) {
+      const nameKey = this.getNameKey(entry?.name);
+      if (nameKey && trustedNames.has(nameKey)) {
+        addTrustedId(entry?.id);
+      }
+    }
+
+    return (Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : [])
+      .filter((entry) => {
+        const nameKey = this.getNameKey(entry?.name);
+        if (nameKey && trustedNames.has(nameKey)) {
+          return false;
+        }
+
+        const id = entry?.id == null ? "" : String(entry.id).trim();
+        return !id || !trustedIds.has(id);
+      });
+  }
+
   hasVisibleForeignPlayers(snapshot = this.lastSnapshot) {
     return this.getSharedSpawnForeignPlayerMatchers(snapshot).count > 0;
+  }
+
+  getForeignPlayerClaimForEntry(entry, snapshot = this.lastSnapshot) {
+    if (!entry?.position) {
+      return null;
+    }
+
+    const mode = this.getSharedSpawnMode();
+    if (mode === "attack-all") {
+      return null;
+    }
+
+    const playerPosition = snapshot?.playerPosition || null;
+    const selfDistance = this.getPositionDistance(entry.position, playerPosition);
+    const healthPercent = Number(entry?.healthPercent);
+    const foreignPlayers = this.getSharedSpawnForeignPlayers(snapshot);
+    let bestClaim = null;
+
+    for (const foreignPlayer of foreignPlayers) {
+      const distance = this.getPositionDistance(entry.position, foreignPlayer?.position);
+      if (!Number.isFinite(distance)) {
+        continue;
+      }
+
+      const adjacentClaim = distance <= SHARED_SPAWN_ADJACENT_CLAIM_DISTANCE;
+      const nearbyClaim = distance <= SHARED_SPAWN_NEARBY_CLAIM_DISTANCE
+        && (
+          !Number.isFinite(selfDistance)
+          || distance < selfDistance
+          || (Number.isFinite(healthPercent) && healthPercent < SHARED_SPAWN_DAMAGED_HEALTH_PERCENT)
+        );
+      if (!adjacentClaim && !nearbyClaim) {
+        continue;
+      }
+
+      if (!bestClaim || distance < bestClaim.distance) {
+        bestClaim = {
+          player: foreignPlayer,
+          distance,
+          reason: adjacentClaim ? "adjacent" : "nearby",
+        };
+      }
+    }
+
+    return bestClaim;
   }
 
   isEntryEngagedByForeignPlayer(entry, snapshot = this.lastSnapshot) {
@@ -13147,6 +13316,7 @@ export class MinibiaTargetBot {
       case "watch-only":
         return this.hasVisibleForeignPlayers(snapshot);
       case "respect-others":
+        return Boolean(this.getForeignPlayerClaimForEntry(entry, snapshot));
       case "attack-all":
       default:
         return false;
@@ -20510,6 +20680,60 @@ export class MinibiaTargetBot {
     );
   }
 
+  isTargetProfileDirectiveActive(profile = null) {
+    if (!profile) {
+      return false;
+    }
+
+    return Number(profile.priority) !== DEFAULT_TARGET_PROFILE.priority
+      || Number(profile.dangerLevel) > DEFAULT_TARGET_PROFILE.dangerLevel
+      || Number(profile.keepDistanceMin) > DEFAULT_TARGET_PROFILE.keepDistanceMin
+      || Number(profile.keepDistanceMax) > DEFAULT_TARGET_PROFILE.keepDistanceMax
+      || Number(profile.finishBelowPercent) > DEFAULT_TARGET_PROFILE.finishBelowPercent
+      || String(profile.killMode || "") !== DEFAULT_TARGET_PROFILE.killMode
+      || String(profile.chaseMode || "") !== DEFAULT_TARGET_PROFILE.chaseMode
+      || String(profile.behavior || "") !== DEFAULT_TARGET_PROFILE.behavior
+      || profile.preferShootable !== DEFAULT_TARGET_PROFILE.preferShootable
+      || profile.avoidBeam === true
+      || profile.avoidWave === true;
+  }
+
+  getTargetProfileDirectiveScore(entry, playerPosition = null) {
+    const profile = this.getTargetProfile(entry?.name);
+    if (!this.isTargetProfileDirectiveActive(profile)) {
+      return 0;
+    }
+
+    const healthPercent = Number(entry?.healthPercent);
+    let score = 0;
+
+    score += (Number(profile.priority || 0) - DEFAULT_TARGET_PROFILE.priority) * 1000;
+    score += Number(profile.dangerLevel || 0) * 260;
+    score += this.getKillModeScore(profile);
+
+    if (profile.stickToTarget && entry?.isCurrentTarget) {
+      score += TARGET_PROFILE_STICK_TO_TARGET_SCORE;
+    }
+
+    if (profile.preferShootable && entry?.isShootable === false) {
+      score -= 600;
+    }
+
+    if (profile.avoidBeam && this.hasBeamExposure(entry, playerPosition)) {
+      score -= 700 + (Number(profile.dangerLevel || 0) * 50);
+    }
+
+    if (profile.avoidWave && this.hasWaveExposure(entry, playerPosition)) {
+      score -= 560 + (Number(profile.dangerLevel || 0) * 45);
+    }
+
+    if (Number.isFinite(healthPercent) && Number(profile.finishBelowPercent) > 0 && healthPercent <= Number(profile.finishBelowPercent)) {
+      score += 1600 + ((Number(profile.finishBelowPercent) - healthPercent) * 22);
+    }
+
+    return score;
+  }
+
   getTargetPriorityScore(entry, playerPosition = null) {
     const profile = this.getTargetProfile(entry?.name);
     const range = this.getEntryDistance(entry, playerPosition);
@@ -20523,7 +20747,7 @@ export class MinibiaTargetBot {
       score += this.getKillModeScore(profile);
 
       if (profile.stickToTarget && entry?.isCurrentTarget) {
-        score += 850;
+        score += TARGET_PROFILE_STICK_TO_TARGET_SCORE;
       }
 
       if (profile.preferShootable && entry?.isShootable === false) {
@@ -20650,6 +20874,8 @@ export class MinibiaTargetBot {
   compareTargetPriority(left, right, playerPosition = null, snapshot = null) {
     const leftScore = this.getTargetPriorityScore(left, playerPosition);
     const rightScore = this.getTargetPriorityScore(right, playerPosition);
+    const leftProfileDirectiveScore = this.getTargetProfileDirectiveScore(left, playerPosition);
+    const rightProfileDirectiveScore = this.getTargetProfileDirectiveScore(right, playerPosition);
     const leftThreatScore = this.getMonsterThreatScoreForEntry(left);
     const rightThreatScore = this.getMonsterThreatScoreForEntry(right);
     const leftScreenBlockers = this.getEntryScreenBlockerCount(left, snapshot, playerPosition);
@@ -20661,9 +20887,10 @@ export class MinibiaTargetBot {
     const leftDistance = Number.isFinite(Number(left?.distance)) ? Number(left.distance) : leftRange;
     const rightDistance = Number.isFinite(Number(right?.distance)) ? Number(right.distance) : rightRange;
 
-    return rightThreatScore - leftThreatScore
-      || leftScreenBlockers - rightScreenBlockers
+    return leftScreenBlockers - rightScreenBlockers
+      || rightProfileDirectiveScore - leftProfileDirectiveScore
       || rightScore - leftScore
+      || rightThreatScore - leftThreatScore
       || leftRange - rightRange
       || leftDistance - rightDistance
       || (left?.isCurrentTarget === right?.isCurrentTarget ? 0 : (left?.isCurrentTarget ? -1 : 1))
@@ -21710,6 +21937,19 @@ export class MinibiaTargetBot {
     return Math.max(Math.abs(from.x - to.x), Math.abs(from.y - to.y));
   }
 
+  isAdjacentToPosition(position, targetPosition) {
+    return this.getPositionDistance(position, targetPosition) === 1;
+  }
+
+  isAdjacentDiagonalToPosition(position, targetPosition) {
+    if (!position || !targetPosition || Number(position.z) !== Number(targetPosition.z)) {
+      return false;
+    }
+
+    return Math.abs(Number(position.x) - Number(targetPosition.x)) === 1
+      && Math.abs(Number(position.y) - Number(targetPosition.y)) === 1;
+  }
+
   getPositionKey(position) {
     if (!position) return "";
 
@@ -21893,12 +22133,78 @@ export class MinibiaTargetBot {
   }
 
   isRoutePositionOccupied(snapshot, position, playerPosition = snapshot?.playerPosition || null) {
+    return this.getRoutePositionOccupants(snapshot, position, playerPosition).length > 0;
+  }
+
+  getRoutePositionOccupants(snapshot, position, playerPosition = snapshot?.playerPosition || null) {
     const key = this.getPositionKey(position);
     if (!key) {
+      return [];
+    }
+
+    const playerKey = this.getPositionKey(playerPosition);
+    if (key === playerKey) {
+      return [];
+    }
+
+    const occupants = [];
+    const seen = new Set();
+    const appendEntries = (entries = []) => {
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (this.getPositionKey(entry?.position) !== key) {
+          continue;
+        }
+
+        const id = entry?.id == null ? "" : String(entry.id).trim();
+        const nameKey = this.getNameKey(entry?.name);
+        const entryKey = id || `${nameKey}:${key}`;
+        if (!entryKey || seen.has(entryKey)) {
+          continue;
+        }
+
+        seen.add(entryKey);
+        occupants.push(entry);
+      }
+    };
+
+    appendEntries(snapshot?.visiblePlayers);
+    appendEntries(snapshot?.visibleCreatures);
+    appendEntries(snapshot?.candidates);
+    appendEntries(snapshot?.currentTarget ? [snapshot.currentTarget] : []);
+    return occupants;
+  }
+
+  shouldBypassOccupiedExactRouteWaypoint(snapshot, waypoint, index = this.routeIndex) {
+    if (!snapshot?.ready || !waypoint) {
       return false;
     }
 
-    return this.getDistanceKeeperOccupiedTileKeys(snapshot, playerPosition).has(key);
+    if (this.isRouteResetActive()) {
+      return false;
+    }
+
+    if (!this.shouldEnforceExactWaypointTraversal(waypoint, index)) {
+      return false;
+    }
+
+    if (!this.isRecordedRouteWaypointType(waypoint, index)) {
+      return false;
+    }
+
+    if (this.shouldAvoidPosition(snapshot, waypoint) || this.getWaypointRouteHazardAt(snapshot, waypoint, waypoint)) {
+      return false;
+    }
+
+    const occupants = this.getRoutePositionOccupants(snapshot, waypoint);
+    if (!occupants.length) {
+      return false;
+    }
+
+    return occupants.every((occupant) => (
+      !snapshot.currentTarget
+      || Number(occupant?.id) !== Number(snapshot.currentTarget?.id)
+      || this.isEntryBlockedBySharedSpawn(occupant, snapshot)
+    ));
   }
 
   tileListContainsPosition(tiles = [], position = null) {
@@ -25534,6 +25840,7 @@ export class MinibiaTargetBot {
       const key = this.getPositionKey(tile);
       if (!key) continue;
       if (this.getAutoAvoidHazardAt(snapshot, tile)) continue;
+      if (this.shouldAvoidPosition(snapshot, tile)) continue;
       map.set(key, {
         x: Math.trunc(Number(tile.x)),
         y: Math.trunc(Number(tile.y)),
@@ -25663,6 +25970,11 @@ export class MinibiaTargetBot {
     if (!wantsEscape && !hasExplicitDistance && !wantsDodging) {
       return null;
     }
+    const wantsMeleeDodge = !wantsEscape
+      && wantsDodging
+      && hasExplicitDistance
+      && Number(profile.keepDistanceMin) <= 1
+      && Number(profile.keepDistanceMax) <= 1;
 
     const dynamicEscapeMin = Math.max(2, currentDistance + 1);
     const windowMin = wantsEscape
@@ -25678,7 +25990,7 @@ export class MinibiaTargetBot {
       minTargetDistance: windowMin,
       maxTargetDistance: Math.max(windowMin, windowMax),
       minMonsterCount: 1,
-      cooldownMs: 220,
+      cooldownMs: wantsMeleeDodge ? 120 : 220,
       behavior: this.resolveDistanceKeeperBehaviorForRouteReset(profile.behavior),
       dodgeBeams: profile.avoidBeam,
       dodgeWaves: profile.avoidWave,
@@ -25782,6 +26094,12 @@ export class MinibiaTargetBot {
     );
     const isRetreating = nextDistance > currentDistance;
     const isApproaching = nextDistance < currentDistance;
+    const isMeleeRangeRule = !isEscapeBehavior
+      && Number(rule.minTargetDistance) <= 1
+      && Number(rule.maxTargetDistance) <= 1;
+    const nextAdjacent = this.isAdjacentToPosition(position, focusTarget?.position);
+    const nextDiagonalAdjacent = this.isAdjacentDiagonalToPosition(position, focusTarget?.position);
+    const currentDiagonalAdjacent = this.isAdjacentDiagonalToPosition(currentPosition, focusTarget?.position);
 
     let score = 0;
 
@@ -25832,6 +26150,26 @@ export class MinibiaTargetBot {
 
     if (rule.behavior === "hold" && isApproaching) {
       score -= 180;
+    }
+
+    if (isMeleeRangeRule) {
+      if (nextDiagonalAdjacent) {
+        score += 620;
+      } else if (nextAdjacent) {
+        score += 180;
+      } else {
+        score -= Math.max(0, nextDistance - 1) * 220;
+      }
+
+      if (currentDistance > 1 && isApproaching) {
+        score += 260;
+      }
+      if (movePenalty > 0 && !isApproaching && nextDistance >= currentDistance) {
+        score -= 180;
+      }
+      if (currentDiagonalAdjacent && movePenalty > 0 && nextRelevantRisk <= currentRelevantRisk) {
+        score -= 300;
+      }
     }
 
     score -= nextRelevantRisk * 220;
@@ -26820,6 +27158,17 @@ export class MinibiaTargetBot {
         return null;
       }
 
+      if (this.shouldBypassOccupiedExactRouteWaypoint(snapshot, waypoint, this.routeIndex)) {
+        const occupantNames = this.getRoutePositionOccupants(snapshot, waypoint)
+          .map((entry) => String(entry?.name || "").trim())
+          .filter(Boolean);
+        const suffix = occupantNames.length ? ` (${occupantNames.join(", ")})` : "";
+        this.log(`Autowalk bypassed occupied waypoint ${this.routeIndex + 1}${suffix}`);
+        this.markWaypointConfirmed(this.routeIndex);
+        this.advanceWaypoint("occupied bypass");
+        continue;
+      }
+
       const adjacentInteractionAction = this.getAdjacentWaypointInteractionAction(snapshot, waypoint, {
         holdRouteForCombat,
       });
@@ -26927,6 +27276,7 @@ export class MinibiaTargetBot {
     const result = await this.cdp.evaluate(buildTargetExpression(candidates.map((candidate) => candidate.id), {
       sharedSpawnMode: this.getSharedSpawnMode(),
       trustedPlayerNames: Array.from(this.getSharedSpawnTrustedPlayerKeys(this.lastSnapshot)),
+      foreignPlayers: this.getSharedSpawnForeignPlayers(this.lastSnapshot),
     }));
 
     if (result?.ok) {

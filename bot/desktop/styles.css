@@ -6421,6 +6421,13 @@ select[data-feedback="error"] {
   word-break: break-word;
 }
 
+.module-rule-tier-line {
+  color: rgba(247, 213, 138, 0.86);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .module-rule-card[data-module-key="manaTrainer"] {
   gap: 10px;
   border-color: rgba(143, 190, 100, 0.2);
@@ -8521,6 +8528,34 @@ select:focus {
   contain: layout paint;
 }
 
+.targeting-column-kicker,
+.module-rule-list-head {
+  min-height: 22px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid rgba(201, 169, 112, 0.18);
+  background: rgba(255, 255, 255, 0.026);
+  color: rgba(247, 213, 138, 0.88);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.module-rule-list-head strong {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
 .target-profile-row {
   padding: 5px;
   border: 1px solid var(--line-soft);
@@ -8550,6 +8585,15 @@ select:focus {
   flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
+}
+
+.target-profile-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .target-profile-priority {
@@ -11325,20 +11369,20 @@ textarea:focus-visible,
   align-items: stretch;
 }
 
-/* Column 1: config panel */
-.route-hunt-grid-3col .route-hunt-config-panel {
+/* Column 1: applied target priority */
+.route-hunt-grid-3col .route-hunt-profile-panel {
   grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+}
+
+/* Column 2: queue and combat settings */
+.route-hunt-grid-3col .route-hunt-config-panel {
+  grid-column: 2;
   grid-row: 1;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-}
-
-/* Column 2: profiles + combat stacked */
-.route-hunt-grid-3col .route-hunt-profile-panel {
-  grid-column: 2;
-  grid-row: 1;
-  min-height: 0;
 }
 
 .route-hunt-grid-3col .route-hunt-combat-panel {
@@ -12377,6 +12421,10 @@ select[data-feedback="success"] {
 .module-rule-action-line {
   font-size: 11px;
   line-height: 1.2;
+}
+
+.module-rule-tier-line {
+  font-size: 10px;
 }
 
 .module-rule-pills {

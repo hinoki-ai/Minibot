@@ -10450,12 +10450,12 @@ test("chooseTarget respects foreign-engaged monsters when shared spawn mode is s
   const freeTarget = {
     id: 11,
     name: "Rat",
-    position: { x: 102, y: 100, z: 8 },
-    dx: 2,
+    position: { x: 99, y: 100, z: 8 },
+    dx: -1,
     dy: 0,
     dz: 0,
-    distance: 2,
-    chebyshevDistance: 2,
+    distance: 1,
+    chebyshevDistance: 1,
     withinCombatBox: true,
     withinCombatWindow: true,
     reachableForCombat: true,
@@ -10485,6 +10485,74 @@ test("chooseTarget respects foreign-engaged monsters when shared spawn mode is s
   };
   assert.equal(bot.chooseTarget(foreignOnlySnapshot), null);
   assert.equal(bot.shouldHoldRouteForCombat(foreignOnlySnapshot), false);
+});
+
+test("chooseTarget infers nearby foreign-player claims and lets the route keep walking", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    monsterNames: ["Larva"],
+    sharedSpawnMode: "respect-others",
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "walk" },
+      { x: 101, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  bot.resetRoute(0);
+
+  const claimedByProximity = {
+    id: 10,
+    name: "Larva",
+    position: { x: 100, y: 100, z: 8 },
+    dx: 1,
+    dy: 0,
+    dz: 0,
+    distance: 1,
+    chebyshevDistance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    engagedPlayerIds: [],
+    engagedPlayerNames: [],
+    engagedPlayerCount: 0,
+  };
+  const snapshot = {
+    ready: true,
+    playerName: "Own Knight",
+    playerPosition: { x: 99, y: 100, z: 8 },
+    currentTarget: null,
+    visiblePlayers: [
+      {
+        id: 900,
+        name: "Knight Alpha",
+        position: { x: 100, y: 101, z: 8 },
+      },
+    ],
+    visibleCreatures: [claimedByProximity],
+    candidates: [claimedByProximity],
+    safeTiles: [
+      { x: 99, y: 100, z: 8 },
+      { x: 100, y: 99, z: 8 },
+      { x: 101, y: 100, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 99, y: 100, z: 8 },
+      { x: 100, y: 99, z: 8 },
+      { x: 101, y: 100, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  };
+
+  assert.equal(bot.chooseTarget(snapshot), null);
+  assert.equal(bot.shouldHoldRouteForCombat(snapshot), false);
+
+  const routeAction = bot.chooseRouteAction(snapshot);
+  assert.equal(bot.routeIndex, 1);
+  assert.equal(routeAction?.kind, "walk");
+  assert.deepEqual(routeAction?.waypoint, bot.options.waypoints[1]);
+  assert.deepEqual(routeAction?.destination, bot.options.waypoints[1]);
 });
 
 test("chooseTarget blocks foreign-engaged monsters by default even when the player row is gone", () => {
@@ -10593,6 +10661,74 @@ test("target command refuses a stale foreign-engaged target before sending the l
     ready: true,
     playerName: "Own Knight",
     playerId: 1,
+  };
+  bot.cdp = {
+    evaluate: async (expression) => vm.runInNewContext(expression, context),
+  };
+
+  const result = await bot.target({
+    chosen: { id: 10, name: "Larva" },
+    candidates: [{ id: 10, name: "Larva" }],
+  });
+
+  assert.equal(result?.ok, false);
+  assert.equal(result?.blockedBySharedSpawn, true);
+  assert.equal(result?.reason, "shared spawn reserved");
+  assert.equal(targetCalls, 0);
+  assert.equal(bot.lastRetargetId, null);
+});
+
+test("target command refuses a stale proximity-claimed target before sending the live click", async () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Larva"],
+    sharedSpawnMode: "respect-others",
+  });
+  const player = {
+    id: 1,
+    name: "Own Knight",
+    __position: { x: 99, y: 100, z: 8 },
+  };
+  const foreignPlayer = {
+    id: 900,
+    name: "Knight Alpha",
+    __position: { x: 100, y: 101, z: 8 },
+  };
+  const monster = {
+    id: 10,
+    name: "Larva",
+    __position: { x: 100, y: 100, z: 8 },
+  };
+  let targetCalls = 0;
+  const context = {
+    window: {
+      gameClient: {
+        player,
+        world: {
+          activeCreatures: new Map([
+            [1, player],
+            [900, foreignPlayer],
+            [10, monster],
+          ]),
+          targetMonster() {
+            targetCalls += 1;
+          },
+        },
+      },
+    },
+  };
+
+  bot.lastSnapshot = {
+    ready: true,
+    playerName: "Own Knight",
+    playerId: 1,
+    playerPosition: { x: 99, y: 100, z: 8 },
+    visiblePlayers: [
+      {
+        id: 900,
+        name: "Knight Alpha",
+        position: { x: 100, y: 101, z: 8 },
+      },
+    ],
   };
   bot.cdp = {
     evaluate: async (expression) => vm.runInNewContext(expression, context),
@@ -10832,6 +10968,91 @@ test("chooseTarget uses target profiles to prefer danger and finish windows over
 
   assert.equal(selection?.chosen?.id, 11);
   assert.deepEqual(selection?.candidates.map((candidate) => candidate.id), [11, 10]);
+});
+
+test("chooseTarget lets dragon profile intent beat raw dragon-lord threat but keeps the current fight", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Dragon", "Dragon Lord"],
+    targetProfiles: [
+      {
+        name: "Dragon",
+        killMode: "asap",
+        keepDistanceMin: 1,
+        keepDistanceMax: 1,
+        behavior: "kite",
+        stickToTarget: true,
+        avoidBeam: true,
+        avoidWave: true,
+      },
+      {
+        name: "Dragon Lord",
+        killMode: "last",
+        keepDistanceMin: 1,
+        keepDistanceMax: 1,
+        behavior: "kite",
+        stickToTarget: true,
+        avoidBeam: true,
+        avoidWave: true,
+      },
+    ],
+  });
+  const dragon = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 99, y: 101, z: 8 },
+    chebyshevDistance: 1,
+    distance: 2,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+  const dragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 101, y: 100, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const firstSelection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [dragon, dragonLord],
+    candidates: [dragonLord, dragon],
+  });
+
+  assert.equal(firstSelection?.chosen?.name, "Dragon");
+
+  const stickySelection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      ...dragonLord,
+      isCurrentTarget: true,
+    },
+    visibleCreatures: [
+      dragon,
+      {
+        ...dragonLord,
+        isCurrentTarget: true,
+      },
+    ],
+    candidates: [
+      dragon,
+      {
+        ...dragonLord,
+        isCurrentTarget: true,
+      },
+    ],
+  });
+
+  assert.equal(stickySelection, null);
 });
 
 test("chooseTarget targets alpha variants and stronger Minibia monsters before weaker nearby monsters", () => {
@@ -12489,6 +12710,181 @@ test("chooseDistanceKeeper treats diagonal monster positions as wave-safe and st
   });
 
   assert.equal(action, null);
+});
+
+test("chooseDistanceKeeper closes dragons to adjacent diagonal melee range", () => {
+  const bot = new MinibiaTargetBot({
+    distanceKeeperEnabled: false,
+    targetProfiles: [
+      {
+        name: "Dragon",
+        keepDistanceMin: 1,
+        keepDistanceMax: 1,
+        behavior: "kite",
+        avoidBeam: true,
+        avoidWave: true,
+      },
+    ],
+  });
+
+  const action = bot.chooseDistanceKeeper({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 102, y: 100, z: 8 },
+      dx: 2,
+      dy: 0,
+      dz: 0,
+      chebyshevDistance: 2,
+      distance: 2,
+      withinCombatBox: true,
+      reachableForCombat: true,
+      isAxisAligned: true,
+    },
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 102, y: 100, z: 8 },
+        dx: 2,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 2,
+        distance: 2,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 102, y: 100, z: 8 },
+        dx: 2,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 2,
+        distance: 2,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    safeTiles: [
+      { x: 100, y: 99, z: 8 },
+      { x: 100, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+      { x: 101, y: 99, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 101, y: 101, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 100, y: 99, z: 8 },
+      { x: 100, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+      { x: 101, y: 99, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 101, y: 101, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  });
+
+  assert.equal(action?.type, "distance-keeper");
+  assert.equal(action?.destination?.x, 101);
+  assert.equal(Math.abs(Number(action?.destination?.y) - 100), 1);
+  assert.equal(action?.nextDistance, 1);
+  assert.equal(action?.reason, "dodge");
+});
+
+test("chooseDistanceKeeper does not diagonal-step through avoid tile rules", () => {
+  const bot = new MinibiaTargetBot({
+    distanceKeeperEnabled: false,
+    targetProfiles: [
+      {
+        name: "Dragon",
+        keepDistanceMin: 1,
+        keepDistanceMax: 1,
+        behavior: "kite",
+        avoidBeam: true,
+        avoidWave: true,
+      },
+    ],
+    tileRules: [
+      { x: 101, y: 100, z: 8, policy: "avoid", trigger: "approach" },
+    ],
+  });
+
+  const action = bot.chooseDistanceKeeper({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 102, y: 100, z: 8 },
+      dx: 2,
+      dy: 0,
+      dz: 0,
+      chebyshevDistance: 2,
+      distance: 2,
+      withinCombatBox: true,
+      reachableForCombat: true,
+      isAxisAligned: true,
+    },
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 102, y: 100, z: 8 },
+        dx: 2,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 2,
+        distance: 2,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 102, y: 100, z: 8 },
+        dx: 2,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 2,
+        distance: 2,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    safeTiles: [
+      { x: 100, y: 99, z: 8 },
+      { x: 100, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+      { x: 101, y: 99, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 101, y: 101, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 100, y: 99, z: 8 },
+      { x: 100, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+      { x: 101, y: 99, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 101, y: 101, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  });
+
+  assert.notEqual(action?.destination?.x, 101);
 });
 
 test("chooseDistanceKeeper only steps onto reachable unoccupied dodge tiles", () => {
@@ -14571,6 +14967,53 @@ test("chooseRouteAction detours around a temporarily occupied walk waypoint usin
   assert.deepEqual(action?.destination, { x: 101, y: 100, z: 8 });
   assert.equal(action?.progressKey, "100,100,8");
   assert.equal(action?.walkReason, "occupied-detour");
+});
+
+test("chooseRouteAction bypasses an exact walk waypoint occupied by another player", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "walk" },
+      { x: 101, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  bot.resetRoute(0);
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerName: "Own Knight",
+    playerPosition: { x: 99, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    visiblePlayers: [
+      {
+        id: 900,
+        name: "Knight Alpha",
+        position: { x: 100, y: 100, z: 8 },
+      },
+    ],
+    elementalFields: [],
+    safeTiles: [
+      { x: 99, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 99, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(bot.routeIndex, 1);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.waypoint, bot.options.waypoints[1]);
+  assert.deepEqual(action?.destination, bot.options.waypoints[1]);
 });
 
 test("chooseRouteAction keeps exact interaction waypoints on hold when the exact tile is occupied", () => {
