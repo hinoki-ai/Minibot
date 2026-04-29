@@ -9,32 +9,32 @@
       "name": "Dragon",
       "priority": 100,
       "dangerLevel": 0,
-      "keepDistanceMin": 1,
-      "keepDistanceMax": 1,
-      "finishBelowPercent": 80,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
       "killMode": "asap",
       "chaseMode": "auto",
-      "behavior": "kite",
+      "behavior": "hold",
       "preferShootable": true,
-      "stickToTarget": true,
+      "stickToTarget": false,
       "avoidBeam": true,
-      "avoidWave": true
+      "avoidWave": false
     },
     {
       "enabled": true,
       "name": "Dragon Lord",
       "priority": 100,
       "dangerLevel": 0,
-      "keepDistanceMin": 1,
-      "keepDistanceMax": 1,
-      "finishBelowPercent": 70,
+      "keepDistanceMin": 0,
+      "keepDistanceMax": 0,
+      "finishBelowPercent": 0,
       "killMode": "last",
       "chaseMode": "auto",
-      "behavior": "kite",
+      "behavior": "hold",
       "preferShootable": true,
       "stickToTarget": true,
       "avoidBeam": true,
-      "avoidWave": true
+      "avoidWave": false
     }
   ],
   "sharedSpawnMode": "attack-all",
@@ -263,7 +263,6 @@
       "requireStationary": true
     }
   ],
-  "targetingEnabled": true,
   "monsterNames": [
     "Alpha Bandit",
     "Alpha Larva",
@@ -342,5 +341,6 @@
     "Wild Warrior",
     "Witch"
   ],
+  "targetingEnabled": true,
   "waypoints": []
 }

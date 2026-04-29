@@ -20685,7 +20685,7 @@ export class MinibiaTargetBot {
       return false;
     }
 
-    return Number(profile.priority) !== DEFAULT_TARGET_PROFILE.priority
+    return Number(profile.priority) > 0
       || Number(profile.dangerLevel) > DEFAULT_TARGET_PROFILE.dangerLevel
       || Number(profile.keepDistanceMin) > DEFAULT_TARGET_PROFILE.keepDistanceMin
       || Number(profile.keepDistanceMax) > DEFAULT_TARGET_PROFILE.keepDistanceMax
@@ -20698,7 +20698,21 @@ export class MinibiaTargetBot {
       || profile.avoidWave === true;
   }
 
-  getTargetProfileDirectiveScore(entry, playerPosition = null) {
+  isCurrentTargetEntry(entry = null, snapshot = null) {
+    if (entry?.isCurrentTarget === true) {
+      return true;
+    }
+
+    const entryId = Number(entry?.id);
+    const currentTargetId = Number(snapshot?.currentTarget?.id);
+    if (Number.isFinite(entryId) && Number.isFinite(currentTargetId)) {
+      return entryId === currentTargetId;
+    }
+
+    return false;
+  }
+
+  getTargetProfileDirectiveScore(entry, playerPosition = null, snapshot = null) {
     const profile = this.getTargetProfile(entry?.name);
     if (!this.isTargetProfileDirectiveActive(profile)) {
       return 0;
@@ -20707,11 +20721,11 @@ export class MinibiaTargetBot {
     const healthPercent = Number(entry?.healthPercent);
     let score = 0;
 
-    score += (Number(profile.priority || 0) - DEFAULT_TARGET_PROFILE.priority) * 1000;
+    score += Math.max(0, Number(profile.priority || 0)) * 1000;
     score += Number(profile.dangerLevel || 0) * 260;
     score += this.getKillModeScore(profile);
 
-    if (profile.stickToTarget && entry?.isCurrentTarget) {
+    if (profile.stickToTarget && this.isCurrentTargetEntry(entry, snapshot)) {
       score += TARGET_PROFILE_STICK_TO_TARGET_SCORE;
     }
 
@@ -20734,7 +20748,7 @@ export class MinibiaTargetBot {
     return score;
   }
 
-  getTargetPriorityScore(entry, playerPosition = null) {
+  getTargetPriorityScore(entry, playerPosition = null, snapshot = null) {
     const profile = this.getTargetProfile(entry?.name);
     const range = this.getEntryDistance(entry, playerPosition);
     const distance = Number.isFinite(Number(entry?.distance)) ? Number(entry.distance) : range;
@@ -20746,7 +20760,7 @@ export class MinibiaTargetBot {
       score += Number(profile.dangerLevel || 0) * 260;
       score += this.getKillModeScore(profile);
 
-      if (profile.stickToTarget && entry?.isCurrentTarget) {
+      if (profile.stickToTarget && this.isCurrentTargetEntry(entry, snapshot)) {
         score += TARGET_PROFILE_STICK_TO_TARGET_SCORE;
       }
 
@@ -20765,7 +20779,7 @@ export class MinibiaTargetBot {
       if (Number.isFinite(healthPercent) && Number(profile.finishBelowPercent) > 0 && healthPercent <= Number(profile.finishBelowPercent)) {
         score += 1600 + ((Number(profile.finishBelowPercent) - healthPercent) * 22);
       }
-    } else if (entry?.isCurrentTarget) {
+    } else if (this.isCurrentTargetEntry(entry, snapshot)) {
       score += 200;
     }
 
@@ -20872,10 +20886,10 @@ export class MinibiaTargetBot {
   }
 
   compareTargetPriority(left, right, playerPosition = null, snapshot = null) {
-    const leftScore = this.getTargetPriorityScore(left, playerPosition);
-    const rightScore = this.getTargetPriorityScore(right, playerPosition);
-    const leftProfileDirectiveScore = this.getTargetProfileDirectiveScore(left, playerPosition);
-    const rightProfileDirectiveScore = this.getTargetProfileDirectiveScore(right, playerPosition);
+    const leftScore = this.getTargetPriorityScore(left, playerPosition, snapshot);
+    const rightScore = this.getTargetPriorityScore(right, playerPosition, snapshot);
+    const leftProfileDirectiveScore = this.getTargetProfileDirectiveScore(left, playerPosition, snapshot);
+    const rightProfileDirectiveScore = this.getTargetProfileDirectiveScore(right, playerPosition, snapshot);
     const leftThreatScore = this.getMonsterThreatScoreForEntry(left);
     const rightThreatScore = this.getMonsterThreatScoreForEntry(right);
     const leftScreenBlockers = this.getEntryScreenBlockerCount(left, snapshot, playerPosition);
@@ -25708,6 +25722,35 @@ export class MinibiaTargetBot {
       ));
   }
 
+  getHazardCategories(entry = null) {
+    const categories = Array.isArray(entry?.categories)
+      ? entry.categories
+      : Array.isArray(entry?.types)
+        ? entry.types
+        : [];
+
+    return categories
+      .map((category) => String(category || "").trim())
+      .filter((category, index, values) => category && values.indexOf(category) === index);
+  }
+
+  getFloorTransitionHazardAt(snapshot, position) {
+    const positionKey = this.getPositionKey(position);
+    if (!positionKey) {
+      return null;
+    }
+
+    const hazards = Array.isArray(snapshot?.hazardTiles) ? snapshot.hazardTiles : [];
+    return hazards.find((entry) => {
+      if (this.getPositionKey(entry?.position) !== positionKey) {
+        return false;
+      }
+
+      const categories = this.getHazardCategories(entry);
+      return categories.includes("holes") || categories.includes("stairsLadders");
+    }) || null;
+  }
+
   getAutoAvoidHazardAt(snapshot, position) {
     if (!this.options.avoidElementalFields || !snapshot || !position) return null;
 
@@ -25839,6 +25882,7 @@ export class MinibiaTargetBot {
     for (const tile of tiles) {
       const key = this.getPositionKey(tile);
       if (!key) continue;
+      if (this.getFloorTransitionHazardAt(snapshot, tile)) continue;
       if (this.getAutoAvoidHazardAt(snapshot, tile)) continue;
       if (this.shouldAvoidPosition(snapshot, tile)) continue;
       map.set(key, {
@@ -25935,6 +25979,7 @@ export class MinibiaTargetBot {
 
         if (!staying) {
           if (occupiedTileKeys.has(key)) continue;
+          if (this.getFloorTransitionHazardAt(snapshot, position)) continue;
           if (this.getElementalFieldAt(snapshot, position)) continue;
           if (this.shouldAvoidPosition(snapshot, position)) continue;
           if (!this.canUseDistanceKeeperStep(tileKeys, playerPosition, position)) continue;

@@ -11034,25 +11034,266 @@ test("chooseTarget lets dragon profile intent beat raw dragon-lord threat but ke
     playerPosition: { x: 100, y: 100, z: 8 },
     currentTarget: {
       ...dragonLord,
-      isCurrentTarget: true,
     },
     visibleCreatures: [
       dragon,
-      {
-        ...dragonLord,
-        isCurrentTarget: true,
-      },
+      dragonLord,
     ],
     candidates: [
       dragon,
-      {
-        ...dragonLord,
-        isCurrentTarget: true,
-      },
+      dragonLord,
     ],
   });
 
   assert.equal(stickySelection, null);
+});
+
+test("chooseTarget uses finish windows as a standalone directive only below the threshold", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Dragon", "Dragon Lord"],
+    targetProfiles: [
+      {
+        name: "Dragon",
+        finishBelowPercent: 80,
+      },
+    ],
+  });
+  const makeDragon = (healthPercent) => ({
+    id: 10,
+    name: "Dragon",
+    position: { x: 101, y: 100, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent,
+  });
+  const dragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 100, y: 101, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const lowHealthSelection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [dragonLord, makeDragon(79)],
+    visibleCreatures: [dragonLord, makeDragon(79)],
+  });
+  assert.equal(lowHealthSelection?.chosen?.name, "Dragon");
+
+  const aboveWindowSelection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [makeDragon(81), dragonLord],
+    visibleCreatures: [makeDragon(81), dragonLord],
+  });
+  assert.equal(aboveWindowSelection?.chosen?.name, "Dragon Lord");
+});
+
+test("chooseTarget applies finish windows to reach-attack candidates", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Dragon", "Dragon Lord"],
+    combatRangeX: 0,
+    combatRangeY: 0,
+    targetProfiles: [
+      {
+        name: "Dragon",
+        finishBelowPercent: 80,
+      },
+    ],
+  });
+  const dragon = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 102, y: 100, z: 8 },
+    chebyshevDistance: 2,
+    distance: 2,
+    withinCombatBox: false,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 30,
+  };
+  const dragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 103, y: 100, z: 8 },
+    chebyshevDistance: 3,
+    distance: 3,
+    withinCombatBox: false,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [dragonLord, dragon],
+  });
+
+  assert.equal(selection?.chosen?.name, "Dragon");
+  assert.deepEqual(selection?.candidates.map((candidate) => candidate.name), ["Dragon", "Dragon Lord"]);
+});
+
+test("chooseTarget applies base finish windows to alpha variants", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Dragon", "Dragon Lord"],
+    targetProfiles: [
+      {
+        name: "Dragon",
+        finishBelowPercent: 80,
+      },
+    ],
+  });
+  const alphaDragon = {
+    id: 10,
+    name: "Alpha Dragon",
+    position: { x: 101, y: 100, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 50,
+  };
+  const dragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 100, y: 101, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [dragonLord, alphaDragon],
+    visibleCreatures: [dragonLord, alphaDragon],
+  });
+
+  assert.equal(selection?.chosen?.name, "Alpha Dragon");
+});
+
+test("follow-train attack targeting applies finish windows", () => {
+  const bot = new MinibiaTargetBot({
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    partyFollowDistance: 2,
+    monsterNames: ["Dragon", "Dragon Lord"],
+    targetProfiles: [
+      {
+        name: "Dragon",
+        finishBelowPercent: 80,
+      },
+    ],
+  });
+  const dragon = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 101, y: 100, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 45,
+  };
+  const dragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 100, y: 101, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    currentFollowTarget: {
+      id: 1,
+      name: "Knight Alpha",
+      position: { x: 99, y: 100, z: 8 },
+    },
+    visiblePlayers: [
+      {
+        id: 1,
+        name: "Knight Alpha",
+        position: { x: 99, y: 100, z: 8 },
+      },
+    ],
+    visibleCreatures: [dragonLord, dragon],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  });
+
+  assert.equal(selection?.chosen?.name, "Dragon");
+});
+
+test("rookiller targeting applies finish windows through the shared target sorter", () => {
+  const bot = new MinibiaTargetBot({
+    targetProfiles: [
+      {
+        name: "Dragon",
+        finishBelowPercent: 80,
+      },
+    ],
+  });
+  const dragon = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 101, y: 100, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 20,
+  };
+  const dragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 100, y: 101, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const selection = bot.chooseRookillerTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [dragonLord, dragon],
+    candidates: [dragonLord, dragon],
+  });
+
+  assert.equal(selection?.chosen?.name, "Dragon");
 });
 
 test("chooseTarget targets alpha variants and stronger Minibia monsters before weaker nearby monsters", () => {
@@ -12975,6 +13216,173 @@ test("chooseDistanceKeeper only steps onto reachable unoccupied dodge tiles", ()
   assert.equal(action?.type, "distance-keeper");
   assert.deepEqual(action?.destination, { x: 100, y: 101, z: 8 });
   assert.equal(action?.reason, "dodge");
+});
+
+test("chooseDistanceKeeper never dodges onto holes even when hole avoidance is disabled", () => {
+  const bot = new MinibiaTargetBot({
+    avoidElementalFields: false,
+    avoidFieldCategories: {
+      holes: false,
+      stairsLadders: false,
+    },
+    distanceKeeperEnabled: false,
+    targetProfiles: [
+      {
+        name: "Dragon",
+        avoidBeam: true,
+      },
+    ],
+  });
+
+  const action = bot.chooseDistanceKeeper({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 101, y: 100, z: 8 },
+      dx: 1,
+      dy: 0,
+      dz: 0,
+      chebyshevDistance: 1,
+      distance: 1,
+      withinCombatBox: true,
+      reachableForCombat: true,
+      isAxisAligned: true,
+    },
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 1,
+        distance: 1,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 1,
+        distance: 1,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    hazardTiles: [
+      {
+        position: { x: 99, y: 100, z: 8 },
+        categories: ["holes"],
+        labels: ["Hole"],
+      },
+    ],
+    reachableWalkableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 99, y: 100, z: 8 },
+    ],
+    safeTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 99, y: 100, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  });
+
+  assert.equal(action, null);
+});
+
+test("chooseDistanceKeeper never dodges onto stairs or ladders even when stair avoidance is disabled", () => {
+  const bot = new MinibiaTargetBot({
+    avoidElementalFields: false,
+    avoidFieldCategories: {
+      stairsLadders: false,
+    },
+    distanceKeeperEnabled: false,
+    targetProfiles: [
+      {
+        name: "Dragon",
+        avoidBeam: true,
+      },
+    ],
+  });
+
+  const action = bot.chooseDistanceKeeper({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 101, y: 100, z: 8 },
+      dx: 1,
+      dy: 0,
+      dz: 0,
+      chebyshevDistance: 1,
+      distance: 1,
+      withinCombatBox: true,
+      reachableForCombat: true,
+      isAxisAligned: true,
+    },
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 1,
+        distance: 1,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 1,
+        distance: 1,
+        withinCombatBox: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+    ],
+    hazardTiles: [
+      {
+        position: { x: 99, y: 100, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["Ladder"],
+      },
+    ],
+    reachableWalkableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 99, y: 100, z: 8 },
+    ],
+    safeTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 99, y: 100, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  });
+
+  assert.equal(action, null);
 });
 
 test("chooseRouteAction holds the route while the current target is still a visible tracked monster outside the local combat box", () => {
