@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import {
   MAX_CREATURE_LEDGER_ENTRIES_PER_KIND,
   MinibiaTargetBot,
@@ -282,7 +283,7 @@ test("normalizeOptions defaults the route recorder to 3 SQM and shows waypoint o
   assert.equal(options.partyFollowDistance, 2);
   assert.equal(options.partyFollowCombatMode, "follow-and-fight");
   assert.equal(options.chaseMode, "auto");
-  assert.equal(options.sharedSpawnMode, "attack-all");
+  assert.equal(options.sharedSpawnMode, "respect-others");
   assert.equal(options.reconnectEnabled, false);
   assert.equal(options.reconnectRetryDelayMs, 4000);
   assert.equal(options.reconnectMaxAttempts, 0);
@@ -5570,6 +5571,104 @@ test("chooseHeal uses the default UH auto rune at fifty percent before potion he
   assert.equal(actions[1]?.name, "Health Potion");
 });
 
+test("chooseHeal preserves self-targeting for hotbar healing runes", () => {
+  const bot = new MinibiaTargetBot({
+    healerEnabled: true,
+    healerRules: [],
+  });
+
+  const action = bot.chooseHeal(createModuleSnapshot({
+    playerStats: {
+      healthPercent: 48,
+      mana: 220,
+      manaPercent: 90,
+    },
+    hotbar: {
+      slotCount: 1,
+      slots: [
+        {
+          index: 0,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          hotkey: "F5",
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 3 },
+          enabled: true,
+        },
+      ],
+    },
+    containers: [],
+  }));
+
+  assert.equal(action?.type, "useHotbarSlot");
+  assert.equal(action?.target, "self");
+  assert.equal(action?.category, "rune");
+  assert.equal(action?.name, "Ultimate Healing Rune");
+  assert.equal(action?.hotkey, "F5");
+});
+
+test("chooseHeal uses the configured auto rune hotkey without requiring inventory discovery", () => {
+  const bot = new MinibiaTargetBot({
+    healerEnabled: true,
+    healerRules: [],
+    healerRuneHotkey: "f5",
+  });
+
+  const action = bot.chooseHeal(createModuleSnapshot({
+    playerStats: {
+      healthPercent: 48,
+      mana: 220,
+      manaPercent: 90,
+    },
+    hotbar: {
+      slotCount: 0,
+      slots: [],
+    },
+    containers: [],
+  }));
+
+  assert.equal(action?.type, "useHotkey");
+  assert.equal(action?.moduleKey, "healerRune");
+  assert.equal(action?.hotkey, "F5");
+  assert.equal(action?.target, "self");
+  assert.equal(action?.category, "rune");
+  assert.equal(action?.name, "Ultimate Healing Rune");
+});
+
+test("chooseHeal prioritizes the auto rune hotkey below its threshold before covered spell tiers", () => {
+  const bot = new MinibiaTargetBot({
+    healerEnabled: true,
+    healerRules: [
+      {
+        enabled: true,
+        words: "exura",
+        minHealthPercent: 70,
+        maxHealthPercent: 80,
+        minMana: 20,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+    healerRuneHotkey: "F5",
+    healerRuneHealthPercent: 50,
+  });
+
+  const actions = bot.chooseHealActions(createModuleSnapshot({
+    playerStats: {
+      healthPercent: 43,
+      mana: 220,
+      manaPercent: 90,
+    },
+    containers: [],
+  }));
+
+  assert.equal(actions[0]?.type, "useHotkey");
+  assert.equal(actions[0]?.moduleKey, "healerRune");
+  assert.equal(actions[0]?.hotkey, "F5");
+  assert.equal(actions[1]?.type, "heal");
+  assert.equal(actions[1]?.words, "exura");
+});
+
 test("chooseHeal inserts the configured auto rune before potion healing", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
@@ -9795,6 +9894,122 @@ test("useHotbarSlot routes item slots through the hotbar slot handler", async ()
   assert.equal(invocations[0].slotIndex, 0);
 });
 
+test("useHotkey dispatches configured function-key input", async () => {
+  const bot = new MinibiaTargetBot({});
+  const sentEvents = [];
+
+  bot.page = { id: "page-1", title: "Minibia" };
+  bot.cdp = {
+    async send(method, params = {}) {
+      sentEvents.push({ method, params });
+      return {};
+    },
+  };
+
+  const result = await bot.useHotkey({
+    type: "heal",
+    moduleKey: "healer",
+    ruleIndex: 0,
+    hotkey: "f5",
+    words: "exura vita",
+    target: "self",
+  });
+
+  const keyEvents = sentEvents.filter((event) => event.method === "Input.dispatchKeyEvent");
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "keyboard-hotkey");
+  assert.equal(result?.hotkey, "F5");
+  assert.equal(result?.words, "exura vita");
+  assert.equal(result?.target, "self");
+  assert.equal(sentEvents[0]?.method, "Page.bringToFront");
+  assert.deepEqual(keyEvents.map((event) => event.params.type), ["rawKeyDown", "keyUp"]);
+  assert.deepEqual(keyEvents.map((event) => event.params.key), ["F5", "F5"]);
+  assert.deepEqual(keyEvents.map((event) => event.params.code), ["F5", "F5"]);
+  assert.deepEqual(keyEvents.map((event) => event.params.windowsVirtualKeyCode), [116, 116]);
+});
+
+test("useHotbarSlot prefers configured hotkeys over hotbar clicks", async () => {
+  const bot = new MinibiaTargetBot({});
+  const sentEvents = [];
+
+  bot.page = { id: "page-1", title: "Minibia" };
+  bot.cdp = {
+    async evaluate() {
+      throw new Error("hotbar evaluate should not be used when a hotkey is configured");
+    },
+    async send(method, params = {}) {
+      sentEvents.push({ method, params });
+      return {};
+    },
+  };
+
+  const result = await bot.useHotbarSlot({
+    slotIndex: 0,
+    hotkey: "F5",
+    target: "self",
+    mode: "bot",
+    moduleKey: "healerRune",
+  });
+
+  const keyEvents = sentEvents.filter((event) => event.method === "Input.dispatchKeyEvent");
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "keyboard-hotkey");
+  assert.equal(result?.hotkey, "F5");
+  assert.equal(result?.target, "self");
+  assert.deepEqual(keyEvents.map((event) => event.params.key), ["F5", "F5"]);
+});
+
+test("useHotbarSlot self-targets item hotbar slots before generic activation", async () => {
+  const bot = new MinibiaTargetBot({});
+  let consumed = null;
+  let genericActivations = 0;
+  const player = { id: 1, name: "Dark Knight" };
+
+  bot.page = { id: "page-1", title: "Minibia" };
+  bot.cdp = {
+    async evaluate(expression) {
+      return evaluatePageExpression(expression, {
+        gameClient: {
+          player,
+          mouse: {
+            useOnCreature(ref, target) {
+              consumed = { ref, target };
+            },
+          },
+          interface: {
+            hotbarManager: {
+              slots: [
+                {
+                  slotIndex: 0,
+                  item: { id: 2273, name: "Ultimate Healing Rune", count: 3 },
+                },
+              ],
+              useSlot() {
+                genericActivations += 1;
+              },
+            },
+          },
+        },
+      });
+    },
+  };
+
+  const result = await bot.useHotbarSlot({
+    slotIndex: 0,
+    target: "self",
+    mode: "bot",
+    moduleKey: "healerRune",
+  });
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "useOnCreature");
+  assert.equal(result?.target, "self");
+  assert.equal(result?.itemId, 2273);
+  assert.equal(consumed?.target, player);
+  assert.equal(consumed?.ref?.location, "hotbar");
+  assert.equal(genericActivations, 0);
+});
+
 test("useHotbarSlot sends text macro slots through the default channel packet path", async () => {
   const bot = new MinibiaTargetBot({});
   const sentPackets = [];
@@ -10270,6 +10485,233 @@ test("chooseTarget respects foreign-engaged monsters when shared spawn mode is s
   };
   assert.equal(bot.chooseTarget(foreignOnlySnapshot), null);
   assert.equal(bot.shouldHoldRouteForCombat(foreignOnlySnapshot), false);
+});
+
+test("chooseTarget blocks foreign-engaged monsters by default even when the player row is gone", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    monsterNames: ["Larva", "Rat"],
+    waypoints: [
+      { x: 101, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  const foreignTarget = {
+    id: 10,
+    name: "Larva",
+    position: { x: 101, y: 100, z: 8 },
+    dx: 1,
+    dy: 0,
+    dz: 0,
+    distance: 1,
+    chebyshevDistance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    engagedPlayerIds: ["900"],
+    engagedPlayerNames: ["Knight Alpha"],
+    engagedPlayerCount: 1,
+  };
+  const ownTarget = {
+    ...foreignTarget,
+    id: 11,
+    name: "Rat",
+    position: { x: 102, y: 100, z: 8 },
+    dx: 2,
+    distance: 2,
+    chebyshevDistance: 2,
+    engagedPlayerIds: [],
+    engagedPlayerNames: ["Own Knight"],
+  };
+
+  const snapshot = {
+    ready: true,
+    playerName: "Own Knight",
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    visiblePlayers: [],
+    visibleCreatures: [foreignTarget, ownTarget],
+    candidates: [foreignTarget, ownTarget],
+  };
+
+  const selection = bot.chooseTarget(snapshot);
+  assert.equal(selection?.chosen?.id, 11);
+  assert.deepEqual(selection?.candidates.map((candidate) => candidate.id), [11]);
+
+  const attackAllBot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    monsterNames: ["Larva"],
+    sharedSpawnMode: "attack-all",
+    waypoints: [
+      { x: 101, y: 100, z: 8, type: "walk" },
+    ],
+  });
+  assert.equal(attackAllBot.chooseTarget({
+    ...snapshot,
+    visibleCreatures: [foreignTarget],
+    candidates: [foreignTarget],
+  }), null);
+});
+
+test("target command refuses a stale foreign-engaged target before sending the live click", async () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Larva"],
+    sharedSpawnMode: "attack-all",
+  });
+  const player = {
+    id: 1,
+    name: "Own Knight",
+  };
+  const monster = {
+    id: 10,
+    name: "Larva",
+    __position: { x: 101, y: 100, z: 8 },
+    target: {
+      id: 900,
+      name: "Knight Alpha",
+    },
+  };
+  let targetCalls = 0;
+  const context = {
+    window: {
+      gameClient: {
+        player,
+        world: {
+          activeCreatures: new Map([
+            [1, player],
+            [10, monster],
+          ]),
+          targetMonster() {
+            targetCalls += 1;
+          },
+        },
+      },
+    },
+  };
+
+  bot.lastSnapshot = {
+    ready: true,
+    playerName: "Own Knight",
+    playerId: 1,
+  };
+  bot.cdp = {
+    evaluate: async (expression) => vm.runInNewContext(expression, context),
+  };
+
+  const result = await bot.target({
+    chosen: { id: 10, name: "Larva" },
+    candidates: [{ id: 10, name: "Larva" }],
+  });
+
+  assert.equal(result?.ok, false);
+  assert.equal(result?.blockedBySharedSpawn, true);
+  assert.equal(result?.reason, "shared spawn reserved");
+  assert.equal(targetCalls, 0);
+  assert.equal(bot.lastRetargetId, null);
+});
+
+test("tick resumes route immediately when a live target attempt finds a reserved monster", async () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    monsterNames: ["Larva"],
+    waypoints: [
+      { x: 101, y: 100, z: 8, type: "walk" },
+    ],
+  });
+  const staleCandidate = {
+    id: 10,
+    name: "Larva",
+    position: { x: 101, y: 100, z: 8 },
+    dx: 1,
+    dy: 0,
+    dz: 0,
+    distance: 1,
+    chebyshevDistance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+  };
+  const snapshot = createModuleSnapshot({
+    playerName: "Own Knight",
+    playerId: 1,
+    visibleCreatures: [staleCandidate],
+    candidates: [staleCandidate],
+  });
+  const routeSnapshots = [];
+  let targetAttempts = 0;
+  let executedRouteAction = null;
+
+  bot.refresh = async () => snapshot;
+  bot.handleReconnect = async () => ({ handled: false });
+  bot.getActiveVocationProfile = async () => null;
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+  bot.attemptDeathHeal = async () => ({ result: { ok: false } });
+  bot.chooseHealerRuneActions = () => [];
+  bot.isHealingPriorityActive = () => false;
+  bot.attemptSustain = async () => ({ result: { ok: false } });
+  bot.attemptHeal = async () => ({ result: { ok: false } });
+  bot.handlePausedCavebotTick = async () => ({ handled: false });
+  bot.attemptTrainerEscape = async () => ({ result: { ok: false } });
+  bot.handleRookiller = async () => ({ handled: false });
+  bot.getVisibleEscapeThreats = () => [];
+  bot.chooseFollowTrainSuspendAction = () => null;
+  bot.chooseFollowTrainAction = () => null;
+  bot.attemptAutoEat = async () => ({ result: { ok: false } });
+  bot.attemptEquipmentAutoReplace = async () => ({ result: { ok: false } });
+  bot.attemptAmmoReload = async () => ({ result: { ok: false } });
+  bot.chooseLight = () => null;
+  bot.chooseManaTrainer = () => null;
+  bot.chooseRuneMaker = () => null;
+  bot.chooseUrgentConvert = () => null;
+  bot.chooseUrgentValueSlotRepair = () => null;
+  bot.attemptAmmoRestock = async () => ({ result: { ok: false } });
+  bot.attemptRefill = async () => ({ result: { ok: false } });
+  bot.attemptLoot = async () => ({ result: { ok: false } });
+  bot.chooseRouteAction = (nextSnapshot) => {
+    routeSnapshots.push(nextSnapshot);
+    return nextSnapshot.candidates?.length
+      ? null
+      : {
+          kind: "walk",
+          waypoint: { x: 101, y: 100, z: 8, type: "walk" },
+          destination: { x: 101, y: 100, z: 8 },
+        };
+  };
+  bot.target = async () => {
+    targetAttempts += 1;
+    return {
+      ok: false,
+      reason: "shared spawn reserved",
+      blockedBySharedSpawn: true,
+      blockedTargets: [
+        {
+          target: {
+            id: 10,
+            name: "Larva",
+            position: { x: 101, y: 100, z: 8 },
+          },
+        },
+      ],
+    };
+  };
+  bot.executeRouteAction = async (action) => {
+    executedRouteAction = action;
+    return { ok: true };
+  };
+  bot.chooseDistanceKeeper = () => null;
+  bot.chooseSpellCaster = () => null;
+  bot.chooseConvert = () => null;
+  bot.chooseAntiIdle = () => null;
+
+  const result = await bot.tick();
+
+  assert.equal(targetAttempts, 1);
+  assert.equal(executedRouteAction?.kind, "walk");
+  assert.equal(routeSnapshots.length, 2);
+  assert.equal(routeSnapshots[0].candidates.length, 1);
+  assert.deepEqual(routeSnapshots[1].candidates, []);
+  assert.equal(result.currentTarget, null);
+  assert.deepEqual(result.candidates, []);
 });
 
 test("chooseTarget can fully suspend combat when watch-only shared spawn mode sees another player", () => {
@@ -13186,6 +13628,43 @@ test("chooseRouteAction keeps the live branch on a shared tile even before a fre
   assert.deepEqual(action?.waypoint, bot.options.waypoints[61]);
 });
 
+test("chooseRouteAction does not relatch onto an ambiguous crossing without route continuity", () => {
+  const waypoints = Array.from({ length: 64 }, (_entry, index) => ({
+    x: 1000 + (index * 10),
+    y: 500,
+    z: 8,
+    type: "walk",
+  }));
+  waypoints[0] = { x: 0, y: 0, z: 8, type: "walk" };
+  waypoints[20] = { x: 50, y: 50, z: 8, type: "walk" };
+  waypoints[44] = { x: 50, y: 50, z: 8, type: "walk" };
+
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypointRadius: 0,
+    waypoints,
+  });
+
+  bot.resetRoute(0);
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 50, y: 50, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(bot.routeIndex, 0);
+  assert.equal(bot.lastConfirmedWaypointIndex, null);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.waypoint, bot.options.waypoints[0]);
+});
+
 test("chooseRouteAction keeps the anchored waypoint when recent route touches still allow the original route", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -14948,8 +15427,8 @@ test("chooseRouteAction keeps a follower parked until the predecessor opens enou
       {
         instanceId: "leader",
         characterName: "Leader",
-        routeIndex: 40,
-        confirmedIndex: 39,
+        routeIndex: 20,
+        confirmedIndex: 19,
         startedAt: 1,
       },
       {
@@ -14976,8 +15455,8 @@ test("chooseRouteAction keeps a follower parked until the predecessor opens enou
   assert.equal(bot.chooseRouteAction(snapshot), null);
   assert.equal(bot.routeIndex, 0);
 
-  bot.routeCoordinationState.members[0].routeIndex = 49;
-  bot.routeCoordinationState.members[0].confirmedIndex = 48;
+  bot.routeCoordinationState.members[0].routeIndex = 31;
+  bot.routeCoordinationState.members[0].confirmedIndex = 30;
 
   const action = bot.chooseRouteAction(snapshot);
   assert.equal(action?.kind, "walk");
@@ -15007,8 +15486,8 @@ test("chooseRouteAction pauses a follower before it walks into a predecessor's s
       {
         instanceId: "leader",
         characterName: "Leader",
-        routeIndex: 62,
-        confirmedIndex: 61,
+        routeIndex: 41,
+        confirmedIndex: 40,
         startedAt: 1,
       },
       {
@@ -15035,8 +15514,8 @@ test("chooseRouteAction pauses a follower before it walks into a predecessor's s
   assert.equal(bot.chooseRouteAction(snapshot), null);
   assert.equal(bot.routeIndex, 20);
 
-  bot.routeCoordinationState.members[0].routeIndex = 68;
-  bot.routeCoordinationState.members[0].confirmedIndex = 67;
+  bot.routeCoordinationState.members[0].routeIndex = 51;
+  bot.routeCoordinationState.members[0].confirmedIndex = 50;
 
   const action = bot.chooseRouteAction(snapshot);
   assert.equal(action?.kind, "walk");
@@ -15178,8 +15657,8 @@ test("chooseRouteAction keeps the lower-priority session parked during a stale r
       {
         instanceId: "leader",
         characterName: "Leader",
-        routeIndex: 40,
-        confirmedIndex: 39,
+        routeIndex: 20,
+        confirmedIndex: 19,
         startedAt: 1,
       },
       {
@@ -15265,6 +15744,58 @@ test("chooseRouteAction lets a wrapped later-started bot keep moving when that w
   assert.equal(action?.destination?.y, 32500);
   assert.equal(action?.destination?.z, 8);
   assert.equal(bot.routeIndex, 178);
+});
+
+test("chooseRouteAction uses a peer live route position before the peer's stored spacing index", () => {
+  const waypoints = Array.from({ length: 100 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypoints,
+  });
+
+  bot.routeIndex = 10;
+  bot.routeCoordinationState = {
+    selfInstanceId: "follower",
+    members: [
+      {
+        instanceId: "leader",
+        characterName: "Leader",
+        routeIndex: 80,
+        confirmedIndex: 79,
+        playerPosition: { x: 120, y: 200, z: 8 },
+        startedAt: 1,
+      },
+      {
+        instanceId: "follower",
+        characterName: "Follower",
+        routeIndex: 10,
+        confirmedIndex: 9,
+        playerPosition: { x: 110, y: 200, z: 8 },
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 110, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(action, null);
+  assert.equal(bot.routeIndex, 10);
+  assert.equal(bot.routeSpacingHold?.peerInstanceId, "leader");
 });
 
 test("chooseRouteAction interrupts an in-progress walk when route spacing collapses", () => {

@@ -50,7 +50,8 @@ The desktop app is the canonical control surface. It supports multiple live char
 - raw live snapshot extraction from the Minibia page
 - reconnect, death, and claim-sensitive session lifecycle handling
 - target selection and combat sequencing
-- autowalk, route resync, route reset, follow-chain movement, and tile-rule evaluation
+- autowalk, route resync, ambiguous-crossing recovery, route reset,
+  follow-chain movement, route-spacing coordination, and tile-rule evaluation
 - sustain, legacy healer, looting, banking, equipment replacement, and utility module dispatch
 - overlay rendering for waypoint visualization inside the live page
 
@@ -207,12 +208,15 @@ Current supported waypoint types:
 - `stairs-down`
 - `use-item`
 - `bank`
+- `shop`
+- `npc-action`
+- `daily-task`
 - `ladder`
 - `exani-tera`
 - `rope`
 - `shovel-hole`
 
-Helper waypoints are part of the saved schema, but normal forward traversal skips them unless blocked-route recovery or helper replay is active.
+Helper waypoints are part of the saved schema, but normal forward traversal skips them unless blocked-route recovery or helper replay is active. Repeated route coordinates are treated as ambiguous crossings during recovery until local adjacency, recent confirmed route touches, or bridge evidence identifies the intended branch.
 
 Current supported waypoint actions:
 
@@ -236,8 +240,11 @@ Minibot works against Minibia internals rather than a public API. Current integr
 - `window.gameClient.world.activeCreatures` for visible creature state
 - `world.targetMonster(...)` for target selection
 - `world.pathfinder.findPath(...)` and viewport tile clicks for route movement
-- live hotbar, inventory, and dialogue managers for shared action execution
-- Chrome DevTools input dispatch for mouse and keyboard interaction
+- live hotbar, inventory, and dialogue managers for shared action execution,
+  including target-aware use of item-backed hotbar slots
+- Chrome DevTools keyboard dispatch for configured rule hotkeys
+- Chrome DevTools input dispatch for mouse interaction and fallback keyboard
+  paths
 - in-page helpers for spell casting and currency conversion
 
 That means behavioral assumptions are runtime-coupled and should be treated as fragile integration points.

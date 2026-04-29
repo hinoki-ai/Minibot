@@ -1,5 +1,6 @@
 export const ACTION_CAPABILITY_KEYS = Object.freeze([
   "useHotbarSlot",
+  "useHotkey",
   "moveInventoryItem",
   "useItem",
   "useItemOnSelf",

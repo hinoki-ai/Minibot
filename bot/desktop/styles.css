@@ -8547,8 +8547,25 @@ select:focus {
 .target-profile-title {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
+}
+
+.target-profile-priority {
+  min-height: 18px;
+  padding: 1px 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(201, 169, 112, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.026);
+  color: #f7d58a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .target-profile-title strong {
@@ -8563,7 +8580,7 @@ select:focus {
   border: 1px solid var(--line-soft);
   color: var(--muted);
   font-size: 9px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -9772,6 +9789,7 @@ label,
 .danger-confirm-label,
 .module-rule-index,
 .module-rule-badge,
+.target-profile-priority,
 .module-rule-pill span,
 .module-rule-section-title,
 .field-note,
@@ -9799,6 +9817,7 @@ label,
 .danger-confirm-label,
 .module-rule-index,
 .module-rule-badge,
+.target-profile-priority,
 .module-rule-pill span,
 .module-rule-section-title,
 .field-note,
@@ -13381,7 +13400,18 @@ select[data-feedback="success"] {
   }
 }
 
-/* Modal toggle cleanup: keep toggles compact and stop checked labels from reading as large badges. */
+/* Modal UX polish base layer: clearer chrome, calmer state color, visible status text. */
+.modal-layer {
+  padding: 8px;
+}
+
+.modal-backdrop {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(247, 213, 138, 0.09), transparent 34%),
+    rgba(0, 0, 0, 0.76);
+  backdrop-filter: blur(3px);
+}
+
 .modal-panel,
 .modal-panel-wide,
 .modal-panel-targeting,
@@ -13392,26 +13422,877 @@ select[data-feedback="success"] {
 .modal-panel-account-registry,
 #modal-targeting,
 #modal-autowalk {
-  --toggle-width: 28px;
-  --toggle-height: 16px;
-  --toggle-pad: 2px;
-  --toggle-surface-radius: 5px;
+  --modal-shell-gap: 7px;
+  --modal-inner-gap: 6px;
+  --modal-radius: 8px;
+  --modal-card-radius: 7px;
+  --modal-line: rgba(201, 169, 112, 0.22);
+  --modal-line-strong: rgba(247, 213, 138, 0.38);
+  --modal-fill: rgba(18, 14, 10, 0.92);
+  --modal-card-fill: rgba(18, 14, 10, 0.68);
+  --modal-note-fill: rgba(255, 255, 255, 0.026);
+  width: calc(100vw - 16px);
+  max-width: calc(100vw - 16px);
+  height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 16px);
+  padding: var(--modal-shell-gap);
+  gap: var(--modal-shell-gap);
+  border-color: var(--modal-line);
+  border-radius: var(--modal-radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.036), transparent 18%),
+    radial-gradient(circle at 0% 0%, rgba(134, 199, 210, 0.055), transparent 30%),
+    radial-gradient(circle at 100% 100%, rgba(143, 190, 100, 0.045), transparent 28%),
+    linear-gradient(180deg, #19140f, #0f0b08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.018),
+    0 24px 64px rgba(0, 0, 0, 0.58);
 }
 
-.modal-panel :is(.checks label, .route-checks label, .module-rule-check) {
-  min-height: 22px;
-  padding: 2px 4px;
-  grid-template-columns: var(--toggle-width) minmax(0, 1fr);
+.modal-panel-route-picker {
+  width: min(540px, calc(100vw - 16px));
+  height: auto;
+  max-height: min(620px, calc(100dvh - 16px));
+}
+
+.modal-head,
+.modal-actions {
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 6px;
+  gap: 8px;
+  border: 1px solid rgba(201, 169, 112, 0.12);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 55%),
+    rgba(10, 8, 6, 0.38);
+}
+
+.modal-head {
+  align-items: center;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.modal-head-copy {
+  gap: 2px;
+}
+
+.modal-head-tools,
+.modal-head-tools .inline-actions,
+.modal-head-tools > div {
+  gap: 6px;
+}
+
+.modal-head .section-title,
+.modal-head .module-title {
+  color: #fbf5e7;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.12;
+  text-transform: none;
+}
+
+.modal-head .section-meta:not([hidden]) {
+  display: block !important;
+  color: rgba(216, 204, 180, 0.82);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.modal-head-copy #shared-module-head-group:not([hidden]),
+.modal-head-copy #rune-module-head-group:not([hidden]) {
+  display: grid !important;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.modal-head-copy :is(.module-state-line, .module-current-line, .module-note) {
+  max-width: min(72ch, 64vw);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modal-head-copy .module-state-line {
+  color: rgba(247, 213, 138, 0.9);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.modal-head-copy .module-current-line,
+.modal-head-copy .module-note:not([hidden]) {
+  display: block;
+  color: rgba(216, 204, 180, 0.82);
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.24;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-body {
+  gap: var(--modal-inner-gap);
+}
+
+.modal-panel .route-modal-head {
+  gap: var(--modal-inner-gap);
+}
+
+.modal-panel .route-modal-head-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.86fr);
+  gap: var(--modal-inner-gap);
+}
+
+.modal-panel .route-modal-head-block {
+  gap: 4px;
+}
+
+.modal-panel .route-modal-head .route-head-meta-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 5px;
-  border-color: rgba(169, 141, 99, 0.14);
-  border-radius: var(--toggle-surface-radius);
-  background: transparent;
+  justify-content: stretch;
+}
+
+.modal-panel .route-modal-head .route-library-meta:not([hidden]),
+.modal-panel .route-modal-head .route-file-note span:not([hidden]),
+.modal-panel .route-library-quick-meta:not([hidden]),
+.modal-panel .hunt-preset-row-meta:not([hidden]),
+.modal-panel .hunt-preset-detail-copy:not([hidden]),
+.modal-panel .hunt-preset-detail-note:not([hidden]),
+.modal-panel .hunt-preset-detail-card .section-meta:not([hidden]),
+.modal-panel .rune-maker-template span:not([hidden]) {
+  display: block !important;
+}
+
+.modal-panel .route-library-meta,
+.modal-panel .route-library-quick-meta,
+.modal-panel .route-file-note,
+.modal-panel .route-selection-summary,
+.modal-panel .route-hunt-inline-note,
+.modal-panel .route-hunt-search-bar,
+.modal-panel .module-rule-summary,
+.modal-panel .module-rule-section,
+.modal-panel .module-rule-pill,
+.modal-panel .summary-cell,
+.modal-panel .runtime-metric {
+  border-color: rgba(201, 169, 112, 0.14);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 58%),
+    var(--modal-note-fill);
   box-shadow: none;
 }
 
-.modal-panel :is(.checks label, .route-checks label, .module-rule-check):hover {
+.modal-panel :is(
+  .route-stack-card,
+  .route-drive-card,
+  .route-editor-card,
+  .route-tile-rule-card,
+  .route-avoid-fields-card,
+  .route-danger-bar,
+  .route-hunt-launchpad,
+  .targeting-config-card,
+  .target-source-panel,
+  .target-profile-card,
+  .target-set-card,
+  .target-watch-group,
+  .route-hunt-registry,
+  .route-hunt-registry-panel,
+  .route-hunt-presence-panel,
+  .modal-module-card,
+  .module-rule-card,
+  .healer-setup-panel,
+  .healer-family-panel,
+  .looting-overview,
+  .looting-card,
+  .autoeat-overview,
+  .autoeat-source-bank,
+  .autoeat-column,
+  .autoeat-controls,
+  .rune-maker-sidebar-card,
+  .rune-maker-main,
+  .hunt-preset-browser,
+  .hunt-preset-detail,
+  .hunt-preset-detail-card,
+  .account-registry-card
+) {
+  border-color: rgba(201, 169, 112, 0.14);
+  border-radius: var(--modal-card-radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent 42%),
+    var(--modal-card-fill);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.24);
+}
+
+.modal-panel :is(
+  .route-stack-card,
+  .route-drive-card,
+  .route-editor-card,
+  .route-tile-rule-card,
+  .route-avoid-fields-card,
+  .route-danger-bar,
+  .route-hunt-launchpad,
+  .targeting-config-card,
+  .target-source-panel,
+  .target-profile-card,
+  .target-set-card,
+  .target-watch-group,
+  .route-hunt-registry-panel,
+  .route-hunt-presence-panel,
+  .modal-module-card,
+  .module-rule-card,
+  .rune-maker-sidebar-card,
+  .rune-maker-main,
+  .hunt-preset-browser,
+  .hunt-preset-detail,
+  .hunt-preset-detail-card,
+  .account-registry-card
+) {
+  padding: 6px;
+  gap: var(--modal-inner-gap);
+}
+
+.modal-panel :is(.btn, input:not([type="checkbox"]), textarea, select) {
+  min-height: 28px;
+  border-radius: 5px;
+}
+
+.modal-panel :is(input:not([type="checkbox"]), textarea, select) {
+  padding: 5px 7px;
+  border-color: rgba(201, 169, 112, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent 48%),
+    rgba(9, 7, 5, 0.66);
+  color: var(--text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32);
+}
+
+.modal-panel :is(input:not([type="checkbox"]), textarea, select):focus {
+  border-color: rgba(247, 213, 138, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    var(--focus-ring);
+}
+
+.modal-panel textarea {
+  min-height: 64px;
+  line-height: 1.32;
+}
+
+.modal-panel label,
+.modal-panel .module-rule-control,
+.modal-panel .route-picker-field,
+.modal-panel .route-head-field,
+.modal-panel .hunt-preset-search-field {
+  color: rgba(216, 204, 180, 0.82);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.18;
+  text-transform: none;
+}
+
+.modal-panel .btn {
+  min-height: 28px;
+  padding: 5px 10px;
+  border-color: rgba(201, 169, 112, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 48%),
+    rgba(28, 22, 15, 0.92);
+  color: rgba(239, 228, 207, 0.92);
+  box-shadow: none;
+}
+
+.modal-panel .btn:hover:not(:disabled) {
+  border-color: rgba(247, 213, 138, 0.46);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 48%),
+    rgba(35, 27, 18, 0.96);
+  transform: none;
+}
+
+.modal-panel .btn.primary,
+.modal-panel .modal-save-button {
+  border-color: rgba(247, 213, 138, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 44%),
+    linear-gradient(180deg, rgba(115, 83, 35, 0.94), rgba(57, 39, 17, 0.96));
+  color: #fff3d2;
+}
+
+.modal-panel .btn.danger {
+  border-color: rgba(196, 106, 91, 0.44);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.034), transparent 48%),
+    rgba(58, 26, 20, 0.82);
+  color: #f3c3b8;
+}
+
+.modal-panel .modal-close-button {
+  border-color: rgba(201, 169, 112, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.034), transparent 48%),
+    rgba(20, 15, 11, 0.94);
+  color: rgba(239, 228, 207, 0.86);
+}
+
+.modal-panel .btn.compact,
+.modal-panel .btn.mini,
+.modal-panel .module-rule-actions .btn {
+  min-height: 25px;
+  padding: 4px 8px;
+  font-size: 9px;
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-toggle
+) {
+  min-height: 30px;
+  padding: 5px 7px;
+  gap: 8px;
+  border-color: rgba(201, 169, 112, 0.14);
+  border-radius: 6px;
+  background: rgba(10, 8, 6, 0.34);
+  color: rgba(239, 228, 207, 0.8);
+}
+
+.modal-panel input[type="checkbox"] {
   border-color: rgba(201, 169, 112, 0.34);
-  background: rgba(255, 255, 255, 0.018);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 50%),
+    rgba(20, 16, 12, 0.98);
+}
+
+.modal-panel input[type="checkbox"]:checked {
+  border-color: rgba(139, 190, 172, 0.72);
+  background:
+    linear-gradient(180deg, rgba(139, 190, 172, 0.36), rgba(139, 190, 172, 0.08) 52%),
+    linear-gradient(180deg, #375b50, #182d27);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(139, 190, 172, 0.12);
+}
+
+.modal-panel input[type="checkbox"]:checked::before {
+  background:
+    linear-gradient(180deg, #fff7df, #d7e7cc);
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+):has(input[type="checkbox"]:checked) {
+  border-color: rgba(139, 190, 172, 0.34);
+  background:
+    linear-gradient(90deg, rgba(139, 190, 172, 0.13), rgba(139, 190, 172, 0) 72%),
+    rgba(13, 22, 19, 0.5);
+}
+
+.modal-module-card:has(> #module-rule-list:not([hidden])):has(> #module-extra-fields:not([hidden])) {
+  grid-template-columns: minmax(280px, 0.78fr) minmax(360px, 1.22fr);
+  gap: var(--modal-inner-gap);
+}
+
+.modal-module-card[data-module-key="healer"],
+.healer-shell {
+  grid-template-columns: minmax(270px, 0.52fr) minmax(0, 1.48fr);
+  gap: var(--modal-inner-gap);
+}
+
+.module-rule-head {
+  align-items: center;
+  gap: 6px;
+}
+
+.module-rule-title-row {
+  gap: 5px;
+}
+
+.module-rule-index,
+.module-rule-badge {
+  font-size: 9px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.module-rule-badge,
+.module-rule-badge.active,
+.module-rule-badge.off,
+.target-profile-priority,
+.target-profile-badge,
+.target-profile-badge.active {
+  min-height: 18px;
+  padding: 1px 6px;
+  border: 1px solid rgba(201, 169, 112, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.module-rule-badge.active,
+.target-profile-badge.active {
+  border-color: rgba(139, 190, 172, 0.38);
+  color: #caeadf;
+}
+
+.module-rule-badge.off,
+.target-profile-row.off .target-profile-badge {
+  border-color: rgba(196, 106, 91, 0.28);
+  color: #e0b3aa;
+}
+
+.module-rule-name {
+  font-size: 13px;
+}
+
+.module-rule-action-line {
+  line-height: 1.28;
+}
+
+.module-rule-sections,
+.module-rule-grid,
+.healer-setup-grid,
+.autoeat-source-grid {
+  gap: var(--modal-inner-gap);
+}
+
+.module-rule-section-title {
+  display: block;
+  color: rgba(247, 213, 138, 0.84);
+  font-size: 9px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.route-main-layout {
+  grid-template-columns: minmax(360px, 1.14fr) minmax(275px, 0.86fr) minmax(275px, 0.86fr);
+  gap: var(--modal-inner-gap);
+}
+
+.route-side-scroll,
+.modal-scroll-stack,
+.module-rule-list,
+.module-extra-fields,
+.monster-source-list,
+.player-archive,
+.npc-archive,
+.target-profile-list,
+.targeting-distance-rule-list,
+.hunt-preset-list,
+.hunt-preset-detail-panel,
+.log-output {
+  scrollbar-gutter: stable;
+}
+
+.route-main-column .route-stack-waypoint-grid,
+#modal-autowalk .waypoint-list-grid {
+  --route-waypoint-grid-gap: 4px;
+  --route-waypoint-tile-min-size: 0px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(48px, auto);
+  gap: 4px;
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row,
+#modal-autowalk .waypoint-list-grid .waypoint-row {
+  min-height: 0;
+  border-color: rgba(201, 169, 112, 0.14);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 45%),
+    rgba(10, 8, 6, 0.42);
+  contain-intrinsic-size: 52px;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row-main,
+#modal-autowalk .waypoint-list-grid .waypoint-row-main {
+  min-height: 48px;
+  padding: 6px 34px 6px 8px;
+  display: grid;
+  grid-template-columns: minmax(58px, auto) minmax(0, 1fr) minmax(92px, auto);
+  grid-template-areas:
+    "top title position"
+    "top detail detail";
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-top,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-top {
+  grid-area: top;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row-main > strong,
+#modal-autowalk .waypoint-list-grid .waypoint-row-main > strong {
+  grid-area: title;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-position,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-position {
+  grid-area: position;
+  justify-self: end;
+  margin-top: 0;
+  text-align: right;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-detail,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-detail {
+  grid-area: detail;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  white-space: normal;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row-index,
+#modal-autowalk .waypoint-list-grid .waypoint-row-index {
+  min-width: 28px;
+  margin-top: 0;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-flags,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-flags {
+  justify-content: flex-start;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row-actions,
+#modal-autowalk .waypoint-list-grid .waypoint-row-actions {
+  right: 6px;
+}
+
+.waypoint-preview-live,
+.waypoint-preview.waypoint-square-grid {
+  --route-waypoint-grid-gap: 4px;
+  --route-waypoint-tile-min-size: 64px;
+  gap: 4px;
+}
+
+.route-hunt-modal-head-compact {
+  gap: 8px;
+}
+
+.route-hunt-head-stats {
+  gap: 4px;
+}
+
+.route-hunt-head-badge {
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid rgba(201, 169, 112, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.route-hunt-head-badge span {
+  color: rgba(216, 204, 180, 0.72);
+  font-size: 9px;
+}
+
+.route-hunt-head-badge strong {
+  font-size: 12px;
+}
+
+.route-hunt-grid-3col {
+  grid-template-columns: minmax(260px, 0.82fr) minmax(300px, 1fr) minmax(260px, 0.86fr);
+  gap: var(--modal-inner-gap);
+}
+
+.hunt-preset-layout {
+  grid-template-columns: minmax(300px, 0.76fr) minmax(0, 1.24fr);
+  gap: var(--modal-inner-gap);
+}
+
+.hunt-preset-row {
+  border-radius: 6px;
+}
+
+.runtime-metrics {
+  gap: 5px;
+}
+
+.log-output {
+  border-radius: 6px;
+}
+
+@media (max-width: 1180px) {
+  .modal-panel .route-modal-head-grid,
+  .route-main-layout,
+  .route-hunt-grid-3col,
+  .hunt-preset-layout,
+  .modal-module-card:has(> #module-rule-list:not([hidden])):has(> #module-extra-fields:not([hidden])),
+  .modal-module-card[data-module-key="healer"],
+  .healer-shell,
+  .looting-overview,
+  .looting-layout,
+  .autoeat-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .modal-panel .route-modal-head-block-right {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px), (max-height: 640px) {
+  .modal-layer {
+    padding: 4px;
+  }
+
+  .modal-panel,
+  .modal-panel-wide,
+  .modal-panel-targeting,
+  .route-modal-panel,
+  .modal-panel-module,
+  .modal-panel-console,
+  .modal-panel-presets,
+  .modal-panel-account-registry,
+  #modal-targeting,
+  #modal-autowalk {
+    --modal-shell-gap: 5px;
+    --modal-inner-gap: 5px;
+    width: calc(100vw - 8px);
+    max-width: calc(100vw - 8px);
+    height: calc(100dvh - 8px);
+    max-height: calc(100dvh - 8px);
+  }
+
+  .modal-panel-route-picker {
+    width: calc(100vw - 8px);
+    height: auto;
+  }
+
+  .modal-head,
+  .modal-actions {
+    min-height: 32px;
+    padding: 4px 5px;
+  }
+
+  .modal-head-copy :is(.module-state-line, .module-current-line, .module-note) {
+    max-width: 86vw;
+  }
+}
+
+/* Modal toggle revamp: small switch, readable label row, no badge-sized checked state. */
+.modal-panel,
+.modal-panel-wide,
+.modal-panel-targeting,
+.route-modal-panel,
+.modal-panel-module,
+.modal-panel-console,
+.modal-panel-presets,
+.modal-panel-account-registry,
+#modal-targeting,
+#modal-autowalk {
+  --toggle-width: 32px;
+  --toggle-height: 18px;
+  --toggle-pad: 2px;
+  --toggle-surface-radius: 6px;
+}
+
+.modal-panel input[type="checkbox"] {
+  border-color: rgba(169, 141, 99, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01) 48%),
+    linear-gradient(180deg, rgba(37, 31, 24, 0.94), rgba(12, 9, 6, 0.98));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.07),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.48),
+    0 1px 0 rgba(0, 0, 0, 0.28);
+}
+
+.modal-panel input[type="checkbox"]::before {
+  background:
+    linear-gradient(180deg, #fbf1de, #cbb58d);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.modal-panel input[type="checkbox"]:hover {
+  border-color: rgba(247, 213, 138, 0.58);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.08),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(247, 213, 138, 0.08);
+}
+
+.modal-panel input[type="checkbox"]:checked {
+  border-color: rgba(166, 219, 118, 0.76);
+  background:
+    linear-gradient(180deg, rgba(208, 247, 156, 0.52), rgba(128, 182, 78, 0.08) 48%),
+    linear-gradient(180deg, #547333, #273c1a);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(143, 190, 100, 0.12);
+}
+
+.modal-panel input[type="checkbox"]:checked::before {
+  background:
+    linear-gradient(180deg, #fffff4, #d9efac);
+  box-shadow:
+    0 1px 4px rgba(12, 26, 8, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.modal-panel input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.08),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.42),
+    var(--focus-ring);
+}
+
+.modal-panel input[type="checkbox"]:disabled {
+  opacity: 0.48;
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+) {
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 6px;
+  display: grid;
+  align-items: center;
+  gap: 7px;
+  border-color: rgba(169, 141, 99, 0.16);
+  border-radius: var(--toggle-surface-radius);
+  background: rgba(14, 11, 8, 0.34);
+  box-shadow: none;
+  color: rgba(239, 228, 207, 0.78);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.18;
+  text-transform: none;
+  transform: none;
+}
+
+.modal-panel :is(.checks label, .route-checks label, .module-rule-check) {
+  grid-template-columns: var(--toggle-width) minmax(0, 1fr);
+}
+
+.modal-panel :is(.route-avoid-category, .equipment-replace-power, .equipment-replace-toggle) {
+  grid-template-columns: var(--toggle-width) minmax(0, 1fr);
+}
+
+.modal-panel .route-avoid-toggle {
+  grid-template-columns: minmax(0, 1fr) var(--toggle-width);
+}
+
+.modal-panel .route-avoid-toggle-control {
+  width: var(--toggle-width);
+  overflow: visible;
+}
+
+.modal-panel .route-avoid-toggle-control input[type="checkbox"] {
+  justify-self: end;
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+) :is(span, strong, small) {
+  min-width: 0;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  letter-spacing: 0;
+  line-height: 1.18;
+  text-transform: none;
+  white-space: normal;
+}
+
+.modal-panel :is(
+  .route-avoid-toggle-copy,
+  .route-avoid-category-copy
+) {
+  gap: 1px;
+}
+
+.modal-panel :is(.route-avoid-toggle-copy strong, .route-avoid-category-copy strong) {
+  color: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.modal-panel :is(.route-avoid-toggle-copy small, .route-avoid-category-copy small) {
+  color: rgba(184, 171, 147, 0.78);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.modal-panel .module-rule-check .field-note {
+  grid-column: 2;
+  margin-top: -1px;
+  color: rgba(184, 171, 147, 0.78);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+):hover {
+  border-color: rgba(201, 169, 112, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
   box-shadow: none;
   transform: none;
 }
@@ -13425,23 +14306,47 @@ select[data-feedback="success"] {
   .equipment-replace-power,
   .equipment-replace-toggle
 ):has(input[type="checkbox"]:checked) {
-  border-color: rgba(247, 213, 138, 0.28);
-  background: transparent;
+  border-color: rgba(143, 190, 100, 0.32);
+  background:
+    linear-gradient(90deg, rgba(143, 190, 100, 0.12), rgba(143, 190, 100, 0) 72%),
+    rgba(18, 24, 14, 0.48);
   color: var(--text);
   box-shadow: none;
 }
 
-.modal-panel .route-hunt-head-check {
-  min-height: 20px;
-  padding: 1px 4px;
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+):has(input[type="checkbox"]:focus-visible) {
+  border-color: rgba(247, 213, 138, 0.54);
+  box-shadow: var(--focus-ring);
 }
 
-.modal-panel :is(.route-avoid-toggle, .equipment-replace-toggle) {
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+):has(input[type="checkbox"]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.modal-panel .route-hunt-head-check {
+  min-height: 24px;
   padding: 3px 5px;
-  gap: 6px;
-  border-radius: 5px;
-  background: transparent;
-  box-shadow: none;
+}
+
+.modal-panel :is(.route-avoid-toggle, .equipment-replace-power, .equipment-replace-toggle) {
+  padding: 5px 6px;
 }
 
 .modal-layer {
@@ -13657,5 +14562,220 @@ select[data-feedback="success"] {
 
   .modal-panel-route-picker {
     height: auto;
+  }
+}
+
+/* Active modal polish closure after all density overrides. */
+.modal-layer {
+  padding: 8px;
+}
+
+.modal-panel,
+.modal-panel-wide,
+.modal-panel-targeting,
+.route-modal-panel,
+.modal-panel-module,
+.modal-panel-console,
+.modal-panel-presets,
+.modal-panel-account-registry,
+#modal-targeting,
+#modal-autowalk {
+  width: calc(100vw - 16px);
+  max-width: calc(100vw - 16px);
+  height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 16px);
+  padding: 7px;
+  gap: 7px;
+  border-color: rgba(201, 169, 112, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.036), transparent 18%),
+    radial-gradient(circle at 0% 0%, rgba(134, 199, 210, 0.055), transparent 30%),
+    radial-gradient(circle at 100% 100%, rgba(143, 190, 100, 0.045), transparent 28%),
+    linear-gradient(180deg, #19140f, #0f0b08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.018),
+    0 24px 64px rgba(0, 0, 0, 0.58);
+}
+
+.modal-panel-route-picker {
+  width: min(540px, calc(100vw - 16px));
+  height: auto;
+  max-height: min(620px, calc(100dvh - 16px));
+}
+
+.modal-head,
+.modal-actions {
+  min-height: 36px;
+  padding: 5px 6px;
+  gap: 8px;
+  border: 1px solid rgba(201, 169, 112, 0.12);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 55%),
+    rgba(10, 8, 6, 0.38);
+}
+
+.modal-body,
+.modal-split-layout,
+.modal-scroll-stack,
+.route-main-layout,
+.route-main-column,
+.route-side-scroll,
+.route-stack-card-main,
+.route-hunt-workspace,
+.route-hunt-modal-summary,
+.route-hunt-grid-3col,
+.route-hunt-registry,
+.route-hunt-presence-grid,
+.hunt-preset-layout,
+.modal-module-card,
+.rune-maker-layout {
+  gap: 6px;
+}
+
+.modal-panel .modal-close-button {
+  border-color: rgba(201, 169, 112, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.034), transparent 48%),
+    rgba(20, 15, 11, 0.94);
+  color: rgba(239, 228, 207, 0.86);
+}
+
+.modal-panel input[type="checkbox"]:checked {
+  border-color: rgba(139, 190, 172, 0.72);
+  background:
+    linear-gradient(180deg, rgba(139, 190, 172, 0.36), rgba(139, 190, 172, 0.08) 52%),
+    linear-gradient(180deg, #375b50, #182d27);
+}
+
+.modal-panel :is(
+  .checks label,
+  .route-checks label,
+  .module-rule-check,
+  .route-avoid-toggle,
+  .route-avoid-category,
+  .equipment-replace-power,
+  .equipment-replace-toggle
+):has(input[type="checkbox"]:checked) {
+  border-color: rgba(139, 190, 172, 0.34);
+  background:
+    linear-gradient(90deg, rgba(139, 190, 172, 0.13), rgba(139, 190, 172, 0) 72%),
+    rgba(13, 22, 19, 0.5);
+}
+
+.route-main-column .route-stack-waypoint-grid,
+#modal-autowalk .waypoint-list-grid {
+  --route-waypoint-grid-gap: 4px;
+  --route-waypoint-tile-min-size: 0px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(48px, auto);
+  gap: 4px;
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row,
+#modal-autowalk .waypoint-list-grid .waypoint-row {
+  min-height: 0;
+  border-color: rgba(201, 169, 112, 0.14);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 45%),
+    rgba(10, 8, 6, 0.42);
+  contain-intrinsic-size: 52px;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row-main,
+#modal-autowalk .waypoint-list-grid .waypoint-row-main {
+  min-height: 48px;
+  padding: 6px 34px 6px 8px;
+  display: grid;
+  grid-template-columns: minmax(58px, auto) minmax(0, 1fr) minmax(92px, auto);
+  grid-template-areas:
+    "top title position"
+    "top detail detail";
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-top,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-top {
+  grid-area: top;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-row-main > strong,
+#modal-autowalk .waypoint-list-grid .waypoint-row-main > strong {
+  grid-area: title;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-position,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-position {
+  grid-area: position;
+  justify-self: end;
+  margin-top: 0;
+  text-align: right;
+}
+
+.route-main-column .route-stack-waypoint-grid .waypoint-chip-detail,
+#modal-autowalk .waypoint-list-grid .waypoint-chip-detail {
+  grid-area: detail;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  white-space: normal;
+}
+
+.waypoint-preview-live,
+.waypoint-preview.waypoint-square-grid {
+  --route-waypoint-grid-gap: 4px;
+  --route-waypoint-tile-min-size: 64px;
+  gap: 4px;
+}
+
+@media (max-width: 720px), (max-height: 640px) {
+  .modal-layer {
+    padding: 4px;
+  }
+
+  .modal-panel,
+  .modal-panel-wide,
+  .modal-panel-targeting,
+  .route-modal-panel,
+  .modal-panel-module,
+  .modal-panel-console,
+  .modal-panel-presets,
+  .modal-panel-account-registry,
+  #modal-targeting,
+  #modal-autowalk {
+    width: calc(100vw - 8px);
+    max-width: calc(100vw - 8px);
+    height: calc(100dvh - 8px);
+    max-height: calc(100dvh - 8px);
+    padding: 5px;
+    gap: 5px;
+  }
+
+  .modal-panel-route-picker {
+    width: calc(100vw - 8px);
+    height: auto;
+  }
+
+  .modal-head,
+  .modal-actions {
+    min-height: 32px;
+    padding: 4px 5px;
   }
 }

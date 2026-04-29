@@ -758,7 +758,7 @@
         <div class="route-hunt-grid route-hunt-grid-3col">
           <section class="targeting-config-card route-hunt-config-panel">
             <label class="monster-field target-queue-field route-hunt-queue-field"
-              title="One monster per line. Comma-separated names also work.">Queue<textarea id="monster" rows="4"
+              title="Top line is highest queue priority. One monster per line. Comma-separated names also work.">Queue priority<textarea id="monster" rows="4"
                 spellcheck="false"></textarea></label>
             <div id="monster-target-list" class="monster-archive monster-target-list" hidden></div>
             <div class="form-grid route-hunt-runtime-grid">
@@ -772,7 +772,7 @@
               <label class="route-hunt-wide-field">Players
                 <select id="autowalk-sharedSpawnMode">
                   <option value="attack-all">Attack All</option>
-                  <option value="respect-others">Respect Others</option>
+                  <option value="respect-others" selected>Respect Others</option>
                   <option value="watch-only">Watch Only</option>
                 </select>
               </label>

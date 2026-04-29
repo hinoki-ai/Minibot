@@ -2042,6 +2042,10 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "off");
+  assert.equal(document.getElementById("quick-toggle-alarms").closest(".quick-module-card")?.dataset.state, "on");
+  assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "On");
+  assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "on");
+  assert.equal(document.querySelector("#compact-toggle-alarms strong")?.textContent?.trim(), "On");
   assert.equal(document.getElementById("quick-toggle-party-follow").closest(".quick-module-card")?.dataset.state, "off");
   assert.match(document.getElementById("route-toggle-open-record").title, /record/i);
 
@@ -2139,6 +2143,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     ["quick-toggle-auto-light", "autoLightEnabled"],
     ["quick-toggle-convert", "autoConvertEnabled"],
     ["quick-toggle-anti-idle", "antiIdleEnabled"],
+    ["quick-toggle-alarms", "alarmsEnabled"],
     ["quick-toggle-party-follow", "partyFollowEnabled"],
   ];
 
@@ -2158,6 +2163,10 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "on");
+  assert.equal(document.getElementById("quick-toggle-alarms").closest(".quick-module-card")?.dataset.state, "off");
+  assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "Off");
+  assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "off");
+  assert.equal(document.querySelector("#compact-toggle-alarms strong")?.textContent?.trim(), "Off");
   assert.equal(document.getElementById("quick-toggle-party-follow").closest(".quick-module-card")?.dataset.state, "on");
 
   const sessionWaypointsBeforeToggle = currentState().options.showWaypointOverlay;
@@ -2217,21 +2226,26 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   document.querySelector('[data-open-modal="healer"]').click();
   await flush();
   document.querySelector('[data-module-key="healer"][data-rule-index="1"][data-rule-field="words"]').value = "Ultimate Healing Rune";
+  document.querySelector('[data-module-key="healer"][data-rule-index="1"][data-rule-field="hotkey"]').value = "F6";
   document.querySelector('[data-module-key="healer"][data-rule-index="1"][data-rule-field="maxHealthPercent"]').value = "50";
   document.querySelector('[data-module-key="healer"][data-module-option-field="healerEmergencyHealthPercent"]').value = "35";
   document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneName"]').value = "Ultimate Healing Rune";
+  document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHotkey"]').value = "F5";
   document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHealthPercent"]').value = "32";
   document.querySelector('[data-save-modules]').click();
   await flush();
   assert.equal(calls.updateOptions.at(-1).healerRules[1].words, "Ultimate Healing Rune");
+  assert.equal(calls.updateOptions.at(-1).healerRules[1].hotkey, "F6");
   assert.equal(calls.updateOptions.at(-1).healerEmergencyHealthPercent, 35);
   assert.equal(calls.updateOptions.at(-1).healerRuneName, "Ultimate Healing Rune");
+  assert.equal(calls.updateOptions.at(-1).healerRuneHotkey, "F5");
   assert.equal(calls.updateOptions.at(-1).healerRuneHealthPercent, 32);
   assert.deepEqual(currentState().options.healerRules, [
     {
       enabled: true,
       label: "",
       words: "exura vita",
+      hotkey: "",
       minHealthPercent: 0,
       maxHealthPercent: 30,
       minMana: 80,
@@ -2242,6 +2256,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
       enabled: true,
       label: "",
       words: "Ultimate Healing Rune",
+      hotkey: "F6",
       minHealthPercent: 31,
       maxHealthPercent: 50,
       minMana: 60,
@@ -2252,6 +2267,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
       enabled: true,
       label: "",
       words: "exura",
+      hotkey: "",
       minHealthPercent: 56,
       maxHealthPercent: 80,
       minMana: 20,
@@ -2261,6 +2277,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   ]);
   assert.equal(currentState().options.healerEmergencyHealthPercent, 35);
   assert.equal(currentState().options.healerRuneName, "Ultimate Healing Rune");
+  assert.equal(currentState().options.healerRuneHotkey, "F5");
   assert.equal(currentState().options.healerRuneHealthPercent, 32);
   assert.deepEqual(currentState().options.healerTiers, [
     {
@@ -3311,7 +3328,7 @@ test("restored view mode from desk state applies without another IPC write", asy
   assert.deepEqual(calls.setViewMode, []);
 });
 
-test("modal shell keeps dense spacing without compact-view runtime overrides", () => {
+test("modal shell keeps polished spacing without compact-view runtime overrides", () => {
   const dom = new JSDOM(html);
   trackDom(dom);
   const { document } = dom.window;
@@ -3329,12 +3346,12 @@ test("modal shell keeps dense spacing without compact-view runtime overrides", (
   const modalBodyStyle = dom.window.getComputedStyle(modalBody);
   const modalActionsStyle = dom.window.getComputedStyle(modalActions);
 
-  assert.equal(modalLayerStyle.paddingTop, "3px");
-  assert.equal(modalPanelStyle.paddingTop, "3px");
-  assert.equal(modalPanelStyle.gap, "3px");
-  assert.equal(modalHeadStyle.gap, "4px");
-  assert.equal(modalBodyStyle.gap, "3px");
-  assert.equal(modalActionsStyle.gap, "3px");
+  assert.equal(modalLayerStyle.paddingTop, "8px");
+  assert.equal(modalPanelStyle.paddingTop, "7px");
+  assert.equal(modalPanelStyle.gap, "7px");
+  assert.equal(modalHeadStyle.gap, "8px");
+  assert.equal(modalBodyStyle.gap, "6px");
+  assert.equal(modalActionsStyle.gap, "8px");
 });
 
 test("compact view does not propagate to the modal layer at runtime", async () => {
@@ -3758,6 +3775,147 @@ test("module save gives button feedback before closing the active settings modal
   assert.equal(saveButton.dataset.feedback, undefined);
 });
 
+test("keyboard hotkey fields render for healing, rune, and spell actions", async () => {
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        deathHealEnabled: true,
+        healerEnabled: true,
+        healerRules: [
+          {
+            enabled: true,
+            label: "",
+            words: "Ultimate Healing Rune",
+            hotkey: "",
+            minHealthPercent: 0,
+            maxHealthPercent: 50,
+            minMana: 0,
+            minManaPercent: 0,
+            cooldownMs: 900,
+          },
+        ],
+        potionHealerEnabled: true,
+        potionHealerRules: [
+          {
+            enabled: true,
+            label: "",
+            itemName: "Health Potion",
+            hotkey: "",
+            minHealthPercent: 0,
+            maxHealthPercent: 65,
+            minMana: 0,
+            minManaPercent: 0,
+            cooldownMs: 900,
+          },
+        ],
+        conditionHealerEnabled: true,
+        conditionHealerRules: [
+          {
+            enabled: true,
+            label: "",
+            condition: "poisoned",
+            words: "exana pox",
+            hotkey: "",
+            minHealthPercent: 0,
+            maxHealthPercent: 100,
+            minMana: 0,
+            minManaPercent: 0,
+            cooldownMs: 900,
+          },
+        ],
+        manaTrainerEnabled: true,
+        manaTrainerRules: [
+          {
+            enabled: true,
+            label: "",
+            words: "utevo res ina",
+            hotkey: "",
+            minHealthPercent: 95,
+            minManaPercent: 85,
+            maxManaPercent: 100,
+            cooldownMs: 1400,
+            requireNoTargets: true,
+            requireStationary: true,
+          },
+        ],
+        runeMakerEnabled: true,
+        runeMakerRules: [
+          {
+            enabled: true,
+            label: "",
+            words: "adori blank",
+            hotkey: "",
+            minHealthPercent: 95,
+            minManaPercent: 90,
+            maxManaPercent: 100,
+            cooldownMs: 1800,
+            requireNoTargets: true,
+            requireStationary: true,
+          },
+        ],
+        spellCasterEnabled: true,
+        spellCasterRules: [
+          {
+            enabled: true,
+            label: "",
+            words: "exori frigo",
+            hotkey: "",
+            minManaPercent: 20,
+            maxTargetDistance: 4,
+            minTargetCount: 1,
+            cooldownMs: 900,
+            pattern: "any",
+            requireTarget: true,
+            requireStationary: false,
+          },
+        ],
+        autoLightEnabled: true,
+        autoLightRules: [
+          {
+            enabled: true,
+            label: "",
+            words: "utevo lux",
+            hotkey: "",
+            minManaPercent: 25,
+            cooldownMs: 3000,
+            requireNoLight: true,
+            requireNoTargets: false,
+            requireStationary: false,
+          },
+        ],
+        trainerManaTrainerEnabled: true,
+        trainerManaTrainerWords: "utevo res ina",
+      },
+    }),
+  });
+  const { document } = desk;
+
+  const openModule = async (moduleName) => {
+    document.querySelector(`[data-open-modal="${moduleName}"]`).click();
+    await flush();
+  };
+
+  await openModule("deathHeal");
+  assert.ok(document.querySelector('[data-module-key="deathHeal"][data-module-option-field="deathHealHotkey"]'));
+
+  await openModule("healer");
+  assert.ok(document.querySelector('[data-module-key="healer"][data-rule-index="0"][data-rule-field="hotkey"]'));
+  assert.ok(document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHotkey"]'));
+  assert.ok(document.querySelector('[data-module-key="potionHealer"][data-rule-index="0"][data-rule-field="hotkey"]'));
+  assert.ok(document.querySelector('[data-module-key="conditionHealer"][data-rule-index="0"][data-rule-field="hotkey"]'));
+
+  for (const moduleName of ["manaTrainer", "runeMaker", "spellCaster", "autoLight"]) {
+    await openModule(moduleName);
+    assert.ok(
+      document.querySelector(`[data-module-key="${moduleName}"][data-rule-index="0"][data-rule-field="hotkey"]`),
+      `${moduleName} should render a rule hotkey input`,
+    );
+  }
+
+  await openModule("trainer");
+  assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerHotkey"]'));
+});
+
 test("healer modal saves nested potion and condition healer rules through the shared module flow", async () => {
   const desk = await createDesk({
     initialState: createState({
@@ -3784,8 +3942,11 @@ test("healer modal saves nested potion and condition healer rules through the sh
   await flush();
 
   const potionSelect = document.querySelector('[data-module-key="potionHealer"][data-rule-index="0"][data-rule-field="itemName"]');
+  const potionHotkey = document.querySelector('[data-module-key="potionHealer"][data-rule-index="0"][data-rule-field="hotkey"]');
   potionSelect.value = "Ultimate Health Potion";
   potionSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+  potionHotkey.value = "F7";
+  potionHotkey.dispatchEvent(new window.Event("input", { bubbles: true }));
 
   document.querySelector('[data-add-module-rule="conditionHealer"]').click();
   await flush();
@@ -3794,6 +3955,9 @@ test("healer modal saves nested potion and condition healer rules through the sh
   conditionTrigger.value = "magic-shield-missing";
   conditionTrigger.dispatchEvent(new window.Event("change", { bubbles: true }));
   await flush();
+  const conditionHotkey = document.querySelector('[data-module-key="conditionHealer"][data-rule-index="0"][data-rule-field="hotkey"]');
+  conditionHotkey.value = "F8";
+  conditionHotkey.dispatchEvent(new window.Event("input", { bubbles: true }));
 
   const conditionAction = document.querySelector('[data-module-key="conditionHealer"][data-rule-index="0"][data-rule-field="words"]');
   const conditionOptions = Array.from(conditionAction.querySelectorAll("option")).map((option) => option.textContent.trim());
@@ -3806,12 +3970,16 @@ test("healer modal saves nested potion and condition healer rules through the sh
   const payload = calls.updateOptions.at(-1);
   assert.equal(payload.potionHealerEnabled, true);
   assert.equal(payload.potionHealerRules[0].itemName, "Ultimate Health Potion");
+  assert.equal(payload.potionHealerRules[0].hotkey, "F7");
   assert.equal(payload.conditionHealerEnabled, true);
   assert.equal(payload.conditionHealerRules[0].condition, "magic-shield-missing");
   assert.equal(payload.conditionHealerRules[0].words, "utamo vita");
+  assert.equal(payload.conditionHealerRules[0].hotkey, "F8");
   assert.equal(currentState().options.potionHealerRules[0].itemName, "Ultimate Health Potion");
+  assert.equal(currentState().options.potionHealerRules[0].hotkey, "F7");
   assert.equal(currentState().options.conditionHealerRules[0].condition, "magic-shield-missing");
   assert.equal(currentState().options.conditionHealerRules[0].words, "utamo vita");
+  assert.equal(currentState().options.conditionHealerRules[0].hotkey, "F8");
 });
 
 test("healer action choices follow the detected session vocation", async () => {
@@ -5668,7 +5836,7 @@ test("hunt workspace keeps player history visible even when nobody is nearby", a
   assert.match(document.getElementById("player-visible-list").textContent, /Scout Beta/);
 });
 
-test("hunt workspace keeps registry entries and target profiles alphabetical", async () => {
+test("hunt workspace keeps registry entries alphabetical and target profiles in priority order", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
@@ -5709,7 +5877,11 @@ test("hunt workspace keeps registry entries and target profiles alphabetical", a
   );
   assert.deepEqual(
     [...document.querySelectorAll("#target-profile-list [data-target-profile-name]")].map((node) => node.dataset.targetProfileName),
-    ["Bat", "Rat", "Swamp Troll"],
+    ["Swamp Troll", "Rat", "Bat"],
+  );
+  assert.equal(
+    document.querySelector("#target-profile-list [data-target-profile-name] .target-profile-priority")?.textContent?.trim(),
+    "Priority 1 - Highest",
   );
 });
 
@@ -5749,7 +5921,7 @@ test("hunt workspace strips polluted target names and filters registry lists by 
   assert.ok(!document.getElementById("monster-archive").textContent.includes("Rashid"));
   assert.deepEqual(
     [...document.querySelectorAll("#target-profile-list [data-target-profile-name]")].map((node) => node.dataset.targetProfileName),
-    ["Alpha Rat", "Rat", "Swamp Troll"],
+    ["Swamp Troll", "Alpha Rat", "Rat"],
   );
 
   const search = document.getElementById("creature-registry-search");
@@ -5909,6 +6081,7 @@ test("mana trainer rules render as grouped rule cards", async () => {
             enabled: true,
             label: "",
             words: "utani hur",
+            hotkey: "",
             minHealthPercent: 95,
             minManaPercent: 95,
             maxManaPercent: 100,
@@ -5949,14 +6122,18 @@ test("mana trainer rules render as grouped rule cards", async () => {
   );
 
   const spellInput = card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="words"]');
+  const hotkeyInput = card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="hotkey"]');
   spellInput.value = "utevo res";
   spellInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+  hotkeyInput.value = "F9";
+  hotkeyInput.dispatchEvent(new window.Event("input", { bubbles: true }));
   await flush();
 
   assert.match(card.querySelector(".module-rule-summary").textContent, /Cast utevo res/);
   document.querySelector("#modal-module [data-save-modules]").click();
   await flush();
   assert.equal(calls.updateOptions.at(-1).manaTrainerRules[0].words, "utevo res");
+  assert.equal(calls.updateOptions.at(-1).manaTrainerRules[0].hotkey, "F9");
 });
 
 test("light module renders live detail lines and saves edited light rules", async () => {
@@ -5969,6 +6146,7 @@ test("light module renders live detail lines and saves edited light rules", asyn
             enabled: true,
             label: "",
             words: "utevo gran lux",
+            hotkey: "",
             minManaPercent: 40,
             cooldownMs: 4500,
             requireNoLight: false,
@@ -5996,6 +6174,7 @@ test("light module renders live detail lines and saves edited light rules", asyn
   assert.match(card.querySelector(".module-rule-summary").textContent, /Light gate\s*Light allowed/i);
 
   const wordsInput = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="words"]');
+  const hotkeyInput = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="hotkey"]');
   const manaInput = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="minManaPercent"]');
   const darkToggle = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="requireNoLight"]');
   const targetToggle = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="requireNoTargets"]');
@@ -6003,6 +6182,8 @@ test("light module renders live detail lines and saves edited light rules", asyn
 
   wordsInput.value = "utevo lux";
   wordsInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+  hotkeyInput.value = "F11";
+  hotkeyInput.dispatchEvent(new window.Event("input", { bubbles: true }));
   manaInput.value = "25";
   manaInput.dispatchEvent(new window.Event("input", { bubbles: true }));
   darkToggle.checked = true;
@@ -6023,11 +6204,13 @@ test("light module renders live detail lines and saves edited light rules", asyn
   const payload = calls.updateOptions.at(-1);
   assert.equal(payload.autoLightEnabled, true);
   assert.equal(payload.autoLightRules[0].words, "utevo lux");
+  assert.equal(payload.autoLightRules[0].hotkey, "F11");
   assert.equal(payload.autoLightRules[0].minManaPercent, 25);
   assert.equal(payload.autoLightRules[0].requireNoLight, true);
   assert.equal(payload.autoLightRules[0].requireNoTargets, false);
   assert.equal(payload.autoLightRules[0].requireStationary, false);
   assert.equal(currentState().options.autoLightRules[0].words, "utevo lux");
+  assert.equal(currentState().options.autoLightRules[0].hotkey, "F11");
   assert.equal(currentState().options.autoLightRules[0].minManaPercent, 25);
   assert.equal(currentState().options.autoLightRules[0].requireNoLight, true);
   assert.equal(currentState().options.autoLightRules[0].requireNoTargets, false);
@@ -6112,6 +6295,7 @@ test("rune maker opens its dedicated workspace and focuses the first rune spell 
             enabled: true,
             label: "",
             words: "adori gran",
+            hotkey: "",
             minHealthPercent: 80,
             minManaPercent: 60,
             maxManaPercent: 70,
@@ -6132,6 +6316,7 @@ test("rune maker opens its dedicated workspace and focuses the first rune spell 
   assert.equal(document.querySelector('[data-module-panel="shared"]').hidden, true);
   assert.equal(document.activeElement?.dataset.moduleKey, "runeMaker");
   assert.equal(document.activeElement?.dataset.ruleField, "words");
+  assert.ok(document.querySelector('[data-module-key="runeMaker"][data-rule-index="0"][data-rule-field="hotkey"]'));
   assert.match(document.getElementById("rune-maker-live-summary").textContent, /live right now/i);
   assert.equal(document.getElementById("rune-maker-rule-meta").textContent.trim(), "1 total / 1 active");
 });
@@ -6146,6 +6331,7 @@ test("rune maker quick windows clone the latest rule and relax combat gates", as
             enabled: true,
             label: "",
             words: "adori vita vis",
+            hotkey: "",
             minHealthPercent: 92,
             minManaPercent: 88,
             maxManaPercent: 100,
@@ -6165,6 +6351,7 @@ test("rune maker quick windows clone the latest rule and relax combat gates", as
   await flush();
 
   const wordsInput = document.querySelector('[data-module-key="runeMaker"][data-rule-index="1"][data-rule-field="words"]');
+  const hotkeyInput = document.querySelector('[data-module-key="runeMaker"][data-rule-index="1"][data-rule-field="hotkey"]');
   const noTargetsToggle = document.querySelector('[data-module-key="runeMaker"][data-rule-index="1"][data-rule-field="requireNoTargets"]');
   const stationaryToggle = document.querySelector('[data-module-key="runeMaker"][data-rule-index="1"][data-rule-field="requireStationary"]');
 
@@ -6173,10 +6360,12 @@ test("rune maker quick windows clone the latest rule and relax combat gates", as
   assert.equal(noTargetsToggle.checked, false);
   assert.equal(stationaryToggle.checked, false);
   assert.equal(document.activeElement, wordsInput);
+  hotkeyInput.value = "F9";
 
   document.querySelector('#modal-module [data-save-modules]').click();
   await flush();
   assert.equal(calls.updateOptions.at(-1).runeMakerRules.length, 2);
+  assert.equal(calls.updateOptions.at(-1).runeMakerRules[1].hotkey, "F9");
   assert.equal(calls.updateOptions.at(-1).runeMakerRules[1].requireNoTargets, false);
   assert.equal(calls.updateOptions.at(-1).runeMakerRules[1].requireStationary, false);
 });
@@ -6608,12 +6797,14 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
         autoEatCooldownMs: 55000,
         trainerManaTrainerEnabled: true,
         trainerManaTrainerWords: "exura",
+        trainerManaTrainerHotkey: "",
         trainerManaTrainerManaPercent: 95,
         trainerManaTrainerMinHealthPercent: 40,
         trainerManaTrainerRules: [
           {
             enabled: true,
             words: "exura",
+            hotkey: "",
             minHealthPercent: 40,
             minManaPercent: 95,
             maxManaPercent: 100,
@@ -6650,6 +6841,7 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
   assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerAutoPartyEnabled"]'));
   assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerEnabled"]'));
   assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerWords"]'));
+  assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerHotkey"]'));
   assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerEscapeHealthPercent"]'));
   assert.equal(document.querySelector('[data-module-key="trainer"][data-module-option-field="antiIdleIntervalMs"]'), null);
   assert.equal(document.querySelector('[data-module-key="trainer"][data-module-option-field="autoEatFoodName"]'), null);
@@ -6670,6 +6862,7 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
   const partnerDistanceInput = document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerPartnerDistance"]');
   const trainerManaToggle = document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerEnabled"]');
   const trainerManaWordsInput = document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerWords"]');
+  const trainerManaHotkeyInput = document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerHotkey"]');
   assert.equal(partnerInput.value, "Guide Gamma");
   assert.equal(trainerReconnectToggle.checked, true);
   assert.equal(trainerAutoPartyToggle.checked, true);
@@ -6678,6 +6871,8 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
 
   trainerManaWordsInput.value = "utura gran";
   trainerManaWordsInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+  trainerManaHotkeyInput.value = "F8";
+  trainerManaHotkeyInput.dispatchEvent(new window.Event("input", { bubbles: true }));
   const trainerManaPercentInput = document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerManaTrainerManaPercent"]');
   trainerManaPercentInput.value = "92";
   trainerManaPercentInput.dispatchEvent(new window.Event("input", { bubbles: true }));
@@ -6721,9 +6916,11 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
   assert.equal(payload.autoEatCooldownMs, 55000);
   assert.equal(payload.trainerManaTrainerEnabled, true);
   assert.equal(payload.trainerManaTrainerWords, "utura gran");
+  assert.equal(payload.trainerManaTrainerHotkey, "F8");
   assert.equal(payload.trainerManaTrainerManaPercent, 92);
   assert.equal(payload.trainerManaTrainerMinHealthPercent, 55);
   assert.equal(payload.trainerManaTrainerRules[0]?.words, "utura gran");
+  assert.equal(payload.trainerManaTrainerRules[0]?.hotkey, "F8");
   assert.equal(payload.trainerManaTrainerRules[0]?.minManaPercent, 92);
   assert.equal(payload.trainerManaTrainerRules[0]?.minHealthPercent, 55);
   assert.equal(payload.healerEmergencyHealthPercent, 30);
@@ -6739,6 +6936,8 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
   assert.equal(currentState().options.antiIdleIntervalMs, 60000);
   assert.deepEqual(currentState().options.autoEatFoodName, ["brown mushroom"]);
   assert.equal(currentState().options.autoEatCooldownMs, 55000);
+  assert.equal(currentState().options.trainerManaTrainerHotkey, "F8");
+  assert.equal(currentState().options.trainerManaTrainerRules[0]?.hotkey, "F8");
   assert.equal(currentState().options.healerEmergencyHealthPercent, 30);
   assert.equal(currentState().options.deathHealHealthPercent, 20);
   assert.equal(currentState().options.trainerEscapeHealthPercent, 16);

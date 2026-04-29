@@ -185,6 +185,9 @@ Current ownership split:
 
 - Module rules run top to bottom and the UI must communicate that ordering.
 - Module cards may expose power toggles, but rule editing stays in the shared module modal unless the feature belongs to targeting or route surfaces.
+- Full and compact module cards must mirror the same effective state. The
+  Alarms card, in particular, mirrors `alarmsEnabled` and shows player
+  proximity alarms as armed or off in both layouts.
 - Healer messaging must preserve the downward-safe coverage model instead of implying isolated HP bands.
 - Trainer messaging must make clear that it reuses anti-idle, auto-eat, healer, death-heal, and reconnect policy from their owning modules while keeping trainer-only partner, trainer mana, reconnect-while-training, and escape controls in the Trainer modal.
 - Auto eat messaging must make clear that it can source food from hotbar, equipped slots, or open containers, and it should outrank anti-idle when both are ready.
@@ -217,6 +220,9 @@ Current ownership split:
 - Keyboard activation should work for route and targeting summary cards.
 - Focus targets inside modals matter; quick-open actions should land on the relevant field when possible.
 - Hover-only window controls still need brief readable tooltips.
+- Checkbox controls inside modals should render as compact switch rows with
+  readable text labels, visible focus/disabled states, and no badge-sized
+  checked labels.
 
 ## Canonical Terminology
 

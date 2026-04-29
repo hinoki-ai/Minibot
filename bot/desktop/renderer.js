@@ -367,8 +367,8 @@ const SHARED_SPAWN_MODE_LABELS = Object.freeze({
 });
 
 const SHARED_SPAWN_MODE_COPY = Object.freeze({
-  "attack-all": "Engage tracked monsters even if another player is sharing the screen.",
-  "respect-others": "Skip monsters that are visibly engaged with non-trusted players and keep walking.",
+  "attack-all": "Engage free tracked monsters even if another player is sharing the screen.",
+  "respect-others": "Skip monsters that are engaged with non-trusted players and keep walking.",
   "watch-only": "If a non-trusted player is visible, suspend combat and keep walking.",
 });
 
@@ -786,6 +786,7 @@ const MODULE_RULE_SCHEMAS = {
     moduleFields: [
       { key: "deathHealVocation", label: "Vocation", type: "select" },
       { key: "deathHealWords", label: "Healing spell", type: "select" },
+      { key: "deathHealHotkey", label: "Hotkey", type: "text", placeholder: "F5" },
       { key: "deathHealHealthPercent", label: "HP threshold %", type: "number" },
       { key: "deathHealCooldownMs", label: "Repeat ms", type: "number" },
     ],
@@ -797,6 +798,7 @@ const MODULE_RULE_SCHEMAS = {
       enabled: true,
       label: "",
       words: "exura",
+      hotkey: "",
       minHealthPercent: 0,
       maxHealthPercent: 80,
       minMana: 20,
@@ -805,6 +807,7 @@ const MODULE_RULE_SCHEMAS = {
     },
     fields: [
       { key: "words", label: "Heal action", type: "text" },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F5" },
       { key: "minHealthPercent", label: "HP min", type: "number" },
       { key: "maxHealthPercent", label: "HP max", type: "number" },
       { key: "minMana", label: "Mana min", type: "number" },
@@ -826,6 +829,13 @@ const MODULE_RULE_SCHEMAS = {
         help: "Leave on Auto to try Ultimate Healing Rune first, then Intense Healing Rune.",
       },
       {
+        key: "healerRuneHotkey",
+        label: "Auto rune hotkey",
+        type: "text",
+        placeholder: "F5",
+        help: "Optional keyboard key for the dedicated auto rune. Use the same key bound in the game hotbar.",
+      },
+      {
         key: "healerRuneHealthPercent",
         label: "Auto rune at/below HP %",
         type: "number",
@@ -841,6 +851,7 @@ const MODULE_RULE_SCHEMAS = {
       enabled: true,
       label: "",
       itemName: "Health Potion",
+      hotkey: "",
       minHealthPercent: 0,
       maxHealthPercent: 65,
       minMana: 0,
@@ -849,6 +860,7 @@ const MODULE_RULE_SCHEMAS = {
     },
     fields: [
       { key: "itemName", label: "Potion", type: "select", options: POTION_HEALER_ITEM_OPTIONS },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F6" },
       { key: "minHealthPercent", label: "HP min", type: "number" },
       { key: "maxHealthPercent", label: "HP max", type: "number" },
       { key: "minMana", label: "Mana min", type: "number" },
@@ -873,6 +885,7 @@ const MODULE_RULE_SCHEMAS = {
       label: "",
       condition: "poisoned",
       words: "exana pox",
+      hotkey: "",
       minHealthPercent: 0,
       maxHealthPercent: 100,
       minMana: 0,
@@ -882,6 +895,7 @@ const MODULE_RULE_SCHEMAS = {
     fields: [
       { key: "condition", label: "Condition", type: "select", options: CONDITION_HEALER_TRIGGER_OPTIONS },
       { key: "words", label: "Condition action", type: "select" },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F7" },
       { key: "minHealthPercent", label: "HP min", type: "number" },
       { key: "maxHealthPercent", label: "HP max", type: "number" },
       { key: "minMana", label: "Mana min", type: "number" },
@@ -905,6 +919,7 @@ const MODULE_RULE_SCHEMAS = {
       enabled: true,
       label: "",
       words: "utevo res ina",
+      hotkey: "",
       minHealthPercent: 95,
       minManaPercent: 85,
       maxManaPercent: 100,
@@ -914,6 +929,7 @@ const MODULE_RULE_SCHEMAS = {
     },
     fields: [
       { key: "words", label: "Spell", type: "text" },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F8" },
       { key: "minHealthPercent", label: "HP min", type: "number" },
       { key: "minManaPercent", label: "MP min", type: "number" },
       { key: "maxManaPercent", label: "MP max", type: "number" },
@@ -931,6 +947,7 @@ const MODULE_RULE_SCHEMAS = {
       enabled: true,
       label: "",
       words: "adori blank",
+      hotkey: "",
       minHealthPercent: 95,
       minManaPercent: 90,
       maxManaPercent: 100,
@@ -940,6 +957,7 @@ const MODULE_RULE_SCHEMAS = {
     },
     fields: [
       { key: "words", label: "Spell", type: "text" },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F9" },
       { key: "minHealthPercent", label: "HP min", type: "number" },
       { key: "minManaPercent", label: "MP min", type: "number" },
       { key: "maxManaPercent", label: "MP max", type: "number" },
@@ -957,6 +975,7 @@ const MODULE_RULE_SCHEMAS = {
       enabled: true,
       label: "",
       words: "exori frigo",
+      hotkey: "",
       minManaPercent: 20,
       maxTargetDistance: 4,
       minTargetCount: 1,
@@ -967,6 +986,7 @@ const MODULE_RULE_SCHEMAS = {
     },
     fields: [
       { key: "words", label: "Spell", type: "text" },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F10" },
       { key: "minManaPercent", label: "MP min", type: "number" },
       { key: "maxTargetDistance", label: "Range max", type: "number" },
       { key: "minTargetCount", label: "Target count", type: "number" },
@@ -1034,6 +1054,7 @@ const MODULE_RULE_SCHEMAS = {
       enabled: true,
       label: "",
       words: "utevo lux",
+      hotkey: "",
       minManaPercent: 25,
       cooldownMs: 3000,
       requireNoLight: true,
@@ -1042,6 +1063,7 @@ const MODULE_RULE_SCHEMAS = {
     },
     fields: [
       { key: "words", label: "Spell", type: "text" },
+      { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F11" },
       { key: "minManaPercent", label: "MP min", type: "number" },
       { key: "cooldownMs", label: "Cooldown ms", type: "number" },
     ],
@@ -1372,6 +1394,13 @@ const MODULE_RULE_SCHEMAS = {
         help: "Spell Trainer repeats for mana training. This does not use the standalone Mana Trainer module.",
       },
       {
+        key: "trainerManaTrainerHotkey",
+        label: "Trainer mana hotkey",
+        type: "text",
+        placeholder: "F8",
+        help: "Optional keyboard key bound to the trainer mana spell in the game hotbar.",
+      },
+      {
         key: "trainerManaTrainerManaPercent",
         label: "Open at mana %",
         type: "number",
@@ -1525,7 +1554,7 @@ const MODULE_RULE_UI = {
     multipleActiveSummary: "Active heal tiers run top to bottom. Lowest active band auto-covers 0% HP.",
     sections: [
       { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "cooldownMs"] },
+      { title: "Cast", fields: ["words", "hotkey", "cooldownMs"] },
       { title: "Configured HP Band", fields: ["minHealthPercent", "maxHealthPercent"] },
       { title: "Mana Gate", fields: ["minMana", "minManaPercent"] },
     ],
@@ -1535,7 +1564,7 @@ const MODULE_RULE_UI = {
     addLabel: "Add Potion Rule",
     sections: [
       { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Potion", fields: ["itemName", "cooldownMs"] },
+      { title: "Potion", fields: ["itemName", "hotkey", "cooldownMs"] },
       { title: "HP Band", fields: ["minHealthPercent", "maxHealthPercent"] },
       { title: "Mana Gate", fields: ["minMana", "minManaPercent"] },
     ],
@@ -1545,7 +1574,7 @@ const MODULE_RULE_UI = {
     addLabel: "Add Condition Rule",
     sections: [
       { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Trigger", fields: ["condition", "words", "cooldownMs"] },
+      { title: "Trigger", fields: ["condition", "words", "hotkey", "cooldownMs"] },
       { title: "HP Band", fields: ["minHealthPercent", "maxHealthPercent"] },
       { title: "Mana Gate", fields: ["minMana", "minManaPercent"] },
     ],
@@ -1560,7 +1589,7 @@ const MODULE_RULE_UI = {
     multipleActiveSummary: "Active mana windows run top to bottom. Put tighter windows first.",
     sections: [
       { title: "Window Identity", fields: ["label", "enabled"] },
-      { title: "Cast Cadence", fields: ["words", "cooldownMs"] },
+      { title: "Cast Cadence", fields: ["words", "hotkey", "cooldownMs"] },
       { title: "Mana Band", fields: ["minManaPercent", "maxManaPercent"] },
       { title: "Safety Gates", fields: ["minHealthPercent", "requireNoTargets", "requireStationary"] },
     ],
@@ -1575,7 +1604,7 @@ const MODULE_RULE_UI = {
     multipleActiveSummary: "Active rune windows run top to bottom.",
     sections: [
       { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "cooldownMs"] },
+      { title: "Cast", fields: ["words", "hotkey", "cooldownMs"] },
       { title: "Mana Window", fields: ["minManaPercent", "maxManaPercent"] },
       { title: "Safety Gates", fields: ["minHealthPercent", "requireNoTargets", "requireStationary"] },
     ],
@@ -1590,7 +1619,7 @@ const MODULE_RULE_UI = {
     multipleActiveSummary: "Active spell rules run top to bottom. Put stricter patterns first.",
     sections: [
       { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "cooldownMs", "pattern"] },
+      { title: "Cast", fields: ["words", "hotkey", "cooldownMs", "pattern"] },
       { title: "Target Gate", fields: ["maxTargetDistance", "minTargetCount", "minManaPercent"] },
       { title: "Safety Gates", fields: ["requireTarget", "requireStationary"] },
     ],
@@ -1620,7 +1649,7 @@ const MODULE_RULE_UI = {
     multipleActiveSummary: "Active light rules run top to bottom.",
     sections: [
       { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "cooldownMs"] },
+      { title: "Cast", fields: ["words", "hotkey", "cooldownMs"] },
       { title: "Mana Gate", fields: ["minManaPercent"] },
       { title: "Safety Gates", fields: ["requireNoLight", "requireNoTargets", "requireStationary"] },
     ],
@@ -1730,9 +1759,11 @@ const MODULE_RULE_FIELD_LABELS = {
   enabled: "Rule active",
   deathHealVocation: "Vocation",
   deathHealWords: "Healing spell",
+  deathHealHotkey: "Hotkey",
   deathHealHealthPercent: "HP threshold %",
   deathHealCooldownMs: "Repeat ms",
   words: "Spell words",
+  hotkey: "Hotkey",
   minHealthPercent: "HP min %",
   maxHealthPercent: "HP max %",
   minMana: "Mana min",
@@ -1753,6 +1784,7 @@ const MODULE_RULE_FIELD_LABELS = {
   requireStationary: "Only while idle",
   healerEmergencyHealthPercent: "Healing priority at/below HP %",
   healerRuneName: "Auto rune",
+  healerRuneHotkey: "Auto rune hotkey",
   healerRuneHealthPercent: "Auto rune at/below HP %",
   potionHealerEnabled: "Enable potion healer",
   conditionHealerEnabled: "Enable condition healer",
@@ -1809,6 +1841,7 @@ const MODULE_RULE_FIELD_LABELS = {
   trainerAutoPartyEnabled: "Auto party shield",
   trainerManaTrainerEnabled: "Trainer mana trainer",
   trainerManaTrainerWords: "Trainer mana spell",
+  trainerManaTrainerHotkey: "Trainer mana hotkey",
   trainerManaTrainerManaPercent: "Open at mana %",
   trainerManaTrainerMinHealthPercent: "Min HP % for mana spell",
   trainerEscapeDistance: "Escape range",
@@ -4942,6 +4975,7 @@ function renderTrainerFields(modulesState = ensureModulesDraft()) {
     "trainerAutoPartyEnabled",
     "trainerManaTrainerEnabled",
     "trainerManaTrainerWords",
+    "trainerManaTrainerHotkey",
     "trainerManaTrainerManaPercent",
     "trainerManaTrainerMinHealthPercent",
     "trainerEscapeHealthPercent",
@@ -6994,6 +7028,7 @@ function renderHealerFields(modulesState = ensureModulesDraft()) {
   const resolvedVocation = getHealerResolvedVocation(sourceState);
   const emergencyField = getModuleOptionFieldSpec("healer", "healerEmergencyHealthPercent");
   const runeNameField = getModuleOptionFieldSpec("healer", "healerRuneName");
+  const runeHotkeyField = getModuleOptionFieldSpec("healer", "healerRuneHotkey");
   const runeThresholdField = getModuleOptionFieldSpec("healer", "healerRuneHealthPercent");
   const potionEnabledField = getModuleOptionFieldSpec("potionHealer", "potionHealerEnabled");
   const conditionEnabledField = getModuleOptionFieldSpec("conditionHealer", "conditionHealerEnabled");
@@ -7031,6 +7066,7 @@ function renderHealerFields(modulesState = ensureModulesDraft()) {
         <div class="form-grid healer-setup-grid">
           ${emergencyField ? renderModuleOptionField("healer", emergencyField, modulesState?.healerEmergencyHealthPercent) : ""}
           ${runeNameField ? renderModuleOptionField("healer", runeNameField, modulesState?.healerRuneName) : ""}
+          ${runeHotkeyField ? renderModuleOptionField("healer", runeHotkeyField, modulesState?.healerRuneHotkey) : ""}
           ${runeThresholdField ? renderModuleOptionField("healer", runeThresholdField, modulesState?.healerRuneHealthPercent) : ""}
           ${potionEnabledField ? renderModuleOptionField("potionHealer", potionEnabledField, modulesState?.potionHealerEnabled) : ""}
           ${conditionEnabledField ? renderModuleOptionField("conditionHealer", conditionEnabledField, modulesState?.conditionHealerEnabled) : ""}
@@ -7103,6 +7139,17 @@ function renderDeathHealFields(modulesState = ensureModulesDraft()) {
       <div class="field-note">Shown from the current runtime vocation. If live detection is missing, set the vocation above.</div>
     </label>
     <label class="module-rule-control">
+      <span>${escapeHtml(MODULE_RULE_FIELD_LABELS.deathHealHotkey)}</span>
+      <input
+        type="text"
+        value="${escapeHtml(formatFieldValueForInput(modulesState?.deathHealHotkey, { type: "text" }))}"
+        placeholder="F5"
+        data-module-key="deathHeal"
+        data-module-option-field="deathHealHotkey"
+      />
+      <div class="field-note">Optional keyboard key bound to this heal in the game hotbar.</div>
+    </label>
+    <label class="module-rule-control">
       <span>${escapeHtml(MODULE_RULE_FIELD_LABELS.deathHealHealthPercent)}</span>
       <input
         type="number"
@@ -7144,6 +7191,11 @@ function formatRuleDisplayName(moduleKey, rule = {}, index = 0) {
 
   const fallbackName = MODULE_RULE_UI[moduleKey]?.fallbackName || "Rule";
   return `${fallbackName} ${index + 1}`;
+}
+
+function formatPriorityRankLabel(index = 0) {
+  const rank = Math.max(1, Math.trunc(Number(index) || 0) + 1);
+  return rank === 1 ? "Priority 1 - Highest" : `Priority ${rank}`;
 }
 
 function formatSafetyGate(rule = {}, key, enabledText, disabledText) {
@@ -7948,12 +8000,14 @@ function cloneModuleOptions(options = {}) {
     deathHealEnabled: Boolean(options.deathHealEnabled),
     deathHealVocation: String(options.deathHealVocation || "").trim(),
     deathHealWords: String(options.deathHealWords || "").trim(),
+    deathHealHotkey: String(options.deathHealHotkey || "").trim(),
     deathHealHealthPercent: Number(options.deathHealHealthPercent) || 0,
     deathHealCooldownMs: Number(options.deathHealCooldownMs) || 0,
     healerEnabled: Boolean(options.healerEnabled),
     healerRules: cloneValue(options.healerRules || []),
     healerEmergencyHealthPercent: Number(options.healerEmergencyHealthPercent) || 0,
     healerRuneName: normalizeHealerActionValue(options.healerRuneName),
+    healerRuneHotkey: String(options.healerRuneHotkey || "").trim(),
     healerRuneHealthPercent: Number(options.healerRuneHealthPercent) || 0,
     potionHealerEnabled: Boolean(options.potionHealerEnabled),
     potionHealerRules: cloneValue(options.potionHealerRules || []),
@@ -7963,6 +8017,7 @@ function cloneModuleOptions(options = {}) {
     manaTrainerRules: cloneValue(options.manaTrainerRules || []),
     trainerManaTrainerEnabled: Boolean(options.trainerManaTrainerEnabled),
     trainerManaTrainerWords: String(options.trainerManaTrainerWords || "").trim(),
+    trainerManaTrainerHotkey: String(options.trainerManaTrainerHotkey || "").trim(),
     trainerManaTrainerManaPercent: Number(options.trainerManaTrainerManaPercent) || 0,
     trainerManaTrainerMinHealthPercent: Number(options.trainerManaTrainerMinHealthPercent) || 0,
     trainerManaTrainerRules: cloneValue(options.trainerManaTrainerRules || []),
@@ -9765,6 +9820,7 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
     reconnect: "reconnectEnabled",
     antiIdle: "antiIdleEnabled",
     distanceKeeper: "distanceKeeperEnabled",
+    alarms: "alarmsEnabled",
     partyFollow: "partyFollowEnabled",
   }[moduleKey];
   const rawEnabled = rawEnabledKey ? Boolean(options?.[rawEnabledKey]) : false;
@@ -9901,6 +9957,11 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
       return {
         ...baseState,
         detail: rawEnabled ? "Idle keepalive armed" : "Idle keepalive off",
+      };
+    case "alarms":
+      return {
+        ...baseState,
+        detail: rawEnabled ? "Player proximity alarms armed" : "Player proximity alarms off",
       };
     case "healer":
       {
@@ -11087,13 +11148,13 @@ function renderModuleRuleList(moduleKey, rules = []) {
         <div class="module-rule-card ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="${moduleKey}" data-rule-index="${index}">
           <div class="module-rule-head">
             <div class="module-rule-title-row">
-              <span class="module-rule-index">Rule ${index + 1}</span>
+              <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
               <strong class="module-rule-name">${escapeHtml(title)}</strong>
               <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
             </div>
             <div class="module-rule-actions">
-              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} up">Move Up</button>
-              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} down">Move Down</button>
+              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Raise priority for ${escapeHtml(title)}">Higher</button>
+              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Lower priority for ${escapeHtml(title)}">Lower</button>
               <button type="button" class="btn mini danger" data-delete-module-rule="${moduleKey}" data-rule-index="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
             </div>
           </div>
@@ -15384,6 +15445,7 @@ function renderDashboard() {
   setEffectiveModuleTileState("trainer", getModuleEffectiveState("trainer", options, state));
   setEffectiveModuleTileState("reconnect", getModuleEffectiveState("reconnect", options, state));
   setEffectiveModuleTileState("antiIdle", getModuleEffectiveState("antiIdle", options, state));
+  setEffectiveModuleTileState("alarms", getModuleEffectiveState("alarms", options, state));
   setEffectiveModuleTileState("partyFollow", getModuleEffectiveState("partyFollow", options, state));
   if (cavebotMasterStopSummary instanceof HTMLElement) {
     setTextContent(
@@ -15518,7 +15580,7 @@ function formatTargetProfileSummary(profile, visibleEntries = []) {
     : "not visible";
 
   return [
-    `hierarchy ${Math.round(Number(profile.priority) || 0)}`,
+    `priority score ${Math.round(Number(profile.priority) || 0)}`,
     `danger ${Math.round(Number(profile.dangerLevel) || 0)}`,
     `focus ${TARGET_PROFILE_KILL_MODE_LABELS[profile.killMode] || TARGET_PROFILE_KILL_MODE_LABELS.normal}`,
     stanceLabel,
@@ -15569,6 +15631,13 @@ function sortTargetProfilesByName(profiles = []) {
   return [...profiles].sort((left, right) => compareDisplayNames(left?.name, right?.name));
 }
 
+function sortTargetProfilesByPriority(profiles = []) {
+  return [...profiles].sort((left, right) => (
+    (Number(right?.priority) || 0) - (Number(left?.priority) || 0)
+    || compareDisplayNames(left?.name, right?.name)
+  ));
+}
+
 function getTargetProfilesRenderKey(profiles, visibleCreatures, searchQuery = "") {
   const profileKey = profiles.map((p) => [
     p.name, p.enabled, p.priority, p.dangerLevel, p.keepDistanceMin, p.keepDistanceMax,
@@ -15595,13 +15664,13 @@ function renderTargetingDistanceRuleList(rules = []) {
         <div class="module-rule-card ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="distanceKeeper" data-rule-index="${index}">
           <div class="module-rule-head">
             <div class="module-rule-title-row">
-              <span class="module-rule-index">Rule ${index + 1}</span>
+              <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
               <strong class="module-rule-name">${escapeHtml(title)}</strong>
               <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
             </div>
             <div class="module-rule-actions">
-              <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} up">Move Up</button>
-              <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} down">Move Down</button>
+              <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Raise priority for ${escapeHtml(title)}">Higher</button>
+              <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Lower priority for ${escapeHtml(title)}">Lower</button>
               <button type="button" class="btn mini danger" data-targeting-distance-delete="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
             </div>
           </div>
@@ -15665,7 +15734,7 @@ function renderTargetingCombatRules({ force = false } = {}) {
 function renderTargetProfiles({ force = false } = {}) {
   if (!targetProfileList) return;
 
-  const profiles = sortTargetProfilesByName(syncTargetProfilesDraftToTargetNames(getMonsterInputNames()));
+  const profiles = sortTargetProfilesByPriority(syncTargetProfilesDraftToTargetNames(getMonsterInputNames()));
   const visibleCreatures = Array.isArray(state?.snapshot?.visibleCreatures) ? state.snapshot.visibleCreatures : [];
   const searchQuery = getCreatureRegistrySearchQuery();
   const searchTerms = getCreatureRegistrySearchTerms(searchQuery);
@@ -15675,7 +15744,7 @@ function renderTargetProfiles({ force = false } = {}) {
 
   if (!profiles.length) {
     if (targetProfilesRenderedKey !== "__empty") {
-      targetProfileList.innerHTML = '<div class="empty-state">Add target monsters to tune hierarchy, danger, focus, spacing, avoidance, and run-away behavior.</div>';
+      targetProfileList.innerHTML = '<div class="empty-state">Add target monsters to tune priority order, danger, focus, spacing, avoidance, and run-away behavior.</div>';
       targetProfilesRenderedKey = "__empty";
     }
     return;
@@ -15709,6 +15778,7 @@ function renderTargetProfiles({ force = false } = {}) {
       <section class="target-profile-row ${profile.enabled ? "" : "off"}" data-target-profile-name="${escapeHtml(profile.name)}" data-target-profile-index="${index}">
         <div class="target-profile-head">
           <div class="target-profile-title">
+            <span class="target-profile-priority">${escapeHtml(formatPriorityRankLabel(index))}</span>
             <strong>${escapeHtml(profile.name)}</strong>
             <span class="target-profile-badge ${profile.enabled ? "active" : ""}">${activeBadge}</span>
           </div>
@@ -15720,7 +15790,7 @@ function renderTargetProfiles({ force = false } = {}) {
         <div class="target-profile-summary">${escapeHtml(summary)}</div>
         <div class="target-profile-grid compact-profile-grid">
           <label class="module-rule-control compact-rule-control">
-            <span>Hierarchy</span>
+            <span>Priority score</span>
             <input type="number" min="0" step="1" value="${escapeHtml(profile.priority)}" data-target-profile-field="priority" />
           </label>
           <label class="module-rule-control compact-rule-control">
@@ -15807,7 +15877,12 @@ function renderTargeting() {
     setInputValue("rangeY", options.rangeY);
     setInputValue("floorTolerance", options.floorTolerance);
     setInputValue("pageUrlPrefix", options.pageUrlPrefix);
-    setInputValue("autowalk-sharedSpawnMode", options.sharedSpawnMode || "attack-all");
+    setInputValue("autowalk-sharedSpawnMode", options.sharedSpawnMode || "respect-others");
+    setInputValue("chaseMode", options.chaseMode || "auto");
+    setCheckboxValue("once", options.once);
+    setCheckboxValue("dryRun", options.dryRun);
+  } else if (!targetingDirty) {
+    setInputValue("autowalk-sharedSpawnMode", options.sharedSpawnMode || "respect-others");
     setInputValue("chaseMode", options.chaseMode || "auto");
     setCheckboxValue("once", options.once);
     setCheckboxValue("dryRun", options.dryRun);
@@ -15817,6 +15892,7 @@ function renderTargeting() {
   renderMonsterArchive();
   renderTargetingCombatRules();
   renderTargetProfiles();
+  renderAutowalkHuntSummary();
 }
 
 function renderTargetSourceRows({
@@ -16246,13 +16322,13 @@ function getAutowalkSharedSpawnMode() {
   const value = String(
     document.getElementById("autowalk-sharedSpawnMode")?.value
     || state?.options?.sharedSpawnMode
-    || "attack-all",
+    || "respect-others",
   )
     .trim()
     .toLowerCase();
   return SHARED_SPAWN_MODE_LABELS[value]
     ? value
-    : "attack-all";
+    : "respect-others";
 }
 
 function getChaseModeValue() {
@@ -16289,7 +16365,7 @@ function renderAutowalkHuntSummary() {
   const sharedSpawnSummaryText = [
     `${SHARED_SPAWN_MODE_LABELS[sharedSpawnMode]}: ${SHARED_SPAWN_MODE_COPY[sharedSpawnMode]}`,
     sharedSpawnMode === "attack-all"
-      ? "Trusted party-follow names do not change this mode."
+      ? "Reserved monsters are still protected."
       : "Trusted party-follow names stay eligible and will not block your hunt.",
   ].join(" ");
   const distanceSummaryText = [
@@ -17313,6 +17389,7 @@ function modulesPayload() {
     const sourceRules = Array.isArray(draft.trainerManaTrainerRules) ? draft.trainerManaTrainerRules : [];
     const sourceRule = sourceRules.find((rule) => String(rule?.words || "").trim()) || null;
     const words = String(draft.trainerManaTrainerWords || "").trim();
+    const hotkey = String(draft.trainerManaTrainerHotkey || sourceRule?.hotkey || "").trim();
     const minManaPercent = Number(draft.trainerManaTrainerManaPercent) || 0;
     if (!words) {
       return [];
@@ -17323,6 +17400,7 @@ function modulesPayload() {
         enabled: true,
         label: String(sourceRule?.label || "").trim(),
         words,
+        hotkey,
         minHealthPercent: Number(draft.trainerManaTrainerMinHealthPercent) || 0,
         minManaPercent,
         maxManaPercent: Math.max(minManaPercent, Math.round(Number(sourceRule?.maxManaPercent) || 100)),
@@ -17337,12 +17415,14 @@ function modulesPayload() {
     deathHealEnabled: draft.deathHealEnabled,
     deathHealVocation: draft.deathHealVocation,
     deathHealWords: draft.deathHealWords,
+    deathHealHotkey: draft.deathHealHotkey,
     deathHealHealthPercent: draft.deathHealHealthPercent,
     deathHealCooldownMs: draft.deathHealCooldownMs,
     healerEnabled: draft.healerEnabled,
     healerRules: cloneValue(draft.healerRules),
     healerEmergencyHealthPercent: draft.healerEmergencyHealthPercent,
     healerRuneName: draft.healerRuneName,
+    healerRuneHotkey: draft.healerRuneHotkey,
     healerRuneHealthPercent: draft.healerRuneHealthPercent,
     potionHealerEnabled: draft.potionHealerEnabled,
     potionHealerRules: cloneValue(draft.potionHealerRules),
@@ -17352,6 +17432,7 @@ function modulesPayload() {
     manaTrainerRules: cloneValue(draft.manaTrainerRules),
     trainerManaTrainerEnabled: draft.trainerManaTrainerEnabled,
     trainerManaTrainerWords: draft.trainerManaTrainerWords,
+    trainerManaTrainerHotkey: draft.trainerManaTrainerHotkey,
     trainerManaTrainerManaPercent: draft.trainerManaTrainerManaPercent,
     trainerManaTrainerMinHealthPercent: draft.trainerManaTrainerMinHealthPercent,
     trainerManaTrainerRules,

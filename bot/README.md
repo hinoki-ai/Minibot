@@ -20,13 +20,16 @@ The current repo ships:
   registries, player/NPC watch, fallback combat rules, and vendored hunt presets
 - route builder and route library support for saved route profiles, recording,
   waypoint overlays, route reset, helper recovery, tile rules, and waypoint
-  interactions such as `bank`, `use-item`, `rope`, `ladder`, and `shovel-hole`
+  interactions such as `bank`, `shop`, `npc-action`, `daily-task`, `use-item`,
+  `rope`, `ladder`, and `shovel-hole`
 - shared modules for sustain, healer, potion healer, condition healer, death
   heal, trainer, mana trainer, auto eat, ring/amulet replacement, ammo,
   rune maker, spell caster, distance keeper, auto light, auto convert, refill,
   looting, banking, reconnect, alarms, anti-idle, follow chain, and rookiller
 - shared action primitives for hotbar, inventory, item use, container, NPC
-  dialogue, trade, travel, residence, blessing, and promotion interactions
+  dialogue, trade, travel, residence, blessing, and promotion interactions,
+  including target-aware hotbar item use and hotkey dispatch for configured
+  spell or consumable bindings
 - vendored Minibia data, vocation packs, and official-hunt preset generation
 
 The checked-in [`cavebots/`](./cavebots) directory is workspace route data. The

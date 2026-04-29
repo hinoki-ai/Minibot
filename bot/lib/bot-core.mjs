@@ -292,7 +292,7 @@ export const DEFAULTS = {
   playerArchive: [],
   npcArchive: [],
   targetProfiles: [],
-  sharedSpawnMode: "attack-all",
+  sharedSpawnMode: "respect-others",
   intervalMs: 250,
   retargetMs: 1200,
   rangeX: 7,
@@ -346,6 +346,7 @@ export const DEFAULTS = {
   deathHealEnabled: true,
   deathHealVocation: "",
   deathHealWords: "",
+  deathHealHotkey: "",
   deathHealHealthPercent: 20,
   deathHealCooldownMs: 900,
   healerEnabled: true,
@@ -353,6 +354,7 @@ export const DEFAULTS = {
   healerHealthPercent: 30,
   healerEmergencyHealthPercent: 30,
   healerRuneName: "",
+  healerRuneHotkey: "",
   healerRuneHealthPercent: 50,
   healerMinMana: 80,
   healerMinManaPercent: 0,
@@ -366,6 +368,7 @@ export const DEFAULTS = {
   manaTrainerMinHealthPercent: 95,
   trainerManaTrainerEnabled: false,
   trainerManaTrainerWords: "utevo res ina",
+  trainerManaTrainerHotkey: "",
   trainerManaTrainerManaPercent: 85,
   trainerManaTrainerMinHealthPercent: 95,
   autoLightEnabled: true,
@@ -474,8 +477,10 @@ const ROUTE_RESYNC_REQUIRED_BRIDGE_TOUCHES = 2;
 const ROUTE_SPACING_LOG_COOLDOWN_MS = 4_000;
 const ROUTE_SPACING_STALE_HOLD_BREAK_MS = 6_000;
 const ROUTE_SPACING_STALE_HOLD_BYPASS_MS = 4_000;
-const ROUTE_SPACING_MIN_GAP_RATIO = 0.9;
-const ROUTE_SPACING_RELEASE_GAP_RATIO = 0.96;
+const ROUTE_SPACING_MIN_GAP_RATIO = 0.45;
+const ROUTE_SPACING_RELEASE_GAP_RATIO = 0.58;
+const ROUTE_SPACING_LIVE_POSITION_DISTANCE = ROUTE_RESYNC_GLOBAL_DISTANCE;
+const ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE = 1;
 const TARGET_PROFILE_CHASE_MODE_GRACE_MS = 2_000;
 const DIALOGUE_RECENT_MESSAGE_LIMIT = 40;
 const FOLLOW_TRAIN_RECENT_TARGET_TTL_MS = 12_000;
@@ -567,6 +572,25 @@ const ANTI_IDLE_FALLBACK_KEY_EVENT = Object.freeze({
   windowsVirtualKeyCode: 16,
   nativeVirtualKeyCode: 16,
 });
+const HOTKEY_MODIFIER_EVENTS = Object.freeze({
+  alt: Object.freeze({ key: "Alt", code: "AltLeft", windowsVirtualKeyCode: 18, nativeVirtualKeyCode: 18, modifiers: 1 }),
+  control: Object.freeze({ key: "Control", code: "ControlLeft", windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 17, modifiers: 2 }),
+  meta: Object.freeze({ key: "Meta", code: "MetaLeft", windowsVirtualKeyCode: 91, nativeVirtualKeyCode: 91, modifiers: 4 }),
+  shift: Object.freeze({ key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16, nativeVirtualKeyCode: 16, modifiers: 8 }),
+});
+const HOTKEY_MODIFIER_ALIASES = Object.freeze({
+  alt: "alt",
+  option: "alt",
+  ctrl: "control",
+  control: "control",
+  cmd: "meta",
+  command: "meta",
+  meta: "meta",
+  win: "meta",
+  windows: "meta",
+  shift: "shift",
+});
+const HOTKEY_MODIFIER_ORDER = Object.freeze(["control", "alt", "shift", "meta"]);
 const ROOKILLER_TARGET_LEVEL = 8;
 const ROOKILLER_TARGET_LEVEL_PERCENT = 90;
 const ROOKILLER_READY_BEEP_MS = 5_000;
@@ -628,6 +652,7 @@ const AUTO_CONVERT_LEGACY_FIELDS = [
 
 export const DEFAULT_HEALER_TIER = Object.freeze({
   words: DEFAULTS.healerWords,
+  hotkey: "",
   healthPercent: DEFAULTS.healerHealthPercent,
   minMana: DEFAULTS.healerMinMana,
   minManaPercent: DEFAULTS.healerMinManaPercent,
@@ -637,6 +662,7 @@ export const DEFAULT_DEATH_HEAL_RULE = Object.freeze({
   enabled: DEFAULTS.deathHealEnabled,
   vocation: DEFAULTS.deathHealVocation,
   words: DEFAULTS.deathHealWords,
+  hotkey: DEFAULTS.deathHealHotkey,
   healthPercent: DEFAULTS.deathHealHealthPercent,
   cooldownMs: DEFAULTS.deathHealCooldownMs,
 });
@@ -645,6 +671,7 @@ export const DEFAULT_HEALER_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: DEFAULTS.healerWords,
+  hotkey: "",
   minHealthPercent: 0,
   maxHealthPercent: DEFAULTS.healerHealthPercent,
   minMana: DEFAULTS.healerMinMana,
@@ -656,6 +683,7 @@ export const DEFAULT_POTION_HEALER_RULE = Object.freeze({
   enabled: true,
   label: "",
   itemName: MINIBIA_HEALTH_POTION_NAMES[0],
+  hotkey: "",
   minHealthPercent: 0,
   maxHealthPercent: 65,
   minMana: 0,
@@ -668,6 +696,7 @@ export const DEFAULT_CONDITION_HEALER_RULE = Object.freeze({
   label: "",
   condition: "poisoned",
   words: "exana pox",
+  hotkey: "",
   minHealthPercent: 0,
   maxHealthPercent: 100,
   minMana: 0,
@@ -679,6 +708,7 @@ export const DEFAULT_MANA_TRAINER_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: DEFAULTS.manaTrainerWords,
+  hotkey: "",
   minHealthPercent: DEFAULTS.manaTrainerMinHealthPercent,
   minManaPercent: DEFAULTS.manaTrainerManaPercent,
   maxManaPercent: 100,
@@ -691,6 +721,7 @@ export const DEFAULT_TRAINER_MANA_TRAINER_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: DEFAULTS.trainerManaTrainerWords,
+  hotkey: DEFAULTS.trainerManaTrainerHotkey,
   minHealthPercent: DEFAULTS.trainerManaTrainerMinHealthPercent,
   minManaPercent: DEFAULTS.trainerManaTrainerManaPercent,
   maxManaPercent: 100,
@@ -703,6 +734,7 @@ export const DEFAULT_AUTO_LIGHT_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: DEFAULTS.autoLightWords,
+  hotkey: "",
   minManaPercent: DEFAULTS.autoLightMinManaPercent,
   cooldownMs: 3000,
   requireNoLight: true,
@@ -745,12 +777,13 @@ export const SHARED_SPAWN_MODES = Object.freeze([
   "watch-only",
 ]);
 
-export const DEFAULT_SHARED_SPAWN_MODE = "attack-all";
+export const DEFAULT_SHARED_SPAWN_MODE = "respect-others";
 
 export const DEFAULT_RUNE_MAKER_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: "",
+  hotkey: "",
   minHealthPercent: 95,
   minManaPercent: 90,
   maxManaPercent: 100,
@@ -763,6 +796,7 @@ export const DEFAULT_SPELL_CASTER_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: "",
+  hotkey: "",
   minManaPercent: 20,
   maxTargetDistance: 4,
   minTargetCount: 1,
@@ -2016,6 +2050,7 @@ function normalizePercentWindow(minValue, maxValue, fallbackMin = 0, fallbackMax
 function normalizeHealerTier(tier = {}, fallback = DEFAULT_HEALER_TIER) {
   const normalizedFallback = {
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     healthPercent: clampPercent(fallback?.healthPercent, DEFAULT_HEALER_TIER.healthPercent),
     minMana: normalizeNonNegativeNumber(fallback?.minMana, DEFAULT_HEALER_TIER.minMana),
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_HEALER_TIER.minManaPercent),
@@ -2023,6 +2058,7 @@ function normalizeHealerTier(tier = {}, fallback = DEFAULT_HEALER_TIER) {
 
   return {
     words: String(tier?.words ?? normalizedFallback.words).trim(),
+    hotkey: normalizeHotkey(tier?.hotkey ?? normalizedFallback.hotkey),
     healthPercent: clampPercent(tier?.healthPercent, normalizedFallback.healthPercent),
     minMana: normalizeNonNegativeNumber(tier?.minMana, normalizedFallback.minMana),
     minManaPercent: clampPercent(tier?.minManaPercent, normalizedFallback.minManaPercent),
@@ -2054,6 +2090,105 @@ function buildLegacyHealerTier(options = {}) {
 function normalizeHealingRuneRuleName(value = "") {
   const key = String(value || "").trim().toLowerCase();
   return HEALING_RUNE_RULE_NAME_BY_KEY[key] || "";
+}
+
+function normalizeHotkey(value = "") {
+  const parts = String(value || "")
+    .split("+")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!parts.length) {
+    return "";
+  }
+
+  const modifiers = [];
+  let key = "";
+  for (const part of parts) {
+    const normalizedModifier = HOTKEY_MODIFIER_ALIASES[part.toLowerCase()];
+    if (normalizedModifier) {
+      if (!modifiers.includes(normalizedModifier)) {
+        modifiers.push(normalizedModifier);
+      }
+    } else {
+      key = part;
+    }
+  }
+
+  if (!key) {
+    return "";
+  }
+
+  const normalizedKey = (() => {
+    const trimmed = key.trim();
+    const upper = trimmed.toUpperCase();
+    if (/^F(?:[1-9]|1[0-2])$/.test(upper)) return upper;
+    if (/^[A-Z]$/.test(upper)) return upper;
+    if (/^[0-9]$/.test(trimmed)) return trimmed;
+    const lower = trimmed.toLowerCase();
+    if (lower === "space" || lower === "spacebar") return "Space";
+    if (lower === "enter" || lower === "return") return "Enter";
+    if (lower === "esc" || lower === "escape") return "Escape";
+    if (lower === "tab") return "Tab";
+    return trimmed;
+  })();
+
+  return [
+    ...HOTKEY_MODIFIER_ORDER
+      .filter((modifier) => modifiers.includes(modifier))
+      .map((modifier) => HOTKEY_MODIFIER_EVENTS[modifier].key),
+    normalizedKey,
+  ].join("+");
+}
+
+function getHotkeyKeyEvent(hotkey = "") {
+  const normalized = normalizeHotkey(hotkey);
+  if (!normalized) {
+    return null;
+  }
+
+  const parts = normalized.split("+").filter(Boolean);
+  const key = parts[parts.length - 1] || "";
+  const upper = key.toUpperCase();
+  if (/^F(?:[1-9]|1[0-2])$/.test(upper)) {
+    const number = Number(upper.slice(1));
+    const code = upper;
+    const value = 111 + number;
+    return { hotkey: normalized, key: code, code, windowsVirtualKeyCode: value, nativeVirtualKeyCode: value };
+  }
+
+  if (/^[A-Z]$/.test(upper)) {
+    const value = upper.charCodeAt(0);
+    return { hotkey: normalized, key: upper.toLowerCase(), code: `Key${upper}`, windowsVirtualKeyCode: value, nativeVirtualKeyCode: value };
+  }
+
+  if (/^[0-9]$/.test(key)) {
+    const value = 48 + Number(key);
+    return { hotkey: normalized, key, code: `Digit${key}`, windowsVirtualKeyCode: value, nativeVirtualKeyCode: value };
+  }
+
+  const special = {
+    Enter: { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 },
+    Escape: { key: "Escape", code: "Escape", windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 },
+    Space: { key: " ", code: "Space", windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32 },
+    Tab: { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 },
+  }[key];
+
+  return special ? { hotkey: normalized, ...special } : null;
+}
+
+function getHotkeyModifierEvents(hotkey = "") {
+  const normalized = normalizeHotkey(hotkey);
+  if (!normalized) return [];
+  const parts = normalized.split("+").slice(0, -1);
+  return parts
+    .map((part) => HOTKEY_MODIFIER_ALIASES[part.toLowerCase()])
+    .filter(Boolean)
+    .map((modifier) => HOTKEY_MODIFIER_EVENTS[modifier]);
+}
+
+function getHotkeyModifierMask(hotkey = "") {
+  return getHotkeyModifierEvents(hotkey)
+    .reduce((mask, event) => mask | event.modifiers, 0);
 }
 
 function isHealingRuneRuleValue(value = "") {
@@ -2122,6 +2257,7 @@ function normalizeHealerRule(rule = {}, fallback = DEFAULT_HEALER_RULE) {
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_HEALER_RULE.enabled),
     label: String(fallback?.label || "").trim(),
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minHealthPercent: clampPercent(fallback?.minHealthPercent, DEFAULT_HEALER_RULE.minHealthPercent),
     maxHealthPercent: clampPercent(fallback?.maxHealthPercent, DEFAULT_HEALER_RULE.maxHealthPercent),
     minMana: normalizeNonNegativeNumber(fallback?.minMana, DEFAULT_HEALER_RULE.minMana),
@@ -2140,6 +2276,7 @@ function normalizeHealerRule(rule = {}, fallback = DEFAULT_HEALER_RULE) {
     enabled: normalizeBoolean(rule?.enabled, normalizedFallback.enabled),
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     words: normalizeHealingRuneRuleName(normalizedWords) || normalizedWords,
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minHealthPercent: healthWindow.min,
     maxHealthPercent: healthWindow.max,
     minMana: normalizeNonNegativeNumber(rule?.minMana, normalizedFallback.minMana),
@@ -2190,6 +2327,7 @@ function buildLegacyHealerRule(options = {}) {
 
   return normalizeHealerRule({
     words: tier.words,
+    hotkey: options.healerHotkey,
     minHealthPercent: 0,
     maxHealthPercent: tier.healthPercent,
     minMana: tier.minMana,
@@ -2201,6 +2339,7 @@ function buildLegacyHealerRule(options = {}) {
 function buildHealerRulesFromLegacyTiers(value = []) {
   return normalizeHealerTiers(value).map((tier) => normalizeHealerRule({
     words: tier.words,
+    hotkey: tier.hotkey,
     minHealthPercent: 0,
     maxHealthPercent: tier.healthPercent,
     minMana: tier.minMana,
@@ -2214,6 +2353,7 @@ function normalizePotionHealerRule(rule = {}, fallback = DEFAULT_POTION_HEALER_R
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_POTION_HEALER_RULE.enabled),
     label: String(fallback?.label || "").trim(),
     itemName: String(fallback?.itemName || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minHealthPercent: clampPercent(fallback?.minHealthPercent, DEFAULT_POTION_HEALER_RULE.minHealthPercent),
     maxHealthPercent: clampPercent(fallback?.maxHealthPercent, DEFAULT_POTION_HEALER_RULE.maxHealthPercent),
     minMana: normalizeNonNegativeNumber(fallback?.minMana, DEFAULT_POTION_HEALER_RULE.minMana),
@@ -2231,6 +2371,7 @@ function normalizePotionHealerRule(rule = {}, fallback = DEFAULT_POTION_HEALER_R
     enabled: normalizeBoolean(rule?.enabled, normalizedFallback.enabled),
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     itemName: String(rule?.itemName ?? normalizedFallback.itemName).trim(),
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minHealthPercent: healthWindow.min,
     maxHealthPercent: healthWindow.max,
     minMana: normalizeNonNegativeNumber(rule?.minMana, normalizedFallback.minMana),
@@ -2262,6 +2403,7 @@ function normalizeConditionHealerRule(rule = {}, fallback = DEFAULT_CONDITION_HE
     label: String(fallback?.label || "").trim(),
     condition: normalizeConditionHealerTrigger(fallback?.condition),
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minHealthPercent: clampPercent(fallback?.minHealthPercent, DEFAULT_CONDITION_HEALER_RULE.minHealthPercent),
     maxHealthPercent: clampPercent(fallback?.maxHealthPercent, DEFAULT_CONDITION_HEALER_RULE.maxHealthPercent),
     minMana: normalizeNonNegativeNumber(fallback?.minMana, DEFAULT_CONDITION_HEALER_RULE.minMana),
@@ -2280,6 +2422,7 @@ function normalizeConditionHealerRule(rule = {}, fallback = DEFAULT_CONDITION_HE
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     condition: normalizeConditionHealerTrigger(rule?.condition ?? normalizedFallback.condition),
     words: String(rule?.words ?? normalizedFallback.words).trim(),
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minHealthPercent: healthWindow.min,
     maxHealthPercent: healthWindow.max,
     minMana: normalizeNonNegativeNumber(rule?.minMana, normalizedFallback.minMana),
@@ -2301,6 +2444,7 @@ function normalizeManaTrainerRule(rule = {}, fallback = DEFAULT_MANA_TRAINER_RUL
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_MANA_TRAINER_RULE.enabled),
     label: String(fallback?.label || "").trim(),
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minHealthPercent: clampPercent(fallback?.minHealthPercent, DEFAULT_MANA_TRAINER_RULE.minHealthPercent),
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_MANA_TRAINER_RULE.minManaPercent),
     maxManaPercent: clampPercent(fallback?.maxManaPercent, DEFAULT_MANA_TRAINER_RULE.maxManaPercent),
@@ -2319,6 +2463,7 @@ function normalizeManaTrainerRule(rule = {}, fallback = DEFAULT_MANA_TRAINER_RUL
     enabled: normalizeBoolean(rule?.enabled, normalizedFallback.enabled),
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     words: String(rule?.words ?? normalizedFallback.words).trim(),
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minHealthPercent: clampPercent(rule?.minHealthPercent, normalizedFallback.minHealthPercent),
     minManaPercent: manaWindow.min,
     maxManaPercent: manaWindow.max,
@@ -2339,6 +2484,7 @@ function normalizeManaTrainerRules(value = []) {
 function buildLegacyManaTrainerRule(options = {}) {
   return normalizeManaTrainerRule({
     words: options.manaTrainerWords,
+    hotkey: options.manaTrainerHotkey,
     minHealthPercent: options.manaTrainerMinHealthPercent,
     minManaPercent: options.manaTrainerManaPercent,
     maxManaPercent: 100,
@@ -2359,6 +2505,7 @@ function normalizeTrainerManaTrainerRules(value = []) {
 function buildLegacyTrainerManaTrainerRule(options = {}) {
   return normalizeManaTrainerRule({
     words: options.trainerManaTrainerWords,
+    hotkey: options.trainerManaTrainerHotkey,
     minHealthPercent: options.trainerManaTrainerMinHealthPercent,
     minManaPercent: options.trainerManaTrainerManaPercent,
     maxManaPercent: 100,
@@ -2373,6 +2520,7 @@ function normalizeAutoLightRule(rule = {}, fallback = DEFAULT_AUTO_LIGHT_RULE) {
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_AUTO_LIGHT_RULE.enabled),
     label: String(fallback?.label || "").trim(),
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_AUTO_LIGHT_RULE.minManaPercent),
     cooldownMs: normalizeNonNegativeNumber(fallback?.cooldownMs, DEFAULT_AUTO_LIGHT_RULE.cooldownMs),
     requireNoLight: normalizeBoolean(fallback?.requireNoLight, DEFAULT_AUTO_LIGHT_RULE.requireNoLight),
@@ -2384,6 +2532,7 @@ function normalizeAutoLightRule(rule = {}, fallback = DEFAULT_AUTO_LIGHT_RULE) {
     enabled: normalizeBoolean(rule?.enabled, normalizedFallback.enabled),
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     words: String(rule?.words ?? normalizedFallback.words).trim(),
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minManaPercent: clampPercent(rule?.minManaPercent, normalizedFallback.minManaPercent),
     cooldownMs: normalizeNonNegativeNumber(rule?.cooldownMs, normalizedFallback.cooldownMs),
     requireNoLight: normalizeBoolean(rule?.requireNoLight, normalizedFallback.requireNoLight),
@@ -2403,6 +2552,7 @@ function normalizeAutoLightRules(value = []) {
 function buildLegacyAutoLightRule(options = {}) {
   return normalizeAutoLightRule({
     words: options.autoLightWords,
+    hotkey: options.autoLightHotkey,
     minManaPercent: options.autoLightMinManaPercent,
     cooldownMs: DEFAULT_AUTO_LIGHT_RULE.cooldownMs,
     requireNoLight: true,
@@ -2479,6 +2629,7 @@ function normalizeRuneMakerRule(rule = {}, fallback = DEFAULT_RUNE_MAKER_RULE) {
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_RUNE_MAKER_RULE.enabled),
     label: String(fallback?.label || "").trim(),
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minHealthPercent: clampPercent(fallback?.minHealthPercent, DEFAULT_RUNE_MAKER_RULE.minHealthPercent),
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_RUNE_MAKER_RULE.minManaPercent),
     maxManaPercent: clampPercent(fallback?.maxManaPercent, DEFAULT_RUNE_MAKER_RULE.maxManaPercent),
@@ -2497,6 +2648,7 @@ function normalizeRuneMakerRule(rule = {}, fallback = DEFAULT_RUNE_MAKER_RULE) {
     enabled: normalizeBoolean(rule?.enabled, normalizedFallback.enabled),
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     words: String(rule?.words ?? normalizedFallback.words).trim(),
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minHealthPercent: clampPercent(rule?.minHealthPercent, normalizedFallback.minHealthPercent),
     minManaPercent: manaWindow.min,
     maxManaPercent: manaWindow.max,
@@ -2519,6 +2671,7 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_SPELL_CASTER_RULE.enabled),
     label: String(fallback?.label || "").trim(),
     words: String(fallback?.words || "").trim(),
+    hotkey: normalizeHotkey(fallback?.hotkey),
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_SPELL_CASTER_RULE.minManaPercent),
     maxTargetDistance: normalizeNonNegativeNumber(fallback?.maxTargetDistance, DEFAULT_SPELL_CASTER_RULE.maxTargetDistance),
     minTargetCount: Math.max(1, Math.trunc(normalizeNonNegativeNumber(
@@ -2535,6 +2688,7 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     enabled: normalizeBoolean(rule?.enabled, normalizedFallback.enabled),
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     words: String(rule?.words ?? normalizedFallback.words).trim(),
+    hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
     minManaPercent: clampPercent(rule?.minManaPercent, normalizedFallback.minManaPercent),
     maxTargetDistance: normalizeNonNegativeNumber(rule?.maxTargetDistance, normalizedFallback.maxTargetDistance),
     minTargetCount: Math.max(1, Math.trunc(normalizeNonNegativeNumber(rule?.minTargetCount, normalizedFallback.minTargetCount))),
@@ -2800,6 +2954,7 @@ export function normalizeOptions(options = {}) {
   merged.deathHealEnabled = merged.deathHealEnabled !== false;
   merged.deathHealVocation = normalizeVocationName(merged.deathHealVocation);
   merged.deathHealWords = String(merged.deathHealWords || "").trim();
+  merged.deathHealHotkey = normalizeHotkey(merged.deathHealHotkey);
   merged.deathHealHealthPercent = clampPercent(merged.deathHealHealthPercent, DEFAULTS.deathHealHealthPercent);
   merged.deathHealCooldownMs = normalizeNonNegativeNumber(merged.deathHealCooldownMs, DEFAULTS.deathHealCooldownMs);
   merged.healerEnabled = Boolean(merged.healerEnabled);
@@ -2821,6 +2976,7 @@ export function normalizeOptions(options = {}) {
     ? clampPercent(merged.healerEmergencyHealthPercent, primaryHealerRule.maxHealthPercent)
     : primaryHealerRule.maxHealthPercent;
   merged.healerRuneName = normalizeHealingRuneRuleName(merged.healerRuneName);
+  merged.healerRuneHotkey = normalizeHotkey(merged.healerRuneHotkey);
   merged.healerRuneHealthPercent = clampPercent(merged.healerRuneHealthPercent, DEFAULTS.healerRuneHealthPercent);
   merged.healerMinMana = primaryHealerRule.minMana;
   merged.healerMinManaPercent = primaryHealerRule.minManaPercent;
@@ -2844,6 +3000,7 @@ export function normalizeOptions(options = {}) {
     : normalizeTrainerManaTrainerRules([buildLegacyTrainerManaTrainerRule(merged)]);
   const primaryTrainerManaTrainerRule = merged.trainerManaTrainerRules[0] || EMPTY_TRAINER_MANA_TRAINER_RULE;
   merged.trainerManaTrainerWords = primaryTrainerManaTrainerRule.words;
+  merged.trainerManaTrainerHotkey = primaryTrainerManaTrainerRule.hotkey;
   merged.trainerManaTrainerManaPercent = primaryTrainerManaTrainerRule.minManaPercent;
   merged.trainerManaTrainerMinHealthPercent = primaryTrainerManaTrainerRule.minHealthPercent;
   merged.autoLightEnabled = Boolean(merged.autoLightEnabled);
@@ -6172,8 +6329,30 @@ function buildStateExpression(options) {
         monster.engagedPlayerNames.length,
       );
     };
+    const markMonsterEngagedByRef = (monster, ref) => {
+      if (!monster || !ref) {
+        return;
+      }
+
+      const playerId = ref.id == null ? "" : String(ref.id).trim();
+      const playerName = String(ref.name || "").trim();
+      if (playerId && !monster.engagedPlayerIds.includes(playerId)) {
+        monster.engagedPlayerIds.push(playerId);
+      }
+      if (playerName && !monster.engagedPlayerNames.includes(playerName)) {
+        monster.engagedPlayerNames.push(playerName);
+      }
+      monster.engagedPlayerCount = Math.max(
+        monster.engagedPlayerIds.length,
+        monster.engagedPlayerNames.length,
+      );
+    };
 
     for (const visibleCreature of visibleCreatures) {
+      for (const ref of Array.isArray(visibleCreature.attackRelationRefs) ? visibleCreature.attackRelationRefs : []) {
+        markMonsterEngagedByRef(visibleCreature, ref);
+      }
+
       for (const ref of Array.isArray(visibleCreature.relationRefs) ? visibleCreature.relationRefs : []) {
         const playersById = ref.id ? (visiblePlayerById.get(String(ref.id)) || []) : [];
         const playersByName = ref.nameKey ? (visiblePlayerByName.get(ref.nameKey) || []) : [];
@@ -6740,10 +6919,21 @@ function buildBackpackEquipmentSlotIndexExpression(
   })()`;
 }
 
-function buildTargetExpression(targetIds) {
+function buildTargetExpression(targetIds, {
+  sharedSpawnMode = DEFAULT_SHARED_SPAWN_MODE,
+  trustedPlayerNames = [],
+} = {}) {
   const queuedIds = Array.isArray(targetIds)
     ? targetIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
     : [Number(targetIds)].filter((id) => Number.isFinite(id));
+  const normalizedSharedSpawnMode = SHARED_SPAWN_MODES.includes(String(sharedSpawnMode || "").trim().toLowerCase())
+    ? String(sharedSpawnMode || "").trim().toLowerCase()
+    : DEFAULT_SHARED_SPAWN_MODE;
+  const trustedPlayerNameKeys = Array.isArray(trustedPlayerNames)
+    ? trustedPlayerNames
+      .map((name) => String(name || "").trim().toLowerCase())
+      .filter(Boolean)
+    : [];
 
   return `(() => {
     const game = window.gameClient;
@@ -6765,12 +6955,165 @@ function buildTargetExpression(targetIds) {
         .filter((creature) => creature && creature.id != null)
         .map((creature) => [Number(creature.id), creature]),
     );
+    const readEntityId = (entry) => {
+      if (entry == null) return "";
+      if (typeof entry === "number" || typeof entry === "bigint") return String(entry).trim();
+      if (typeof entry === "string") {
+        const normalized = entry.trim();
+        return /^-?\\d+$/.test(normalized) ? normalized : "";
+      }
+
+      for (const value of [
+        entry.id,
+        entry.__id,
+        entry.creatureId,
+        entry.playerId,
+        entry.cid,
+      ]) {
+        if (typeof value === "number" || typeof value === "bigint") return String(value).trim();
+        if (typeof value === "string" && value.trim()) return value.trim();
+      }
+      return "";
+    };
+    const readEntityName = (entry) => {
+      if (entry == null) return "";
+      if (typeof entry === "string") {
+        const normalized = entry.trim();
+        return /^-?\\d+$/.test(normalized) ? "" : normalized;
+      }
+
+      return String(entry.name ?? entry.__name ?? entry.state?.name ?? "").trim();
+    };
+    const playerId = readEntityId(player);
+    const trustedNameKeys = new Set(${JSON.stringify(trustedPlayerNameKeys)});
+    const trustedIds = new Set(playerId ? [playerId] : []);
+    const playerNameKey = String(readEntityName(player) || player?.name || "").trim().toLowerCase();
+    if (playerNameKey) {
+      trustedNameKeys.add(playerNameKey);
+    }
+    for (const creature of creatures) {
+      const nameKey = String(readEntityName(creature) || creature?.name || "").trim().toLowerCase();
+      if (!nameKey || !trustedNameKeys.has(nameKey)) continue;
+      const id = readEntityId(creature);
+      if (id) trustedIds.add(id);
+    }
+    const describeRelationRef = (candidate) => {
+      if (candidate == null) return null;
+
+      const nestedCandidate = [
+        candidate?.creature,
+        candidate?.target,
+        candidate?.entity,
+        candidate?.value,
+        candidate?.current,
+      ].find((entry) => entry != null) || candidate;
+      const id = readEntityId(nestedCandidate) || readEntityId(candidate);
+      const name = readEntityName(nestedCandidate) || readEntityName(candidate);
+      const nameKey = String(name || "").trim().toLowerCase();
+      if (!id && !nameKey) return null;
+
+      return { id: id || null, name, nameKey };
+    };
+    const collectAttackRefs = (creature) => {
+      const refs = [];
+      const seen = new Set();
+      const appendRef = (candidate) => {
+        const ref = describeRelationRef(candidate);
+        if (!ref) return;
+        const key = ref.id ? "id:" + ref.id : "name:" + ref.nameKey;
+        if (seen.has(key)) return;
+        seen.add(key);
+        refs.push(ref);
+      };
+      const relationRoots = [
+        creature,
+        creature?.state,
+        creature?.combat,
+        creature?.combatState,
+        creature?.targeting,
+        creature?.attack,
+        creature?.ai,
+        creature?.data,
+      ].filter(Boolean);
+      const relationKeys = [
+        "__target",
+        "target",
+        "attackTarget",
+        "__attackTarget",
+        "currentTarget",
+        "currentAttackTarget",
+        "combatTarget",
+        "targetCreature",
+        "targetEntity",
+        "selectedTarget",
+      ];
+
+      for (const root of relationRoots) {
+        for (const key of relationKeys) {
+          appendRef(root?.[key]);
+        }
+      }
+      for (const methodName of ["getTarget", "getAttackTarget", "getCombatTarget"]) {
+        if (typeof creature?.[methodName] !== "function") continue;
+        try {
+          appendRef(creature[methodName]());
+        } catch {}
+      }
+      return refs;
+    };
+    const isTrustedPlayerRef = (ref) => Boolean(
+      ref
+      && (
+        (ref.id && trustedIds.has(String(ref.id)))
+        || (ref.nameKey && trustedNameKeys.has(ref.nameKey))
+      )
+    );
+    const describeSharedSpawnBlock = (target) => {
+      const targetId = readEntityId(target);
+      const targetNameKey = String(readEntityName(target) || target?.name || "").trim().toLowerCase();
+      const foreignRef = collectAttackRefs(target).find((ref) => {
+        if (!ref || (!ref.id && !ref.nameKey)) return false;
+        if (targetId && ref.id && String(ref.id) === String(targetId)) return false;
+        if (targetNameKey && ref.nameKey === targetNameKey) return false;
+        return !isTrustedPlayerRef(ref);
+      });
+      return foreignRef
+        ? {
+            target: {
+              id: target?.id ?? targetId,
+              name: target?.name || "",
+            },
+            engagedPlayer: foreignRef,
+          }
+        : null;
+    };
     const targets = ${JSON.stringify(queuedIds)}
       .map((id) => targetById.get(Number(id)))
       .filter(Boolean);
 
     if (!targets.length) {
       return { ok: false, reason: "target missing" };
+    }
+
+    const targetEntries = targets.map((target) => ({
+      target,
+      sharedSpawnBlock: describeSharedSpawnBlock(target),
+    }));
+    const sharedSpawnBlocks = targetEntries
+      .map((entry) => entry.sharedSpawnBlock)
+      .filter(Boolean);
+    const safeTargets = targetEntries
+      .filter((entry) => !entry.sharedSpawnBlock)
+      .map((entry) => entry.target);
+    if (!safeTargets.length && sharedSpawnBlocks.length) {
+      return {
+        ok: false,
+        reason: "shared spawn reserved",
+        blockedBySharedSpawn: true,
+        sharedSpawnMode: ${JSON.stringify(normalizedSharedSpawnMode)},
+        blockedTargets: sharedSpawnBlocks,
+        ...sharedSpawnBlocks[0],
+      };
     }
 
     const hadAutoWalk = Boolean(
@@ -6836,12 +7179,13 @@ function buildTargetExpression(targetIds) {
       }
     }
 
-    world.targetMonster(new Set(targets));
+    world.targetMonster(new Set(safeTargets));
 
-    const primaryTarget = targets[0];
+    const primaryTarget = safeTargets[0];
 
     return {
       ok: true,
+      filteredBySharedSpawn: sharedSpawnBlocks,
       interruptedWalk: hadAutoWalk && interruptedWalk,
       interruptedFollow,
       previousFollowTarget: previousFollowTarget
@@ -6868,7 +7212,7 @@ function buildTargetExpression(targetIds) {
             }
           : null,
       },
-      queuedTargets: targets.map((target) => ({
+      queuedTargets: safeTargets.map((target) => ({
         id: target.id,
         name: target.name || "",
         position: target.__position
@@ -8889,6 +9233,7 @@ function buildCastWordsExpression(words) {
 function buildUseHotbarSlotExpression(slotIndex, options = {}) {
   const normalizedSlotIndex = Math.max(0, Math.trunc(Number(slotIndex) || 0));
   const mode = JSON.stringify(String(options?.mode || "bot").trim() || "bot");
+  const target = JSON.stringify(String(options?.target || "").trim().toLowerCase());
 
   return `(async () => {
     const game = window.gameClient;
@@ -8896,8 +9241,10 @@ function buildUseHotbarSlotExpression(slotIndex, options = {}) {
     const hotbar = ui?.hotbarManager;
     const requestedSlotIndex = ${normalizedSlotIndex};
     const requestedMode = ${mode};
+    const requestedTarget = ${target};
     const PacketCtor = globalThis.ChannelMessagePacket;
     const defaultChannel = globalThis.CONST?.CHANNEL?.DEFAULT;
+    const ItemUseOnCreaturePacketCtor = globalThis.ItemUseOnCreaturePacket || globalThis.ItemUseCreaturePacket;
     const collectValues = (value) => {
       if (!value) return [];
       if (Array.isArray(value)) return value;
@@ -8926,6 +9273,14 @@ function buildUseHotbarSlotExpression(slotIndex, options = {}) {
     const getItemId = (item) => {
       const itemId = Number(item?.id ?? item?.itemId ?? item?.clientId ?? item?.serverId);
       return Number.isFinite(itemId) ? itemId : null;
+    };
+    const getItemCount = (item) => {
+      if (!item) return 0;
+      const rawCount = Number(item?.count ?? item?.amount ?? item?.charges ?? item?.quantity);
+      if (Number.isFinite(rawCount) && rawCount > 0) {
+        return Math.trunc(rawCount);
+      }
+      return 1;
     };
     const getHotbarEntries = () => {
       const groups = [
@@ -9037,6 +9392,95 @@ function buildUseHotbarSlotExpression(slotIndex, options = {}) {
         slotIndex: requestedSlotIndex,
         kind,
         label,
+      };
+    }
+
+    if (item && (requestedTarget === "self" || requestedTarget === "target")) {
+      const useTarget = requestedTarget === "self"
+        ? game?.player
+        : game?.player?.__target || null;
+      const itemId = getItemId(item);
+      const itemRef = {
+        which: hotbar,
+        index: requestedSlotIndex,
+        location: "hotbar",
+        containerRuntimeId: null,
+        item,
+      };
+
+      if (!useTarget) {
+        return {
+          ok: false,
+          reason: "target unavailable",
+          slotIndex: requestedSlotIndex,
+          kind: kind || "item",
+          label,
+          itemId,
+          target: requestedTarget,
+        };
+      }
+
+      for (const ref of [itemRef, slot, item]) {
+        const mouseTargetMethod = tryCall(game?.mouse, [
+          "useOnCreature",
+          "sendItemUseOnCreature",
+          "useItemOnCreature",
+        ], [ref, useTarget]);
+        if (mouseTargetMethod) {
+          return {
+            ok: true,
+            slotIndex: requestedSlotIndex,
+            kind: kind || "item",
+            label,
+            itemId,
+            count: getItemCount(item),
+            target: requestedTarget,
+            transport: mouseTargetMethod,
+          };
+        }
+      }
+
+      if (typeof game?.send === "function" && typeof ItemUseOnCreaturePacketCtor === "function") {
+        game.send(new ItemUseOnCreaturePacketCtor(itemRef, useTarget));
+        return {
+          ok: true,
+          slotIndex: requestedSlotIndex,
+          kind: kind || "item",
+          label,
+          itemId,
+          count: getItemCount(item),
+          target: requestedTarget,
+          transport: "item-use-on-creature-packet",
+        };
+      }
+
+      for (const [owner, methodNames, args] of [
+        [item, ["useOnCreature", "useWith", "onUseWith", "__useWith", "use", "onUse", "__use"], [useTarget]],
+        [hotbar, ["useOnCreature", "useItemOnCreature"], [requestedSlotIndex, useTarget, slot]],
+      ]) {
+        const targetMethod = tryCall(owner, methodNames, args);
+        if (targetMethod) {
+          return {
+            ok: true,
+            slotIndex: requestedSlotIndex,
+            kind: kind || "item",
+            label,
+            itemId,
+            count: getItemCount(item),
+            target: requestedTarget,
+            transport: targetMethod,
+          };
+        }
+      }
+
+      return {
+        ok: false,
+        reason: "self-target item use unavailable",
+        slotIndex: requestedSlotIndex,
+        kind: kind || "item",
+        label,
+        itemId,
+        target: requestedTarget,
       };
     }
 
@@ -12653,9 +13097,34 @@ export class MinibiaTargetBot {
       return false;
     }
 
+    const trustedNames = this.getSharedSpawnTrustedPlayerKeys(snapshot);
+    const trustedIds = new Set();
+    const addTrustedId = (value) => {
+      const id = value == null ? "" : String(value).trim();
+      if (id) {
+        trustedIds.add(id);
+      }
+    };
+
+    addTrustedId(snapshot?.playerId);
+    for (const visiblePlayer of Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : []) {
+      const nameKey = this.getNameKey(visiblePlayer?.name);
+      if (nameKey && trustedNames.has(nameKey)) {
+        addTrustedId(visiblePlayer?.id);
+      }
+    }
+
     const foreignPlayers = this.getSharedSpawnForeignPlayerMatchers(snapshot);
-    if (!foreignPlayers.count) {
-      return false;
+    const engagedNames = Array.isArray(entry?.engagedPlayerNames)
+      ? entry.engagedPlayerNames
+        .map((value) => this.getNameKey(value))
+        .filter(Boolean)
+      : [];
+    if (engagedNames.some((nameKey) => foreignPlayers.names.has(nameKey))) {
+      return true;
+    }
+    if (engagedNames.length > 0) {
+      return engagedNames.some((nameKey) => !trustedNames.has(nameKey));
     }
 
     const engagedIds = Array.isArray(entry?.engagedPlayerIds)
@@ -12666,21 +13135,18 @@ export class MinibiaTargetBot {
     if (engagedIds.some((id) => foreignPlayers.ids.has(id))) {
       return true;
     }
-
-    const engagedNames = Array.isArray(entry?.engagedPlayerNames)
-      ? entry.engagedPlayerNames
-        .map((value) => this.getNameKey(value))
-        .filter(Boolean)
-      : [];
-    return engagedNames.some((nameKey) => foreignPlayers.names.has(nameKey));
+    return engagedIds.some((id) => !trustedIds.has(id));
   }
 
   isEntryBlockedBySharedSpawn(entry, snapshot = this.lastSnapshot) {
+    if (this.isEntryEngagedByForeignPlayer(entry, snapshot)) {
+      return true;
+    }
+
     switch (this.getSharedSpawnMode()) {
       case "watch-only":
         return this.hasVisibleForeignPlayers(snapshot);
       case "respect-others":
-        return this.isEntryEngagedByForeignPlayer(entry, snapshot);
       case "attack-all":
       default:
         return false;
@@ -12691,6 +13157,75 @@ export class MinibiaTargetBot {
     return Array.isArray(entries)
       ? entries.filter((entry) => !this.isEntryBlockedBySharedSpawn(entry, snapshot))
       : [];
+  }
+
+  removeSharedSpawnBlockedTargetsFromSnapshot(snapshot = this.lastSnapshot, blockedTargets = []) {
+    if (!snapshot || typeof snapshot !== "object") {
+      return snapshot;
+    }
+
+    const blockedIds = new Set();
+    const blockedPositionKeys = new Set();
+    const blockedNameKeys = new Set();
+    const appendBlockedTarget = (entry) => {
+      const target = entry?.target && typeof entry.target === "object" ? entry.target : entry;
+      const id = target?.id == null ? "" : String(target.id).trim();
+      if (id) {
+        blockedIds.add(id);
+      }
+
+      const nameKey = this.getNameKey(target?.name);
+      const positionKey = this.getPositionKey(target?.position);
+      if (nameKey && positionKey) {
+        blockedPositionKeys.add(`${nameKey}:${positionKey}`);
+      } else if (nameKey) {
+        blockedNameKeys.add(nameKey);
+      }
+    };
+
+    (Array.isArray(blockedTargets) ? blockedTargets : [blockedTargets]).forEach(appendBlockedTarget);
+    if (!blockedIds.size && !blockedPositionKeys.size && !blockedNameKeys.size) {
+      return snapshot;
+    }
+
+    const isBlocked = (entry) => {
+      if (!entry) {
+        return false;
+      }
+
+      const id = entry?.id == null ? "" : String(entry.id).trim();
+      if (id && blockedIds.has(id)) {
+        return true;
+      }
+
+      const nameKey = this.getNameKey(entry?.name);
+      if (!nameKey) {
+        return false;
+      }
+
+      const positionKey = this.getPositionKey(entry?.position);
+      return Boolean(
+        (positionKey && blockedPositionKeys.has(`${nameKey}:${positionKey}`))
+        || blockedNameKeys.has(nameKey)
+      );
+    };
+    const filterList = (value) => (Array.isArray(value)
+      ? value.filter((entry) => !isBlocked(entry))
+      : value);
+
+    const nextSnapshot = {
+      ...snapshot,
+      currentTarget: isBlocked(snapshot.currentTarget) ? null : snapshot.currentTarget,
+      candidates: filterList(snapshot.candidates),
+      visibleCreatures: filterList(snapshot.visibleCreatures),
+      visibleMonsters: filterList(snapshot.visibleMonsters),
+      allMatches: filterList(snapshot.allMatches),
+    };
+
+    if (this.lastSnapshot === snapshot) {
+      this.lastSnapshot = nextSnapshot;
+    }
+    return nextSnapshot;
   }
 
   getFollowTrainSpacing() {
@@ -16950,6 +17485,16 @@ export class MinibiaTargetBot {
       }
 
       const routeOffset = this.getForwardRouteOffset(this.routeIndex, index);
+      if (this.isAmbiguousRoutePositionIndex(index, snapshot.playerPosition, {
+        distance,
+        routeOffset,
+        now: this.getNow(),
+        exactReached: reached,
+        maxDistance: ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+      })) {
+        continue;
+      }
+
       const isCurrentIndex = index === this.routeIndex;
       if (!bestMatch
         || (reached && !bestMatch.reached)
@@ -17208,6 +17753,35 @@ export class MinibiaTargetBot {
     return members.find((member) => member.instanceId === selfInstanceId) || null;
   }
 
+  getRouteSpacingMemberSpacingIndex(member) {
+    if (!member) {
+      return null;
+    }
+
+    const routeIndex = Number.isInteger(member.routeIndex) ? member.routeIndex : null;
+    if (!member.playerPosition || !this.options.waypoints.length) {
+      return routeIndex;
+    }
+
+    const projectedIndex = this.findClosestWaypointIndex(member.playerPosition, {
+      maxDistance: ROUTE_SPACING_LIVE_POSITION_DISTANCE,
+      includeCurrent: true,
+      anchorIndex: routeIndex,
+      candidateFilter: ({ index, waypoint, distance, reached, routeOffset }) => (
+        this.getWaypointType(waypoint) !== "helper"
+        && !this.isAmbiguousRoutePositionIndex(index, member.playerPosition, {
+          distance,
+          offset: routeOffset,
+          exactReached: reached,
+          maxDistance: ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+          allowRouteEvidence: false,
+        })
+      ),
+    });
+
+    return Number.isInteger(projectedIndex) ? projectedIndex : routeIndex;
+  }
+
   getRouteSpacingOrderedMembers(candidateIndex = this.routeIndex) {
     const members = this.getRouteSpacingMembers();
     if (!members.length) {
@@ -17226,7 +17800,7 @@ export class MinibiaTargetBot {
         ...member,
         spacingIndex: member.instanceId === selfInstanceId
           ? nextIndex
-          : member.routeIndex,
+          : this.getRouteSpacingMemberSpacingIndex(member),
       }))
       .sort((left, right) => {
         const spacingDelta = left.spacingIndex - right.spacingIndex;
@@ -17378,8 +17952,11 @@ export class MinibiaTargetBot {
     const blockingPeer = this.getRouteSpacingSuccessor(nextLineup);
 
     if (blockingPeer) {
-      const currentGap = this.getForwardRouteOffset(currentIndex, blockingPeer.routeIndex);
-      const nextGap = this.getForwardRouteOffset(nextIndex, blockingPeer.spacingIndex);
+      const peerIndex = Number.isInteger(blockingPeer.spacingIndex)
+        ? blockingPeer.spacingIndex
+        : blockingPeer.routeIndex;
+      const currentGap = this.getForwardRouteOffset(currentIndex, peerIndex);
+      const nextGap = this.getForwardRouteOffset(nextIndex, peerIndex);
       const threshold = this.routeSpacingHold?.peerInstanceId === blockingPeer.instanceId
         ? releaseGap
         : minGap;
@@ -22017,6 +22594,7 @@ export class MinibiaTargetBot {
         index: this.lastConfirmedWaypointIndex,
         at: Math.max(0, Number(this.lastConfirmedWaypointAt) || 0),
         confirmed: true,
+        source: "confirmed",
       };
     }
 
@@ -22040,6 +22618,7 @@ export class MinibiaTargetBot {
             index: current,
             at: Math.max(0, Number(touch.reachedAt ?? touch.at) || 0),
             confirmed: touch.reached === true,
+            source: "touch",
           };
         }
       }
@@ -22205,6 +22784,168 @@ export class MinibiaTargetBot {
     return Boolean(waypointKey) && reachableKeys.has(waypointKey);
   }
 
+  areRouteIndicesLocallyAdjacent(leftIndex, rightIndex, {
+    maxOffset = ROUTE_RESYNC_EXACT_RELATCH_SKIP,
+  } = {}) {
+    if (!this.options.waypoints.length) {
+      return false;
+    }
+
+    if (!Number.isInteger(leftIndex) || !Number.isInteger(rightIndex)) {
+      return false;
+    }
+
+    if (leftIndex === rightIndex) {
+      return true;
+    }
+
+    const forwardOffset = this.getForwardRouteOffset(leftIndex, rightIndex);
+    const backwardOffset = this.getForwardRouteOffset(rightIndex, leftIndex);
+    const nearestOffset = Math.min(
+      Number.isFinite(forwardOffset) ? forwardOffset : Number.POSITIVE_INFINITY,
+      Number.isFinite(backwardOffset) ? backwardOffset : Number.POSITIVE_INFINITY,
+    );
+
+    return Number.isFinite(nearestOffset)
+      && nearestOffset <= Math.max(1, Math.trunc(Number(maxOffset) || 0));
+  }
+
+  getNearbyRoutePositionMatches(playerPosition, {
+    maxDistance = ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+  } = {}) {
+    if (!playerPosition || !this.options.waypoints.length) {
+      return [];
+    }
+
+    const distanceLimit = Math.max(0, Number(maxDistance) || 0);
+    const matches = [];
+
+    for (let index = 0; index < this.options.waypoints.length; index += 1) {
+      const waypoint = this.options.waypoints[index];
+      if (!waypoint || this.getWaypointType(waypoint) === "helper") {
+        continue;
+      }
+
+      const distance = this.getPositionDistance(playerPosition, waypoint);
+      if (!Number.isFinite(distance)) {
+        continue;
+      }
+
+      const matchDistance = Math.max(distanceLimit, this.getWaypointRadius(waypoint));
+      if (distance <= matchDistance) {
+        matches.push({
+          index,
+          waypoint,
+          distance,
+          reached: this.isWaypointReached(playerPosition, waypoint),
+        });
+      }
+    }
+
+    return matches;
+  }
+
+  hasNonLocalRoutePositionOverlap(index, playerPosition, {
+    maxDistance = ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+  } = {}) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.options.waypoints.length) {
+      return false;
+    }
+
+    return this.getNearbyRoutePositionMatches(playerPosition, { maxDistance })
+      .some((match) => (
+        match.index !== index
+        && !this.areRouteIndicesLocallyAdjacent(index, match.index)
+      ));
+  }
+
+  hasRouteRecoveryDisambiguation(index, {
+    offset = null,
+    routeOffset = null,
+    recoveryAnchor = null,
+    now = Date.now(),
+    exactReached = false,
+    allowRouteEvidence = true,
+  } = {}) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.options.waypoints.length) {
+      return false;
+    }
+
+    if (index === this.routeIndex) {
+      return true;
+    }
+
+    const normalizedOffset = this.normalizeRouteRecoveryOffset(offset, routeOffset);
+    if (Number.isFinite(normalizedOffset) && normalizedOffset <= ROUTE_RESYNC_DIRECT_SKIP) {
+      return true;
+    }
+
+    const anchorIndex = Number.isInteger(recoveryAnchor?.index)
+      ? recoveryAnchor.index
+      : null;
+    if (Number.isInteger(anchorIndex)) {
+      if (index === anchorIndex && recoveryAnchor.source !== "confirmed") {
+        return false;
+      }
+
+      if (index === anchorIndex && recoveryAnchor.confirmed === true && exactReached) {
+        return true;
+      }
+
+      const anchorOffset = this.getForwardRouteOffset(anchorIndex, index);
+      if (this.hasRouteRecoveryBridgeEvidence(index, {
+        fromIndex: anchorIndex,
+        offset: anchorOffset,
+        now,
+        minimumTouchAt: Math.max(0, Number(recoveryAnchor?.at) || 0),
+        exactReached,
+      })) {
+        return true;
+      }
+    }
+
+    if (!allowRouteEvidence) {
+      return false;
+    }
+
+    return this.hasRouteRecoveryBridgeEvidence(index, {
+      offset: normalizedOffset,
+      now,
+      minimumTouchAt: Math.max(0, Number(this.lastConfirmedWaypointAt) || 0),
+      exactReached,
+    });
+  }
+
+  isAmbiguousRoutePositionIndex(index, playerPosition, {
+    distance = null,
+    offset = null,
+    routeOffset = null,
+    recoveryAnchor = null,
+    now = Date.now(),
+    exactReached = false,
+    maxDistance = ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+    allowRouteEvidence = true,
+  } = {}) {
+    if (!this.hasNonLocalRoutePositionOverlap(index, playerPosition, { maxDistance })) {
+      return false;
+    }
+
+    if (this.hasRouteRecoveryDisambiguation(index, {
+      offset,
+      routeOffset,
+      recoveryAnchor,
+      now,
+      exactReached,
+      allowRouteEvidence,
+    })) {
+      return false;
+    }
+
+    const localDistance = Number(distance);
+    return !Number.isFinite(localDistance)
+      || localDistance <= Math.max(0, Number(maxDistance) || 0);
+  }
+
   hasStrongLocalRouteRecoveryEvidence(index, waypoint, {
     distance = null,
     reached = false,
@@ -22322,6 +23063,7 @@ export class MinibiaTargetBot {
   findClosestWaypointIndex(playerPosition, {
     maxDistance = Number.POSITIVE_INFINITY,
     includeCurrent = true,
+    anchorIndex = this.routeIndex,
     candidateFilter = null,
   } = {}) {
     if (!playerPosition || !this.options.waypoints.length) {
@@ -22346,7 +23088,10 @@ export class MinibiaTargetBot {
       }
 
       const reached = this.isWaypointReached(playerPosition, waypoint);
-      const routeOffset = this.getForwardRouteOffset(this.routeIndex, index);
+      const routeOffset = this.getForwardRouteOffset(
+        Number.isInteger(anchorIndex) ? anchorIndex : this.routeIndex,
+        index,
+      );
       if (candidateFilter && !candidateFilter({
         index,
         waypoint,
@@ -22502,7 +23247,16 @@ export class MinibiaTargetBot {
       })
     );
     const candidateFilter = ({ index, waypoint, distance = null, offset = null, routeOffset = null, reached = false }) => (
-      this.canRouteRecoveryCandidateProgress(snapshot, waypoint, {
+      !this.isAmbiguousRoutePositionIndex(index, playerPosition, {
+        distance,
+        offset,
+        routeOffset,
+        recoveryAnchor,
+        now,
+        exactReached: reached,
+        maxDistance: ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+      })
+      && this.canRouteRecoveryCandidateProgress(snapshot, waypoint, {
         reached,
         walkPlanCache: recoveryWalkPlanCache,
       })
@@ -22560,6 +23314,17 @@ export class MinibiaTargetBot {
 
       const normalizedOffset = this.normalizeRouteRecoveryOffset(candidate.offset, candidate.routeOffset);
       if (!Number.isFinite(normalizedOffset) || normalizedOffset <= 0) {
+        return false;
+      }
+
+      if (this.isAmbiguousRoutePositionIndex(candidate.index, playerPosition, {
+        distance: candidate.distance,
+        offset: normalizedOffset,
+        recoveryAnchor,
+        now,
+        exactReached: candidate.reached,
+        maxDistance: ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+      })) {
         return false;
       }
 
@@ -22911,6 +23676,19 @@ export class MinibiaTargetBot {
     }
 
     if (context.kind === "rune") {
+      if (rule.hotkey) {
+        return {
+          type: "useHotkey",
+          moduleKey: "healer",
+          ruleIndex,
+          hotkey: rule.hotkey,
+          target: "self",
+          name: context.runeName,
+          category: "rune",
+          label: rule.label || context.runeName,
+        };
+      }
+
       return buildHealingRuneConsumableAction(snapshot, context.runeName, {
         preferHotbar: this.options.preferHotbarConsumables,
         moduleKey: "healer",
@@ -22934,6 +23712,7 @@ export class MinibiaTargetBot {
       moduleKey: "healer",
       ruleIndex,
       words: rule.words,
+      hotkey: rule.hotkey,
       label: rule.label,
     };
   }
@@ -23101,6 +23880,7 @@ export class MinibiaTargetBot {
       moduleKey: "conditionHealer",
       ruleIndex,
       words: context.words,
+      hotkey: rule.hotkey,
       label: rule.label,
       condition: context.condition,
     };
@@ -23185,6 +23965,15 @@ export class MinibiaTargetBot {
 
     return {
       spell,
+      hotkeyAction: this.options?.deathHealHotkey
+        ? {
+            type: "death-heal",
+            moduleKey: "deathHeal",
+            hotkey: this.options.deathHealHotkey,
+            words: spell.words,
+            label: spell.name || spell.words,
+          }
+        : null,
       hotbarAction: buildHotbarSlotAction(snapshot, {
         kind: "spell",
         words: spell.words,
@@ -23206,6 +23995,13 @@ export class MinibiaTargetBot {
       return { action: null, result: null };
     }
 
+    if (plan.hotkeyAction) {
+      const hotkeyResult = await this.useHotkey(plan.hotkeyAction);
+      if (hotkeyResult?.ok) {
+        return { action: plan.hotkeyAction, result: hotkeyResult };
+      }
+    }
+
     if (plan.hotbarAction) {
       const hotbarResult = await this.useHotbarSlot(plan.hotbarAction);
       if (hotbarResult?.ok) {
@@ -23215,7 +24011,7 @@ export class MinibiaTargetBot {
 
     const castResult = await this.castWords(plan.castAction);
     return {
-      action: plan.hotbarAction || plan.castAction,
+      action: plan.hotkeyAction || plan.hotbarAction || plan.castAction,
       result: castResult,
     };
   }
@@ -23342,15 +24138,26 @@ export class MinibiaTargetBot {
         return cached;
       }
 
-      const action = buildConsumableAction(snapshot, {
-        category: "potion",
-        name: rule.itemName,
-      }, {
-        target: "self",
-        preferHotbar: this.options.preferHotbarConsumables,
-        moduleKey: "potionHealer",
-        ruleIndex,
-      });
+      const action = rule.hotkey
+        ? {
+            type: "useHotkey",
+            moduleKey: "potionHealer",
+            ruleIndex,
+            hotkey: rule.hotkey,
+            target: "self",
+            name: rule.itemName,
+            category: "potion",
+            label: rule.label || rule.itemName,
+          }
+        : buildConsumableAction(snapshot, {
+            category: "potion",
+            name: rule.itemName,
+          }, {
+            target: "self",
+            preferHotbar: this.options.preferHotbarConsumables,
+            moduleKey: "potionHealer",
+            ruleIndex,
+          });
       actionCache.set(ruleIndex, action);
       return action;
     };
@@ -23399,6 +24206,18 @@ export class MinibiaTargetBot {
 
     if (this.getNow() - this.getLastModuleActionAt("healerRune") < DEFAULT_HEALER_RULE.cooldownMs) {
       return [];
+    }
+
+    if (this.options.healerRuneHotkey) {
+      return [{
+        type: "useHotkey",
+        moduleKey: "healerRune",
+        hotkey: this.options.healerRuneHotkey,
+        target: "self",
+        name: this.getConfiguredHealerRuneNames()[0] || "Healing Rune",
+        category: "rune",
+        label: "Auto rune",
+      }];
     }
 
     for (const runeName of this.getConfiguredHealerRuneNames()) {
@@ -23472,6 +24291,7 @@ export class MinibiaTargetBot {
 
   chooseHealActions(snapshot, vocationProfile = null) {
     const spellActions = this.chooseSpellHealActions(snapshot, vocationProfile);
+    const healerRuneActions = this.chooseHealerRuneActions(snapshot);
     const selfActions = [];
     const supportActions = [];
 
@@ -23484,8 +24304,8 @@ export class MinibiaTargetBot {
     }
 
     return [
-      ...selfActions,
-      ...this.chooseHealerRuneActions(snapshot),
+      ...(healerRuneActions.length ? healerRuneActions : selfActions),
+      ...(healerRuneActions.length ? selfActions : healerRuneActions),
       ...this.choosePotionHealActions(snapshot),
       ...this.chooseConditionHealActions(snapshot, vocationProfile),
       ...supportActions,
@@ -23556,6 +24376,7 @@ export class MinibiaTargetBot {
         moduleKey: "autoLight",
         ruleIndex,
         words: rule.words,
+        hotkey: rule.hotkey,
         label: rule.label,
       }),
     });
@@ -23585,6 +24406,7 @@ export class MinibiaTargetBot {
         moduleKey: "manaTrainer",
         ruleIndex,
         words: rule.words,
+        hotkey: rule.hotkey,
         label: rule.label,
       }),
     });
@@ -23611,6 +24433,7 @@ export class MinibiaTargetBot {
         moduleKey: "trainerManaTrainer",
         ruleIndex,
         words: rule.words,
+        hotkey: rule.hotkey,
         label: rule.label,
       }),
     });
@@ -23639,6 +24462,7 @@ export class MinibiaTargetBot {
         moduleKey: "runeMaker",
         ruleIndex,
         words: rule.words,
+        hotkey: rule.hotkey,
         label: rule.label,
       }),
     });
@@ -23672,6 +24496,7 @@ export class MinibiaTargetBot {
         moduleKey: "spellCaster",
         ruleIndex,
         words: rule.words,
+        hotkey: rule.hotkey,
         label: rule.label,
         target,
       }),
@@ -26099,7 +26924,10 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, target: chosen, candidates };
     }
 
-    const result = await this.cdp.evaluate(buildTargetExpression(candidates.map((candidate) => candidate.id)));
+    const result = await this.cdp.evaluate(buildTargetExpression(candidates.map((candidate) => candidate.id), {
+      sharedSpawnMode: this.getSharedSpawnMode(),
+      trustedPlayerNames: Array.from(this.getSharedSpawnTrustedPlayerKeys(this.lastSnapshot)),
+    }));
 
     if (result?.ok) {
       if (result?.interruptedWalk) {
@@ -26119,30 +26947,35 @@ export class MinibiaTargetBot {
           reason: "targeting",
         });
       }
+      const resultCandidates = Array.isArray(result.queuedTargets) && result.queuedTargets.length
+        ? result.queuedTargets
+        : candidates;
+      const resultFocus = result.target || resultCandidates[0] || chosen;
+      const resultSignature = resultCandidates.map((candidate) => candidate.id).join(",") || signature;
       this.lastRetargetAt = now;
-      this.lastRetargetId = chosen.id;
-      this.lastTargetSignature = signature;
+      this.lastRetargetId = resultFocus.id;
+      this.lastTargetSignature = resultSignature;
       const restoredTarget = {
-        ...chosen,
+        ...(resultCandidates[0] || chosen),
         ...(result.target || {}),
-        name: result.target?.name || chosen.name || "",
+        name: result.target?.name || resultCandidates[0]?.name || chosen.name || "",
       };
       const restoredSnapshot = {
         ...(this.lastSnapshot && typeof this.lastSnapshot === "object" ? this.lastSnapshot : {}),
         ready: true,
         currentTarget: restoredTarget,
-        candidates: result.queuedTargets || candidates,
+        candidates: resultCandidates,
       };
       this.lastSnapshot = restoredSnapshot;
       await this.restorePreferredChaseMode({
         snapshot: restoredSnapshot,
         force: true,
       }).catch(() => null);
-      this.log(`Targeted ${result.queuedTargets?.length || candidates.length} visible match${(result.queuedTargets?.length || candidates.length) === 1 ? "" : "es"}; focus ${formatTarget(result.target)}`);
+      this.log(`Targeted ${resultCandidates.length} visible match${resultCandidates.length === 1 ? "" : "es"}; focus ${formatTarget(result.target)}`);
       this.emit("action", {
         dryRun: false,
         target: result.target,
-        candidates: result.queuedTargets || candidates,
+        candidates: resultCandidates,
       });
       return result;
     }
@@ -26157,10 +26990,22 @@ export class MinibiaTargetBot {
       : { type: actionOrType, words: maybeWords };
     const actionType = action.type || "cast";
     const words = String(action.words || "").trim();
+    const hotkey = normalizeHotkey(action.hotkey);
     const moduleKey = action.moduleKey || null;
     const ruleIndex = Number.isInteger(action.ruleIndex) ? action.ruleIndex : null;
     const markFailureCooldown = action.markFailureCooldown !== false;
     const now = Date.now();
+
+    if (hotkey) {
+      return this.useHotkey({
+        ...action,
+        hotkey,
+        words,
+        moduleKey,
+        ruleIndex,
+        markFailureCooldown,
+      });
+    }
 
     if (!words) {
       return { ok: false, reason: "missing words", words };
@@ -26191,15 +27036,137 @@ export class MinibiaTargetBot {
     return result;
   }
 
+  async useHotkey(action = {}) {
+    const hotkey = normalizeHotkey(action.hotkey);
+    const keyEvent = getHotkeyKeyEvent(hotkey);
+    const modifierEvents = getHotkeyModifierEvents(hotkey);
+    const modifierMask = getHotkeyModifierMask(hotkey);
+    const actionType = action.type || "hotkey";
+    const words = String(action.words || "").trim();
+    const moduleKey = action.moduleKey || null;
+    const ruleIndex = Number.isInteger(action.ruleIndex) ? action.ruleIndex : null;
+    const now = Date.now();
+
+    if (!hotkey || !keyEvent) {
+      return { ok: false, reason: "invalid hotkey", hotkey: action.hotkey || "" };
+    }
+
+    if (this.options.dryRun) {
+      this.markModuleAction(moduleKey, ruleIndex, now);
+      this.log(`Would press hotkey ${hotkey}${words ? ` for ${words}` : ""}`);
+      this.emit("hotkey", { dryRun: true, actionType, hotkey, words, moduleKey });
+      return { ok: true, dryRun: true, hotkey, words };
+    }
+
+    await this.attach();
+    if (!this.hasUsableTransport() || typeof this.cdp?.send !== "function") {
+      return { ok: false, reason: "transport unavailable", hotkey };
+    }
+
+    try {
+      try {
+        await this.cdp.send("Page.bringToFront", {});
+      } catch {}
+
+      let activeModifiers = 0;
+      for (const modifier of modifierEvents) {
+        activeModifiers |= modifier.modifiers;
+        await this.cdp.send("Input.dispatchKeyEvent", {
+          type: "rawKeyDown",
+          key: modifier.key,
+          code: modifier.code,
+          windowsVirtualKeyCode: modifier.windowsVirtualKeyCode,
+          nativeVirtualKeyCode: modifier.nativeVirtualKeyCode,
+          modifiers: activeModifiers,
+        });
+      }
+
+      await sleep(20);
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "rawKeyDown",
+        key: keyEvent.key,
+        code: keyEvent.code,
+        windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+        modifiers: modifierMask,
+      });
+      await sleep(35);
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: keyEvent.key,
+        code: keyEvent.code,
+        windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+        modifiers: modifierMask,
+      });
+
+      let releaseModifiers = modifierMask;
+      for (const modifier of [...modifierEvents].reverse()) {
+        releaseModifiers &= ~modifier.modifiers;
+        await this.cdp.send("Input.dispatchKeyEvent", {
+          type: "keyUp",
+          key: modifier.key,
+          code: modifier.code,
+          windowsVirtualKeyCode: modifier.windowsVirtualKeyCode,
+          nativeVirtualKeyCode: modifier.nativeVirtualKeyCode,
+          modifiers: releaseModifiers,
+        });
+      }
+
+      this.markModuleAction(moduleKey, ruleIndex, now);
+      this.recordFollowTrainActionFromCast(actionType, words, now);
+      this.log(`Pressed hotkey ${hotkey}${words ? ` for ${words}` : ""}`);
+      this.emit("hotkey", { dryRun: false, actionType, hotkey, words, moduleKey });
+      return {
+        ok: true,
+        transport: "keyboard-hotkey",
+        hotkey,
+        words,
+        target: action.target || null,
+        itemId: action.itemId ?? null,
+        name: action.name || null,
+        category: action.category || null,
+      };
+    } catch (error) {
+      for (const modifier of [...modifierEvents].reverse()) {
+        try {
+          await this.cdp.send("Input.dispatchKeyEvent", {
+            type: "keyUp",
+            key: modifier.key,
+            code: modifier.code,
+            windowsVirtualKeyCode: modifier.windowsVirtualKeyCode,
+            nativeVirtualKeyCode: modifier.nativeVirtualKeyCode,
+            modifiers: 0,
+          });
+        } catch {}
+      }
+      this.log(`Hotkey ${hotkey} failed: ${error?.message || String(error || "unknown error")}`);
+      return { ok: false, reason: "hotkey failed", hotkey, error: error?.message || String(error || "") };
+    }
+  }
+
   async useHotbarSlot(action = {}) {
     const slotIndex = Number.isInteger(action.slotIndex)
       ? action.slotIndex
       : Math.trunc(Number(action.index ?? action.slot ?? -1));
     const mode = String(action.mode || "bot").trim() || "bot";
+    const target = String(action.target || "").trim().toLowerCase();
+    const hotkey = normalizeHotkey(action.hotkey);
     const moduleKey = action.moduleKey || null;
     const ruleIndex = Number.isInteger(action.ruleIndex) ? action.ruleIndex : null;
     const markFailureCooldown = action.markFailureCooldown !== false;
     const now = Date.now();
+
+    if (hotkey) {
+      return this.useHotkey({
+        ...action,
+        hotkey,
+        target,
+        moduleKey,
+        ruleIndex,
+        markFailureCooldown,
+      });
+    }
 
     if (!Number.isInteger(slotIndex) || slotIndex < 0) {
       return { ok: false, reason: "missing hotbar slot", slotIndex };
@@ -26208,17 +27175,17 @@ export class MinibiaTargetBot {
     if (this.options.dryRun) {
       this.markModuleAction(moduleKey, ruleIndex, now);
       this.log(`Would use hotbar slot ${slotIndex}`);
-      this.emit("hotbar", { dryRun: true, slotIndex, mode, moduleKey });
-      return { ok: true, dryRun: true, slotIndex, mode };
+      this.emit("hotbar", { dryRun: true, slotIndex, mode, target: target || null, moduleKey });
+      return { ok: true, dryRun: true, slotIndex, mode, target: target || null };
     }
 
     await this.attach();
-    const result = await this.cdp.evaluate(buildUseHotbarSlotExpression(slotIndex, { mode }));
+    const result = await this.cdp.evaluate(buildUseHotbarSlotExpression(slotIndex, { mode, target }));
 
     if (result?.ok) {
       this.markModuleAction(moduleKey, ruleIndex, now);
       this.log(`Used hotbar slot ${slotIndex}${result?.label ? ` (${result.label})` : ""}`);
-      this.emit("hotbar", { dryRun: false, slotIndex, mode, moduleKey, result });
+      this.emit("hotbar", { dryRun: false, slotIndex, mode, target: target || null, moduleKey, result });
       return result;
     }
 
@@ -28953,13 +29920,21 @@ export class MinibiaTargetBot {
         return snapshot;
       }
 
+      const healerRunePriorityActive = this.chooseHealerRuneActions(snapshot).length > 0;
+      if (healerRunePriorityActive) {
+        const healAttempt = await this.attemptHeal(snapshot, vocationProfile);
+        if (healAttempt.result?.ok) {
+          return snapshot;
+        }
+      }
+
       const healingPriorityActive = this.isHealingPriorityActive(snapshot, vocationProfile);
       const sustainAttempt = await this.attemptSustain(snapshot, vocationProfile);
       if (sustainAttempt.result?.ok && healingPriorityActive) {
         return snapshot;
       }
 
-      if (!sustainAttempt.result?.ok) {
+      if (!sustainAttempt.result?.ok && !healerRunePriorityActive) {
         const healAttempt = await this.attemptHeal(snapshot, vocationProfile);
         if (healAttempt.result?.ok && healingPriorityActive) {
           return snapshot;
@@ -29166,7 +30141,7 @@ export class MinibiaTargetBot {
         }
       }
 
-      const chosen = this.chooseTarget(snapshot);
+      let chosen = this.chooseTarget(snapshot);
 
       if (this.options.stopAggroHold) {
         if (snapshot.currentTarget) {
@@ -29189,7 +30164,20 @@ export class MinibiaTargetBot {
       }
 
       if (chosen) {
-        await this.target(chosen);
+        const targetResult = await this.target(chosen);
+        if (targetResult?.ok === false && targetResult?.blockedBySharedSpawn) {
+          const blockedTargets = Array.isArray(targetResult.blockedTargets) && targetResult.blockedTargets.length
+            ? targetResult.blockedTargets
+            : [targetResult.target || chosen.chosen || chosen].filter(Boolean);
+          snapshot = this.removeSharedSpawnBlockedTargetsFromSnapshot(snapshot, blockedTargets);
+          chosen = null;
+
+          const resumeRouteAction = this.chooseRouteAction(snapshot);
+          if (resumeRouteAction && !(healingPriorityActive && resumeRouteAction.kind === "cast")) {
+            await this.executeRouteAction(resumeRouteAction);
+            return snapshot;
+          }
+        }
       }
 
       const distanceAction = this.chooseDistanceKeeper(snapshot);

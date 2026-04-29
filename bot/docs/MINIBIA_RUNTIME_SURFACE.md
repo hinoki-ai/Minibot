@@ -208,6 +208,11 @@ Positions normalize to:
 
 `kind` is currently normalized to values such as `spell`, `item`, `text`, `action`, or `unknown`.
 
+`hotkey` is best-effort metadata sourced from live hotbar fields such as
+`hotkey`, `keybind`, `shortcut`, `key`, or `binding`. It is preserved so module
+actions and UI summaries can report the operator-facing binding even when the
+slot is still addressed by index.
+
 ### Inventory Items
 
 Normalized inventory items use:

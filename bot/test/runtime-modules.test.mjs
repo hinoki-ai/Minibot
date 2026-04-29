@@ -208,6 +208,74 @@ test("tick lets the configured healer rune threshold outrank sustain health poti
   assert.equal(usedItems[0]?.moduleKey, "healerRune");
 });
 
+test("tick automatically fires the configured healer rune hotkey before sustain or covered spell heals", async () => {
+  const bot = createBot({
+    vocation: "knight",
+    healerEnabled: true,
+    healerRules: [
+      {
+        enabled: true,
+        words: "exura",
+        minHealthPercent: 70,
+        maxHealthPercent: 80,
+        minMana: 20,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+    healerRuneName: "Ultimate Healing Rune",
+    healerRuneHotkey: "F5",
+    healerRuneHealthPercent: 50,
+  });
+  const pressedHotkeys = [];
+  let sustainCalled = false;
+
+  installRefresh(bot, {
+    ready: true,
+    playerStats: {
+      health: 130,
+      maxHealth: 300,
+      healthPercent: 43,
+      mana: 90,
+      maxMana: 120,
+      manaPercent: 75,
+    },
+    hotbar: {
+      slotCount: 0,
+      slots: [],
+    },
+    containers: [],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    hasLightCondition: true,
+  });
+
+  bot.attemptSustain = async () => {
+    sustainCalled = true;
+    return { action: { type: "heal", moduleKey: "sustain" }, result: { ok: true } };
+  };
+  bot.castWords = async () => {
+    throw new Error("covered spell healer should not run before the configured auto rune");
+  };
+  bot.useHotkey = async (action) => {
+    pressedHotkeys.push(action);
+    bot.markModuleAction(action.moduleKey, action.ruleIndex, Date.now());
+    return { ok: true, transport: "keyboard-hotkey", hotkey: action.hotkey };
+  };
+
+  const snapshot = await bot.tick();
+
+  assert.equal(snapshot?.ready, true);
+  assert.equal(sustainCalled, false);
+  assert.equal(pressedHotkeys.length, 1);
+  assert.equal(pressedHotkeys[0]?.moduleKey, "healerRune");
+  assert.equal(pressedHotkeys[0]?.hotkey, "F5");
+  assert.equal(pressedHotkeys[0]?.target, "self");
+});
+
 test("tick loots opened corpse containers before resuming route movement", async () => {
   const bot = createBot({
     vocation: "paladin",

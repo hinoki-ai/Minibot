@@ -18,6 +18,7 @@ The repo now has a real shared action surface exposed through [`lib/action-route
 Current action types:
 
 - `useHotbarSlot`
+- `useHotkey`
 - `moveInventoryItem`
 - `useItem`
 - `useItemOnSelf`
@@ -54,6 +55,8 @@ Supporting files:
 The current repo already routes real behavior through the shared layer:
 
 - vocation-aware sustain uses hotbar and consumable actions
+- rule-based spell and consumable modules can use configured hotkeys before
+  falling back to direct cast or hotbar/inventory execution
 - looting uses shared inventory move planning
 - route interaction actions reuse shared item-use paths
 - NPC trade support uses row selection plus `buyItem`, `sellItem`, and `sellAllOfItem`
@@ -113,7 +116,26 @@ Shared hotbar actions already support:
 - slot addressing by index
 - spell-word matching
 - item-backed hotbar use
+- `self` and `target` use-on-creature handling for item-backed slots
+- carried hotkey metadata from the live snapshot
 - normalized slot metadata from the snapshot layer
+
+When a consumable planner resolves an item from the hotbar, it should keep the
+requested `target`, `name`, and `category` on the emitted `useHotbarSlot`
+action. Healing runes and potions must not lose self-targeting just because the
+item came from a hotbar slot.
+
+### Hotkeys
+
+Shared hotkey actions already support:
+
+- normalized key names such as `F1`, `Shift+F1`, `Control+F2`, `Space`, `Enter`, `Escape`, and `Tab`
+- modifier ordering and aliases such as `Ctrl`, `Command`, `Option`, and `Win`
+- CDP keyboard dispatch with modifiers held and released around the primary key
+
+Hotkey actions are input-style actions. They should carry the same module,
+rule, words, target, item, name, and category metadata as the rule that emitted
+them so logs and cooldown tracking remain attributable.
 
 ### Inventory Moves
 

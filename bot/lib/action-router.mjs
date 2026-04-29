@@ -7,6 +7,7 @@ import { probeActionCapabilities } from "./capability-probe.mjs";
 
 export const ACTION_METHOD_BY_TYPE = Object.freeze({
   useHotbarSlot: "useHotbarSlot",
+  useHotkey: "useHotkey",
   moveInventoryItem: "moveInventoryItem",
   useItem: "useItem",
   useItemOnSelf: "useItemOnSelf",

@@ -119,6 +119,7 @@ export function buildHotbarSlotAction(snapshotLike = {}, selector = {}, extra = 
     spellName: slot.spellName,
     actionType: slot.actionType,
     itemId: slot.itemId,
+    hotkey: slot.hotkey,
     ...extra,
   };
 }

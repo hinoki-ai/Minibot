@@ -219,6 +219,11 @@ Important behavior notes:
 - rules run top to bottom
 - disabled rules remain stored but do not fire
 - death heal is a separate safety layer from the ordered healer rules
+- healing runes and potions can be resolved from the hotbar or inventory; when
+  they come from the hotbar, Minibot still uses them on the player instead of
+  triggering the slot generically
+- rules that carry a configured hotkey use that binding through the live
+  client before falling back to their normal cast, hotbar, or inventory path
 - trainer keeps emergency heal, escape, mana-trainer, anti-idle, and follow-chain context aligned for training sessions
 - when follow chain owns movement, trainer can stay configured for inherited reconnect, food cadence, and anti-idle behavior from their owning modules while the trainer movement loop itself remains blocked
 - looting uses keep lists, skip lists, and preferred container routing
@@ -246,6 +251,11 @@ Important alert behavior:
 - the top-strip `P` chip rises from `P -` to `P <count>` when players are visible and follows the stronger staff alert styling when staff-like names are detected
 - route reset beeps once the character reaches waypoint `1` and is ready for takeover
 - route reset temporarily forces stand-style combat spacing, so chase or kite profiles do not drag the character away while returning
+- route recovery avoids relatching to ambiguous repeated crossing tiles unless
+  recent route continuity proves the intended branch
+- multi-character route spacing uses live peer positions near the route before
+  falling back to stored route indices, so followers do not park against stale
+  peer progress
 - reconnect automation only arms on real disconnects, not on death
 
 ### 7. Compact View

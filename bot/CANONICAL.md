@@ -72,6 +72,9 @@ Current waypoint types:
 - `stairs-down`
 - `use-item`
 - `bank`
+- `shop`
+- `npc-action`
+- `daily-task`
 - `ladder`
 - `exani-tera`
 - `rope`
@@ -113,6 +116,9 @@ Do not document backlog-only route fields as current runtime schema.
   with their own thresholds and cooldown gates.
 - Auto eat can source food from hotbar, equipment, or open containers and should
   fire before anti-idle when both are due.
+- Hotbar-backed consumable actions must preserve their intended target. A
+  self-heal rune or potion resolved from a hotbar slot must use the item on the
+  player, not activate the slot as a generic action.
 - Ring and amulet replacement are separate inventory utilities that may match
   explicit names, generic slot requests, or vendored item metadata.
 - Looting uses keep lists, skip lists, and preferred container routing rather
@@ -149,3 +155,9 @@ Do not document backlog-only route fields as current runtime schema.
   floor-change waypoint types unless the route intentionally changes floors.
 - Short checkpoint spacing, `radius: 1`, and a lower `walkRepathMs` such as
   `300` reduce false stalls on blocked tiles.
+- Route recovery must not relatch to a repeated crossing coordinate unless
+  recent route continuity, local adjacency, or bridge touches disambiguate the
+  intended index.
+- Multi-character route spacing should prefer a peer's live route position when
+  it is near the waypoint spine, falling back to stored spacing indices only
+  when live position is unavailable or implausible.

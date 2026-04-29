@@ -64,6 +64,9 @@ export function buildConsumableAction(snapshotLike = {}, selector = {}, {
 
   if (entry.hotbarSlot) {
     return buildHotbarSlotAction(snapshot, { slotIndex: entry.hotbarSlot.index }, {
+      target,
+      name: selector?.name || entry?.item?.name || "",
+      category: normalizedSelector.category || "",
       moduleKey,
       ruleIndex,
     });
