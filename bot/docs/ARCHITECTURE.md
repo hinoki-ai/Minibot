@@ -72,7 +72,7 @@ Shared gameplay modules:
 - [`lib/modules/equipment-replace.mjs`](../lib/modules/equipment-replace.mjs): ring and amulet replacement planning from live inventory state
 - [`lib/modules/banker.mjs`](../lib/modules/banker.mjs): banking rule normalization and dialogue-state machine
 - [`lib/modules/shopper.mjs`](../lib/modules/shopper.mjs): normalized buy, sell, and sell-all planning
-- [`lib/modules/refill.mjs`](../lib/modules/refill.mjs): refill request planning from vocation policy and supply counts
+- [`lib/modules/refill.mjs`](../lib/modules/refill.mjs): refill request planning from vocation policy, hidden supply plans, visible trade state, and supply counts
 - [`lib/modules/npc-dialogue.mjs`](../lib/modules/npc-dialogue.mjs): recent dialogue parsing and bank-balance extraction
 - [`lib/modules/auto-eat.mjs`](../lib/modules/auto-eat.mjs), [`lib/modules/hotbar.mjs`](../lib/modules/hotbar.mjs), [`lib/modules/consumables.mjs`](../lib/modules/consumables.mjs), [`lib/modules/ammo.mjs`](../lib/modules/ammo.mjs), [`lib/modules/inventory.mjs`](../lib/modules/inventory.mjs), [`lib/modules/container-routing.mjs`](../lib/modules/container-routing.mjs), and [`lib/modules/economy.mjs`](../lib/modules/economy.mjs): shared support layers used by the higher-level modules
 

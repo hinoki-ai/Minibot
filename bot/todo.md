@@ -6,11 +6,11 @@ handoff, roadmap, audit, or next-agent markdown.
 Last verification baseline:
 
 - date: 2026-04-30, America/Santiago
-- full run: `npm test` -> `770` passed, `0` failed
+- full run: `npm test` -> `778` passed, `0` failed
 - route validation: `node scripts/validate-routes.mjs` -> `36` route files,
   `0` errors, `586` warnings
 - structure check: `npm run check:structure` -> OK
-- audit context: cavehunt stairhop/loop pass against the current dirty
+- audit context: refill supply-plan progress pass against the current dirty
   worktree; unrelated local changes were not reverted
 
 Recommended execution depth:
@@ -138,9 +138,13 @@ if it blocks safe operation.
      refill-loop service leg, preserve return context with `refillRole`, and
      pause with a reason when shop dialogue/trade retries or active loop
      bank/NPC service actions fail.
-   - Add a supply plan with desired counts, minimum hunt counts, reserve gold,
-     buy caps, protected items, sell lists, NPC names, shop keywords, city,
-     travel destinations, depot branch, and return waypoint.
+   - Advanced: hidden `refillPlan` now normalizes desired shop counts, minimum
+     hunt counts, reserve gold, buy caps, protected items, sell lists, NPC
+     names, shop keywords, city, travel destinations, depot branch, and return
+     waypoint. Hunt branching uses the minimum counts while shop execution buys
+     toward desired counts, enforces buy caps and carried-gold reserve, and uses
+     plan NPC/keyword/branch/return metadata when waypoint-local values are not
+     set.
    - Refill should branch from a hunt because supplies, cap, gold, or durability
      crossed thresholds, then return to the hunt through route waypoints.
    - Acceptance: a route can complete hunt -> low supply -> bank/sell/buy ->

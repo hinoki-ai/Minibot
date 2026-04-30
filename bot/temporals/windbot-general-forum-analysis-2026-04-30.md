@@ -1,13 +1,17 @@
 created_at: 2026-04-30T00:00:00-04:00
+expires_at: 2026-04-30T23:59:00-04:00
 timezone: America/Santiago
+reason: Temporary WindBot forum research memo for Minibot product comparison requested during the current research pass.
 source_scope: Public WindBot forum pages and official WindBot docs fetched 2026-04-30.
 
 # WindBot General Forum Analysis
 
-This is a temporary research memo for Minibot learning. It summarizes product
-and architecture patterns from the public WindBot forum without adopting
-official-Tibia automation, anti-cheat bypass, stealth, packet hooks, memory
-inspection, or staff-evasion behavior.
+This is a temporary research memo for Minibot learning. It captures all
+non-spam knowledge categories visible in the public WindBot forum, including
+topics that remain out of scope for Minibot implementation. Research coverage
+and implementation boundaries are separate: the project should understand every
+historical pattern, but risky patterns are documented as context, constraints,
+or failure modes rather than converted into features.
 
 ## Source Quality
 
@@ -20,6 +24,46 @@ inspection, or staff-evasion behavior.
   servers. The 2017 announcement and release posts repeatedly moved the product
   toward OpenTibia/private-server compatibility after BattlEye-style client
   changes.
+
+## Knowledge Capture Policy
+
+- Do filter spam, duplicate spam replies, dead ad threads, and unrelated
+  marketplace noise.
+- Do not filter non-spam knowledge out of the research set. Track architecture,
+  product UX, support failures, compatibility problems, anti-cheat disruption,
+  official-server risk discussion, PvP/war tooling, community trade/reseller
+  systems, scripting libraries, HUDs, and historical unsafe patterns.
+- Keep a separate implementation boundary. Minibot may learn vocabulary,
+  risks, UX expectations, and failure cases from unsafe historical features, but
+  it must not implement anti-cheat bypass, stealth, packet hooks, memory
+  inspection, staff evasion, official-server abuse, or PvP grief automation.
+
+## Forum Map
+
+- Announcements: product news, policy, client-transition messaging, payment and
+  license changes, anti-cheat compatibility warnings.
+- Releases: protocol/client compatibility, bug-fix cadence, addon dependencies,
+  release notes, upgrade pressure after Tibia client changes.
+- General: usage discussion, risk, navigation server, item IDs, compatibility
+  questions, client support, official/private server questions, community
+  norms.
+- Suggestions: requested features and missing workflow pain points.
+- Support: setup failures, client-version mismatch, looting/deposit bugs,
+  targeting issues, license/account problems, OS/runtime problems.
+- Bugs: regressions and broken behavior reports.
+- WindBot for Client 11: beta testing, client 11 compatibility, DLL/graphics
+  issues, reports from the migration era.
+- Lua Scripts: hotkeys, persistents, HUDs, community libraries, utility scripts,
+  alarms, reconnect/backpack reopeners, equipment switchers, friend healer,
+  loot logger, market seller, supply buyer.
+- Cavebot Scripts: route/profile sharing, hunting scripts, paid/free scripts,
+  route quality expectations, support for route authors.
+- Tutorials: beginner flow, healer, cavebot, supply checks, depot deposit,
+  Lua, script setup widgets, client addons, VPS and runtime setup.
+- Game Chat, Showcases, Game Guides, War Chat, Trade, Misc: broader community
+  context, strategy, screenshots/HUD demos, trading, resellers, scam reports,
+  and non-product chatter. These are lower priority for Minibot architecture
+  but still useful for user expectations and abuse/risk context.
 
 ## High-Signal Threads
 
@@ -105,15 +149,69 @@ inspection, or staff-evasion behavior.
      these as UX requirements: compatibility checks, validation before save,
      visible action failures, and exact owner/reason messages.
 
-## What To Ignore
+## Full Non-Spam Knowledge Taxonomy
 
-- Bypass/anti-cheat threads.
-- Official-server risk reduction as a product goal.
-- Player/GM logout evasion.
-- Packet or memory techniques.
-- PvP combo/aimbot automation.
-- Third-party binaries or old download links.
-- Forum spam and inactive purchase/reseller content.
+- Core automation architecture: world snapshot, route state, action queue,
+  event status, module ownership, profile save/load, and user setup.
+- Cavebot: route recording, stand/node/action waypoints, labels, goto loops,
+  floor changes, tool use, luring, route sections, depot legs, city/hunt
+  branches, and recovery after accidental floor movement.
+- Targeting: target profile order, monster filtering, stance/chase/hold
+  behavior, ignore lists, target stickiness, and combat ownership.
+- Healer/sustain: ordered spell/rune/potion rules, condition healing, vocation
+  and level requirements, parallel potion/spell behavior, cooldown windows, and
+  visible disabled/blocked rule states.
+- Looting: corpse handling, browse-field fragility, category filters, stackable
+  and non-stackable destinations, rare alerts, container naming, and depot
+  routing.
+- Refill/economy: supply categories, supply thresholds, bank withdrawal, NPC
+  buy/sell, depot deposit, money spent/withdrawn counters, and return-to-hunt
+  labels.
+- Navigation/multi-client: chat rooms, navigation rooms, ally/enemy/leader
+  relations, position/mana sharing, HUD radar, pings, private messages,
+  hosted/private navigation servers, idle room policy, update intervals, admin
+  controls, and room passwords.
+- Scripting/API: Lua hotkeys, persistent scripts, events, variables, iterators,
+  typed objects, bot-control functions, HUD drawing, user widgets, script
+  metadata, community libraries, and converter/import workflows.
+- HUD/operator UX: overlays, list-as status text, colors, alerts, tray messages,
+  screenshots, loot logs, kill counters, route/debug visibility, and live
+  status.
+- Data catalogs: item IDs, item names, item values, weights, flags, spell/rune
+  info, walkable furniture, edible items, field IDs, client/protocol support,
+  and addon requirements.
+- Compatibility: client version support, Tibia 10/11 migration, OpenTibia
+  focus, DLL/graphics issues, Windows/Linux/VPS runtime concerns, launcher
+  requirements, and unsupported old/custom clients.
+- Community operations: paid/free scripts, resellers, license days, license
+  pause/transfer, support policies, forum rules, scam reports, marketplace
+  moderation, and user trust signals.
+- War/PvP context: war strategy, relation lists, enemy/ally tagging, combo or
+  shooter concepts, and player-alert behavior. This is knowledge for threat
+  modeling and UX boundaries, not a Minibot feature target.
+- Official-server and anti-cheat context: deletion risk, reporting, BattlEye
+  disruption, "works/does not work" compatibility claims, and unsafe bypass
+  discussion. This must be retained as historical context and product-boundary
+  evidence, not converted into bypass implementation.
+- Failure patterns: unsupported client, stale or missing containers, broken
+  looting after server save, deposit action misconfiguration, targeting not
+  attacking, old protocol questions, backpack/window state loss, NPC dialogue
+  failures, and unclear script setup naming.
+- Spam: unrelated adult dating/ad posts and repeated link spam from 2026 are
+  the only content category to discard from research.
+
+## Implementation Boundary Notes
+
+- Do not erase risky topics from research. Keep them indexed, summarized, and
+  available for comparison.
+- Do not turn unsafe topics into implementation tasks. For Minibot, translate
+  them into allowed equivalents:
+  - anti-cheat/bypass knowledge -> compatibility warnings and allowed-runtime
+    boundaries;
+  - player/GM evasion -> operator alerts and transparent pause controls;
+  - packet/memory/client tampering -> no-op historical context;
+  - PvP combo/aimbot tooling -> threat-model notes and explicit non-goals;
+  - third-party binaries/download links -> historical references only.
 
 ## Useful Sources
 

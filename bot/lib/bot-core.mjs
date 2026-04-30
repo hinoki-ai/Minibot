@@ -23960,9 +23960,6 @@ export class MinibiaTargetBot {
   }
 
   isRouteGlideWaypoint(waypoint, index = this.routeIndex) {
-    if (!this.shouldAllowRouteGlide()) {
-      return false;
-    }
     if (!waypoint || this.isRouteResetActive()) {
       return false;
     }
@@ -23978,12 +23975,8 @@ export class MinibiaTargetBot {
     ) && this.isRecordedRouteWaypointType(waypoint, index);
   }
 
-  shouldAllowRouteGlide() {
-    return !this.shouldFollowRouteWaypointsExactly();
-  }
-
   isRouteGlideDestinationAhead(destinationKey = "") {
-    if (!this.shouldAllowRouteGlide() || !destinationKey || !this.options.waypoints.length) {
+    if (!destinationKey || !this.options.waypoints.length) {
       return false;
     }
 
@@ -30018,9 +30011,6 @@ export class MinibiaTargetBot {
   isRecentRouteGlideTarget(index, waypoint, now = this.getNow(), {
     reached = false,
   } = {}) {
-    if (!this.shouldAllowRouteGlide()) {
-      return false;
-    }
     if (!reached || !Number.isInteger(index) || this.lastWalkGlideTargetIndex !== index) {
       return false;
     }
@@ -30047,9 +30037,6 @@ export class MinibiaTargetBot {
   isRecentRouteGlideSegmentMatch(index, waypoint, now = this.getNow(), {
     reached = false,
   } = {}) {
-    if (!this.shouldAllowRouteGlide()) {
-      return false;
-    }
     if (!reached || !Number.isInteger(index) || !Number.isInteger(this.lastWalkGlideTargetIndex)) {
       return false;
     }
@@ -34256,29 +34243,66 @@ export class MinibiaTargetBot {
         return snapshot;
       }
 
-      const pendingRouteAction = this.chooseRouteAction(snapshot, vocationProfile);
-      if (pendingRouteAction) {
-        const convertAction = this.chooseConvert(snapshot);
-        if (convertAction) {
-          const convertResult = await this.convertCurrency(convertAction);
-          if (convertResult?.ok) {
-            return snapshot;
-          }
-        }
-
-        if (!(healingPriorityActive && pendingRouteAction.kind === "cast")) {
+      let chosen = null;
+      let targetCheckedBeforeRoute = false;
+      let targetLockedBeforeRoute = false;
+      if (!this.options.routeStrictClear && !this.isRouteResetActive()) {
+        targetCheckedBeforeRoute = true;
+        chosen = this.chooseTarget(snapshot);
+        if (chosen) {
+          const targetResult = await this.target(chosen);
           this.recordDecision({
-            owner: "route",
-            action: pendingRouteAction,
-            state: "acted",
-            reason: pendingRouteAction.walkReason || pendingRouteAction.reason || pendingRouteAction.kind,
+            owner: "targeter",
+            action: {
+              type: "target",
+              moduleKey: "targeter",
+              label: chosen?.chosen?.name || chosen?.name || "",
+            },
+            result: targetResult,
+            state: targetResult?.ok ? "acted" : "skipped",
+            suppressedOwners: ["route"],
           });
-          await this.executeRouteAction(pendingRouteAction);
-          return snapshot;
+          if (targetResult?.ok) {
+            targetLockedBeforeRoute = true;
+          } else if (targetResult?.blockedBySharedSpawn) {
+            const blockedTargets = Array.isArray(targetResult.blockedTargets) && targetResult.blockedTargets.length
+              ? targetResult.blockedTargets
+              : [targetResult.target || chosen.chosen || chosen].filter(Boolean);
+            snapshot = this.removeSharedSpawnBlockedTargetsFromSnapshot(snapshot, blockedTargets);
+            chosen = null;
+          } else {
+            chosen = null;
+          }
         }
       }
 
-      let chosen = this.chooseTarget(snapshot);
+      if (!chosen) {
+        const pendingRouteAction = this.chooseRouteAction(snapshot, vocationProfile);
+        if (pendingRouteAction) {
+          const convertAction = this.chooseConvert(snapshot);
+          if (convertAction) {
+            const convertResult = await this.convertCurrency(convertAction);
+            if (convertResult?.ok) {
+              return snapshot;
+            }
+          }
+
+          if (!(healingPriorityActive && pendingRouteAction.kind === "cast")) {
+            this.recordDecision({
+              owner: "route",
+              action: pendingRouteAction,
+              state: "acted",
+              reason: pendingRouteAction.walkReason || pendingRouteAction.reason || pendingRouteAction.kind,
+            });
+            await this.executeRouteAction(pendingRouteAction);
+            return snapshot;
+          }
+        }
+      }
+
+      if (!chosen && !targetCheckedBeforeRoute) {
+        chosen = this.chooseTarget(snapshot);
+      }
 
       if (this.options.stopAggroHold) {
         if (snapshot.currentTarget) {
@@ -34300,7 +34324,7 @@ export class MinibiaTargetBot {
         return snapshot;
       }
 
-      if (chosen) {
+      if (chosen && !targetLockedBeforeRoute) {
         const targetResult = await this.target(chosen);
         this.recordDecision({
           owner: "targeter",

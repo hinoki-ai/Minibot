@@ -11145,11 +11145,101 @@ test("tick resumes route immediately when a live target attempt finds a reserved
 
   assert.equal(targetAttempts, 1);
   assert.equal(executedRouteAction?.kind, "walk");
-  assert.equal(routeSnapshots.length, 2);
-  assert.equal(routeSnapshots[0].candidates.length, 1);
-  assert.deepEqual(routeSnapshots[1].candidates, []);
+  assert.equal(routeSnapshots.length, 1);
+  assert.deepEqual(routeSnapshots[0].candidates, []);
   assert.equal(result.currentTarget, null);
   assert.deepEqual(result.candidates, []);
+});
+
+test("tick targets a visible combat monster before route walking near stairs", async () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    routeStrictClear: false,
+    monsterNames: ["Dragon"],
+    waypoints: [
+      { x: 32824, y: 32143, z: 7, type: "stairs-down" },
+    ],
+  });
+  const dragon = {
+    id: 570812,
+    name: "Dragon",
+    position: { x: 32823, y: 32144, z: 7 },
+    dx: -1,
+    dy: 1,
+    dz: 0,
+    distance: 2,
+    chebyshevDistance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+  };
+  const snapshot = createModuleSnapshot({
+    playerPosition: { x: 32824, y: 32143, z: 7 },
+    currentTarget: null,
+    visibleCreatures: [dragon],
+    candidates: [dragon],
+    hazardTiles: [
+      {
+        position: { x: 32824, y: 32143, z: 7 },
+        categories: ["stairsLadders"],
+        labels: ["ramp"],
+      },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+  const calls = [];
+
+  bot.refresh = async () => snapshot;
+  bot.handleReconnect = async () => ({ handled: false });
+  bot.getActiveVocationProfile = async () => null;
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+  bot.attemptDeathHeal = async () => ({ result: { ok: false } });
+  bot.isHealingPriorityActive = () => false;
+  bot.attemptSustain = async () => ({ result: { ok: false } });
+  bot.attemptHeal = async () => ({ result: { ok: false } });
+  bot.chooseNoGoZoneEscape = () => null;
+  bot.handlePausedCavebotTick = async () => ({ handled: false });
+  bot.attemptTrainerEscape = async () => ({ result: { ok: false } });
+  bot.handleRookiller = async () => ({ handled: false });
+  bot.getVisibleEscapeThreats = () => [];
+  bot.chooseFollowTrainSuspendAction = () => null;
+  bot.chooseFollowTrainAction = () => null;
+  bot.attemptAutoEat = async () => ({ result: { ok: false } });
+  bot.attemptEquipmentAutoReplace = async () => ({ result: { ok: false } });
+  bot.attemptAmmoReload = async () => ({ result: { ok: false } });
+  bot.chooseLight = () => null;
+  bot.chooseManaTrainer = () => null;
+  bot.chooseRuneMaker = () => null;
+  bot.chooseUrgentConvert = () => null;
+  bot.chooseUrgentValueSlotRepair = () => null;
+  bot.attemptAmmoRestock = async () => ({ result: { ok: false } });
+  bot.attemptRefill = async () => ({ result: { ok: false } });
+  bot.attemptLoot = async () => ({ result: { ok: false } });
+  bot.chooseRouteAction = () => ({
+    kind: "walk",
+    waypoint: bot.options.waypoints[0],
+    destination: bot.options.waypoints[0],
+    walkReason: "stair-recovery",
+  });
+  bot.target = async (selection) => {
+    calls.push(`target:${selection?.chosen?.id}`);
+    return { ok: true };
+  };
+  bot.executeRouteAction = async () => {
+    calls.push("route");
+    return { ok: true };
+  };
+  bot.chooseDistanceKeeper = () => null;
+  bot.chooseSpellCaster = () => null;
+  bot.chooseConvert = () => null;
+  bot.chooseAntiIdle = () => null;
+
+  const result = await bot.tick();
+
+  assert.equal(result, snapshot);
+  assert.deepEqual(calls, ["target:570812"]);
 });
 
 test("chooseTarget can fully suspend combat when watch-only shared spawn mode sees another player", () => {
@@ -14393,7 +14483,7 @@ test("chooseRouteAction immediately reissues a route walk after the last click m
   }
 });
 
-test("chooseRouteAction walks the next recorded waypoint when exact route following is enabled", () => {
+test("chooseRouteAction glides to the farthest safe reachable waypoint on a plain route segment", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     autowalkLoop: false,
@@ -14407,49 +14497,7 @@ test("chooseRouteAction walks the next recorded waypoint when exact route follow
     ],
   });
 
-  bot.resetRoute(0);
-  const action = bot.chooseRouteAction({
-    ready: true,
-    playerPosition: { x: 100, y: 100, z: 8 },
-    currentTarget: null,
-    candidates: [],
-    visibleCreatures: [],
-    isMoving: false,
-    pathfinderAutoWalking: false,
-    pathfinderFinalDestination: null,
-    reachableTiles: [
-      { x: 100, y: 100, z: 8 },
-      { x: 101, y: 100, z: 8 },
-      { x: 102, y: 100, z: 8 },
-      { x: 103, y: 100, z: 8 },
-      { x: 104, y: 100, z: 8 },
-    ],
-  });
-
-  assert.equal(bot.routeIndex, 0);
-  assert.equal(action?.kind, "walk");
-  assert.deepEqual(action?.waypoint, bot.options.waypoints[0]);
-  assert.deepEqual(action?.destination, bot.options.waypoints[0]);
-  assert.equal(action?.progressKey, "101,100,8");
-  assert.equal(action?.walkReason, "direct");
-  assert.equal(action?.glideTargetIndex, null);
-});
-
-test("chooseRouteAction glides to the farthest safe reachable waypoint on a plain route segment when exact following is disabled", () => {
-  const bot = new MinibiaTargetBot({
-    autowalkEnabled: true,
-    autowalkLoop: false,
-    routeFollowExactWaypoints: false,
-    waypointRadius: 0,
-    waypoints: [
-      { x: 101, y: 100, z: 8, type: "walk" },
-      { x: 102, y: 100, z: 8, type: "walk" },
-      { x: 103, y: 100, z: 8, type: "walk" },
-      { x: 104, y: 100, z: 8, type: "walk" },
-      { x: 105, y: 100, z: 8, type: "walk" },
-    ],
-  });
-
+  assert.equal(bot.options.routeFollowExactWaypoints, true);
   bot.resetRoute(0);
   const action = bot.chooseRouteAction({
     ready: true,
@@ -14515,11 +14563,10 @@ test("chooseRouteAction does not glide through route automation waypoints", () =
   assert.equal(action?.glideTargetIndex, null);
 });
 
-test("resyncRouteProgress can relatch to a recently accepted glide destination", () => {
+test("resyncRouteProgress relatches exact route state to a recently accepted glide destination", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     autowalkLoop: false,
-    routeFollowExactWaypoints: false,
     waypointRadius: 0,
     waypoints: [
       { x: 101, y: 100, z: 8, type: "walk" },
@@ -14532,6 +14579,7 @@ test("resyncRouteProgress can relatch to a recently accepted glide destination",
 
   let now = 5_000;
   bot.getNow = () => now;
+  assert.equal(bot.options.routeFollowExactWaypoints, true);
   bot.resetRoute(0);
   bot.setLastWalkAttempt("101,100,8", { x: 100, y: 100, z: 8 }, {
     destination: bot.options.waypoints[4],

@@ -100,6 +100,21 @@
   "ammoRequireNoTargets": false,
   "ammoRequireStationary": false,
   "refillEnabled": false,
+  "refillPlan": {
+    "desiredCounts": {},
+    "minimumHuntCounts": {},
+    "buyCaps": {},
+    "reserveGold": 0,
+    "protectedItems": [],
+    "sellItems": [],
+    "npcNames": [],
+    "shopKeywords": [],
+    "city": "",
+    "travelDestinations": [],
+    "depotBranch": "",
+    "returnWaypoint": "",
+    "items": []
+  },
   "refillSellRequests": [],
   "refillAutoSellEnabled": false,
   "refillAutoSellMinFreeSlots": 2,
@@ -317,13 +332,13 @@
       "requireStationary": true
     }
   ],
-  "targetingEnabled": true,
   "monsterNames": [
     "alpha dragon lord",
     "alpha dragon",
     "dragon lord",
     "dragon"
   ],
+  "targetingEnabled": true,
   "waypoints": [
     {
       "x": 32822,
@@ -403,249 +418,256 @@
       "label": "Waypoint 011"
     },
     {
-      "x": 32816,
-      "y": 32139,
+      "x": 32817,
+      "y": 32141,
       "z": 8,
       "type": "walk",
       "label": "Waypoint 012"
+    },
+    {
+      "x": 32817,
+      "y": 32137,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 013"
     },
     {
       "x": 32821,
       "y": 32143,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 013"
+      "label": "Waypoint 014"
     },
     {
       "x": 32826,
       "y": 32146,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 014"
+      "label": "Waypoint 015"
     },
     {
       "x": 32831,
       "y": 32144,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 015"
+      "label": "Waypoint 016"
     },
     {
       "x": 32832,
       "y": 32140,
       "z": 8,
       "type": "stairs-down",
-      "label": "Waypoint 016"
+      "label": "Waypoint 017"
     },
     {
       "x": 32833,
       "y": 32140,
       "z": 9,
       "type": "walk",
-      "label": "Waypoint 017"
+      "label": "Waypoint 018"
     },
     {
       "x": 32838,
       "y": 32135,
       "z": 9,
       "type": "walk",
-      "label": "Waypoint 018"
+      "label": "Waypoint 019"
     },
     {
       "x": 32833,
       "y": 32139,
       "z": 9,
       "type": "walk",
-      "label": "Waypoint 019"
+      "label": "Waypoint 020"
     },
     {
       "x": 32832,
       "y": 32140,
       "z": 9,
       "type": "stairs-up",
-      "label": "Waypoint 020"
+      "label": "Waypoint 021"
     },
     {
       "x": 32831,
       "y": 32140,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 021"
+      "label": "Waypoint 022"
     },
     {
       "x": 32830,
       "y": 32145,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 022"
+      "label": "Waypoint 023"
     },
     {
       "x": 32825,
       "y": 32147,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 023"
+      "label": "Waypoint 024"
     },
     {
       "x": 32819,
       "y": 32148,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 024"
+      "label": "Waypoint 025"
     },
     {
       "x": 32814,
       "y": 32150,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 025"
+      "label": "Waypoint 026"
     },
     {
       "x": 32812,
       "y": 32155,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 026"
+      "label": "Waypoint 027"
     },
     {
       "x": 32811,
       "y": 32160,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 027"
+      "label": "Waypoint 028"
     },
     {
       "x": 32811,
       "y": 32161,
       "z": 8,
       "type": "stairs-down",
-      "label": "Waypoint 028"
+      "label": "Waypoint 029"
     },
     {
       "x": 32812,
       "y": 32161,
       "z": 9,
       "type": "walk",
-      "label": "Waypoint 029"
+      "label": "Waypoint 030"
     },
     {
       "x": 32814,
       "y": 32166,
       "z": 9,
       "type": "walk",
-      "label": "Waypoint 030"
+      "label": "Waypoint 031"
     },
     {
       "x": 32813,
       "y": 32161,
       "z": 9,
       "type": "walk",
-      "label": "Waypoint 031"
+      "label": "Waypoint 032"
     },
     {
       "x": 32811,
       "y": 32161,
       "z": 9,
       "type": "stairs-up",
-      "label": "Waypoint 032"
+      "label": "Waypoint 033"
     },
     {
       "x": 32810,
       "y": 32161,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 033"
+      "label": "Waypoint 034"
     },
     {
       "x": 32810,
       "y": 32156,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 034"
+      "label": "Waypoint 035"
     },
     {
       "x": 32811,
       "y": 32151,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 035"
+      "label": "Waypoint 036"
     },
     {
       "x": 32812,
       "y": 32146,
       "z": 8,
       "type": "walk",
-      "label": "Waypoint 036"
+      "label": "Waypoint 037"
     },
     {
       "x": 32816,
       "y": 32144,
       "z": 8,
       "type": "stairs-up",
-      "label": "Waypoint 037"
-    },
-    {
-      "x": 32817,
-      "y": 32144,
-      "z": 7,
-      "type": "walk",
       "label": "Waypoint 038"
     },
     {
-      "x": 32822,
+      "x": 32817,
       "y": 32144,
       "z": 7,
       "type": "walk",
       "label": "Waypoint 039"
     },
     {
+      "x": 32822,
+      "y": 32144,
+      "z": 7,
+      "type": "walk",
+      "label": "Waypoint 040"
+    },
+    {
       "x": 32825,
       "y": 32143,
       "z": 7,
       "type": "stairs-up",
-      "label": "Waypoint 040"
+      "label": "Waypoint 041"
     },
     {
       "x": 32826,
       "y": 32143,
       "z": 6,
       "type": "walk",
-      "label": "Waypoint 041"
+      "label": "Waypoint 042"
     },
     {
       "x": 32821,
       "y": 32145,
       "z": 6,
       "type": "walk",
-      "label": "Waypoint 042"
+      "label": "Waypoint 043"
     },
     {
       "x": 32817,
       "y": 32144,
       "z": 6,
       "type": "stairs-up",
-      "label": "Waypoint 043"
+      "label": "Waypoint 044"
     },
     {
       "x": 32816,
       "y": 32144,
       "z": 5,
       "type": "walk",
-      "label": "Waypoint 044"
+      "label": "Waypoint 045"
     },
     {
       "x": 32821,
       "y": 32144,
       "z": 5,
       "type": "stairs-up",
-      "label": "Waypoint 045"
+      "label": "Waypoint 046"
     },
     {
       "x": 32822,
       "y": 32144,
       "z": 4,
       "type": "walk",
-      "label": "Waypoint 046"
+      "label": "Waypoint 047"
     }
   ]
 }
