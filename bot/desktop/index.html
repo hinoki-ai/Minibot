@@ -69,17 +69,14 @@
                     </button>
                   </div>
                   <div class="quick-module-card">
-                    <button id="quick-open-session-waypoints" type="button" class="quick-module-open"
-                      data-proxy-click="#quick-toggle-session-waypoints">
-                      <span>Waypoints</span>
-                      <strong>All tabs markers</strong>
-                      <small>Flip live waypoint markers for every tab</small>
+                    <button id="quick-open-targeting" type="button" class="quick-module-open"
+                      data-open-modal="targeting" data-focus-target="#monster">
+                      <span>Hunt</span>
+                      <strong id="summary-targeting">-</strong>
+                      <small id="summary-targeting-detail">-</small>
                     </button>
-                    <button id="quick-toggle-session-waypoints" type="button"
-                      class="btn tile-btn quick-module-toggle quick-session-waypoints-button">
-                      <span>View</span>
-                      <strong>Shown</strong>
-                    </button>
+                    <button id="quick-toggle-targeting" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>On</strong></button>
                   </div>
                   <div class="quick-module-card">
                     <button type="button" class="quick-module-open" data-open-modal="healer">
@@ -91,13 +88,15 @@
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
-                    <button id="quick-open-trainer" type="button" class="quick-module-open" data-open-modal="trainer">
-                      <span>Trainer</span>
-                      <strong id="summary-trainer">-</strong>
-                      <small id="summary-trainer-detail">-</small>
+                    <button id="quick-open-looting" type="button" class="quick-module-open" data-open-modal="looting">
+                      <span>Looting</span>
+                      <strong id="summary-looting">-</strong>
+                      <small id="summary-looting-detail">-</small>
                     </button>
-                    <button id="quick-toggle-trainer" type="button"
-                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                    <button id="quick-toggle-looting" type="button" class="btn tile-btn quick-module-toggle">
+                      <span>Power</span>
+                      <strong>Off</strong>
+                    </button>
                   </div>
                   <div class="quick-module-card">
                     <button id="quick-open-reconnect" type="button" class="quick-module-open"
@@ -107,24 +106,6 @@
                       <small id="summary-reconnect-detail">-</small>
                     </button>
                     <button id="quick-toggle-reconnect" type="button"
-                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
-                  </div>
-                  <div class="quick-module-card">
-                    <button type="button" class="quick-module-open" data-open-modal="deathHeal">
-                      <span>Death Heal</span>
-                      <strong id="summary-death-heal">-</strong>
-                      <small id="summary-death-heal-detail">-</small>
-                    </button>
-                    <button id="quick-toggle-death-heal" type="button"
-                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
-                  </div>
-                  <div class="quick-module-card">
-                    <button type="button" class="quick-module-open" data-open-modal="manaTrainer">
-                      <span>Mana</span>
-                      <strong id="summary-mana">-</strong>
-                      <small id="summary-mana-words">-</small>
-                    </button>
-                    <button id="quick-toggle-mana-trainer" type="button"
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
@@ -156,12 +137,30 @@
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
-                    <button type="button" class="quick-module-open" data-open-modal="runeMaker">
-                      <span>Runes</span>
-                      <strong id="summary-rune">-</strong>
-                      <small id="summary-rune-words">-</small>
+                    <button type="button" class="quick-module-open" data-open-modal="deathHeal">
+                      <span>Death Heal</span>
+                      <strong id="summary-death-heal">-</strong>
+                      <small id="summary-death-heal-detail">-</small>
                     </button>
-                    <button id="quick-toggle-rune-maker" type="button"
+                    <button id="quick-toggle-death-heal" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-trainer" type="button" class="quick-module-open" data-open-modal="trainer">
+                      <span>Trainer</span>
+                      <strong id="summary-trainer">-</strong>
+                      <small id="summary-trainer-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-trainer" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button type="button" class="quick-module-open" data-open-modal="manaTrainer">
+                      <span>Mana</span>
+                      <strong id="summary-mana">-</strong>
+                      <small id="summary-mana-words">-</small>
+                    </button>
+                    <button id="quick-toggle-mana-trainer" type="button"
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
@@ -174,35 +173,13 @@
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
-                    <button id="quick-open-targeting" type="button" class="quick-module-open"
-                      data-open-modal="targeting" data-focus-target="#monster">
-                      <span>Hunt</span>
-                      <strong id="summary-targeting">-</strong>
-                      <small id="summary-targeting-detail">-</small>
+                    <button type="button" class="quick-module-open" data-open-modal="runeMaker">
+                      <span>Runes</span>
+                      <strong id="summary-rune">-</strong>
+                      <small id="summary-rune-words">-</small>
                     </button>
-                    <button id="quick-toggle-targeting" type="button"
-                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>On</strong></button>
-                  </div>
-                  <div class="quick-module-card">
-                    <button id="quick-open-avoid-fields" type="button" class="quick-module-open"
-                      data-focus-route-builder="#avoidElementalFields">
-                      <span>Field Safe</span>
-                      <strong id="summary-field-safe">-</strong>
-                      <small id="summary-field-safe-detail">-</small>
-                    </button>
-                    <button id="quick-toggle-avoid-fields" type="button"
-                      class="btn tile-btn quick-module-toggle"><span>Mode</span><strong>Off</strong></button>
-                  </div>
-                  <div class="quick-module-card">
-                    <button id="quick-open-looting" type="button" class="quick-module-open" data-open-modal="looting">
-                      <span>Looting</span>
-                      <strong id="summary-looting">-</strong>
-                      <small id="summary-looting-detail">-</small>
-                    </button>
-                    <button id="quick-toggle-looting" type="button" class="btn tile-btn quick-module-toggle">
-                      <span>Power</span>
-                      <strong>Off</strong>
-                    </button>
+                    <button id="quick-toggle-rune-maker" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
                     <button id="quick-open-banking" type="button" class="quick-module-open" data-open-modal="banking">
@@ -216,14 +193,36 @@
                     </button>
                   </div>
                   <div class="quick-module-card">
-                    <button id="quick-open-anti-idle" type="button" class="quick-module-open"
-                      data-open-modal="antiIdle">
-                      <span>Anti Idle</span>
-                      <strong id="summary-anti-idle">-</strong>
-                      <small id="summary-anti-idle-detail">-</small>
+                    <button type="button" class="quick-module-open" data-open-modal="autoConvert">
+                      <span>Gold</span>
+                      <strong id="summary-convert">-</strong>
+                      <small id="summary-convert-detail">-</small>
                     </button>
-                    <button id="quick-toggle-anti-idle" type="button"
+                    <button id="quick-toggle-convert" type="button"
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-avoid-fields" type="button" class="quick-module-open"
+                      data-focus-route-builder="#avoidElementalFields">
+                      <span>Field Safe</span>
+                      <strong id="summary-field-safe">-</strong>
+                      <small id="summary-field-safe-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-avoid-fields" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Mode</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
+                    <button id="quick-open-session-waypoints" type="button" class="quick-module-open"
+                      data-proxy-click="#quick-toggle-session-waypoints">
+                      <span>Waypoints</span>
+                      <strong>All tabs markers</strong>
+                      <small>Flip live waypoint markers for every tab</small>
+                    </button>
+                    <button id="quick-toggle-session-waypoints" type="button"
+                      class="btn tile-btn quick-module-toggle quick-session-waypoints-button">
+                      <span>View</span>
+                      <strong>Shown</strong>
+                    </button>
                   </div>
                   <div class="quick-module-card">
                     <button id="quick-open-alarms" type="button" class="quick-module-open" data-open-modal="alarms">
@@ -245,21 +244,22 @@
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
+                    <button id="quick-open-anti-idle" type="button" class="quick-module-open"
+                      data-open-modal="antiIdle">
+                      <span>Anti Idle</span>
+                      <strong id="summary-anti-idle">-</strong>
+                      <small id="summary-anti-idle-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-anti-idle" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
                     <button type="button" class="quick-module-open" data-open-modal="autoLight">
                       <span>Light</span>
                       <strong id="summary-light">-</strong>
                       <small id="summary-light-detail">-</small>
                     </button>
                     <button id="quick-toggle-auto-light" type="button"
-                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
-                  </div>
-                  <div class="quick-module-card">
-                    <button type="button" class="quick-module-open" data-open-modal="autoConvert">
-                      <span>Gold</span>
-                      <strong id="summary-convert">-</strong>
-                      <small id="summary-convert-detail">-</small>
-                    </button>
-                    <button id="quick-toggle-convert" type="button"
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
@@ -307,11 +307,10 @@
                   <span>Selected</span>
                   <strong id="route-overview-focus">-</strong>
                 </button>
-                <button id="route-overview-open-library" type="button" class="summary-cell route-overview-metric-button"
-                  data-open-route-library="true" title="Open the route panel and the saved-route picker.">
+                <div id="route-overview-library-cell" class="summary-cell route-overview-metric">
                   <span>Saved Files</span>
                   <strong id="route-overview-library">-</strong>
-                </button>
+                </div>
               </div>
               <div class="route-overview-options" aria-label="Route panel quick options">
                 <button id="route-overview-open-panel" type="button" class="btn mini route-overview-option"
@@ -532,6 +531,22 @@
               </div>
             </div>
             <div class="button-grid compact-grid compact-module-grid">
+              <div class="compact-split-card compact-split-card-single">
+                <button id="compact-open-cavebot-pause" type="button" class="compact-card-open danger"
+                  data-proxy-click="#quick-toggle-cavebot-pause">
+                  <span>Cavebot</span>
+                  <strong id="compact-cavebot-master-stop">Master Stop</strong>
+                </button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-targeting" type="button" class="compact-card-open" data-open-modal="targeting"
+                  data-focus-target="#monster">
+                  <span>Hunt</span>
+                  <strong id="compact-targeting-summary">-</strong>
+                </button>
+                <button id="compact-toggle-targeting" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-targeting"><span>Power</span><strong>On</strong></button>
+              </div>
               <div class="compact-split-card">
                 <button id="compact-open-healer" type="button" class="compact-card-open" data-open-modal="healer">
                   <span>Healer</span>
@@ -541,12 +556,12 @@
                   data-proxy-click="#quick-toggle-healer"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
-                <button id="compact-open-trainer" type="button" class="compact-card-open" data-open-modal="trainer">
-                  <span>Trainer</span>
-                  <strong id="compact-trainer-summary">-</strong>
+                <button id="compact-open-looting" type="button" class="compact-card-open" data-open-modal="looting">
+                  <span>Looting</span>
+                  <strong id="compact-looting-summary">-</strong>
                 </button>
-                <button id="compact-toggle-trainer" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-trainer"><span>Power</span><strong>Off</strong></button>
+                <button id="compact-toggle-looting" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-looting"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
                 <button id="compact-open-reconnect" type="button" class="compact-card-open" data-open-modal="reconnect">
@@ -555,23 +570,6 @@
                 </button>
                 <button id="compact-toggle-reconnect" type="button" class="btn compact-card-toggle"
                   data-proxy-click="#quick-toggle-reconnect"><span>Power</span><strong>Off</strong></button>
-              </div>
-              <div class="compact-split-card">
-                <button id="compact-open-death-heal" type="button" class="compact-card-open"
-                  data-open-modal="deathHeal">
-                  <span>Death Heal</span>
-                  <strong id="compact-death-heal-summary">-</strong>
-                </button>
-                <button id="compact-toggle-death-heal" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-death-heal"><span>Power</span><strong>Off</strong></button>
-              </div>
-              <div class="compact-split-card">
-                <button id="compact-open-mana" type="button" class="compact-card-open" data-open-modal="manaTrainer">
-                  <span>Mana</span>
-                  <strong id="compact-mana-summary">-</strong>
-                </button>
-                <button id="compact-toggle-mana-trainer" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-mana-trainer"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
                 <button id="compact-open-auto-eat" type="button" class="compact-card-open" data-open-modal="autoEat">
@@ -599,12 +597,29 @@
                   data-proxy-click="#quick-toggle-ring-amulet-auto-replace"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
-                <button id="compact-open-rune" type="button" class="compact-card-open" data-open-modal="runeMaker">
-                  <span>Runes</span>
-                  <strong id="compact-rune-summary">-</strong>
+                <button id="compact-open-death-heal" type="button" class="compact-card-open"
+                  data-open-modal="deathHeal">
+                  <span>Death Heal</span>
+                  <strong id="compact-death-heal-summary">-</strong>
                 </button>
-                <button id="compact-toggle-rune-maker" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-rune-maker"><span>Power</span><strong>Off</strong></button>
+                <button id="compact-toggle-death-heal" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-death-heal"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-trainer" type="button" class="compact-card-open" data-open-modal="trainer">
+                  <span>Trainer</span>
+                  <strong id="compact-trainer-summary">-</strong>
+                </button>
+                <button id="compact-toggle-trainer" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-trainer"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-mana" type="button" class="compact-card-open" data-open-modal="manaTrainer">
+                  <span>Mana</span>
+                  <strong id="compact-mana-summary">-</strong>
+                </button>
+                <button id="compact-toggle-mana-trainer" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-mana-trainer"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
                 <button id="compact-open-spell" type="button" class="compact-card-open" data-open-modal="spellCaster">
@@ -615,12 +630,20 @@
                   data-proxy-click="#quick-toggle-spell-caster"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
-                <button id="compact-open-light" type="button" class="compact-card-open" data-open-modal="autoLight">
-                  <span>Light</span>
-                  <strong id="compact-light-summary">-</strong>
+                <button id="compact-open-rune" type="button" class="compact-card-open" data-open-modal="runeMaker">
+                  <span>Runes</span>
+                  <strong id="compact-rune-summary">-</strong>
                 </button>
-                <button id="compact-toggle-auto-light" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-auto-light"><span>Power</span><strong>Off</strong></button>
+                <button id="compact-toggle-rune-maker" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-rune-maker"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-banking" type="button" class="compact-card-open" data-open-modal="banking">
+                  <span>Banking</span>
+                  <strong id="compact-banking-summary">-</strong>
+                </button>
+                <button id="compact-toggle-banking" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-banking"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
                 <button id="compact-open-convert" type="button" class="compact-card-open" data-open-modal="autoConvert">
@@ -631,12 +654,13 @@
                   data-proxy-click="#quick-toggle-convert"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
-                <button id="compact-open-anti-idle" type="button" class="compact-card-open" data-open-modal="antiIdle">
-                  <span>Anti Idle</span>
-                  <strong id="compact-anti-idle-summary">-</strong>
+                <button id="compact-open-avoid-fields" type="button" class="compact-card-open"
+                  data-focus-route-builder="#avoidElementalFields">
+                  <span>Field Safe</span>
+                  <strong id="compact-field-safe-summary">-</strong>
                 </button>
-                <button id="compact-toggle-anti-idle" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-anti-idle"><span>Power</span><strong>Off</strong></button>
+                <button id="compact-toggle-avoid-fields" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-avoid-fields"><span>Mode</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
                 <button id="compact-open-alarms" type="button" class="compact-card-open" data-open-modal="alarms">
@@ -656,13 +680,20 @@
                   data-proxy-click="#quick-toggle-party-follow"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
-                <button id="compact-open-avoid-fields" type="button" class="compact-card-open"
-                  data-focus-route-builder="#avoidElementalFields">
-                  <span>Field Safe</span>
-                  <strong id="compact-field-safe-summary">-</strong>
+                <button id="compact-open-anti-idle" type="button" class="compact-card-open" data-open-modal="antiIdle">
+                  <span>Anti Idle</span>
+                  <strong id="compact-anti-idle-summary">-</strong>
                 </button>
-                <button id="compact-toggle-avoid-fields" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-avoid-fields"><span>Mode</span><strong>Off</strong></button>
+                <button id="compact-toggle-anti-idle" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-anti-idle"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
+                <button id="compact-open-light" type="button" class="compact-card-open" data-open-modal="autoLight">
+                  <span>Light</span>
+                  <strong id="compact-light-summary">-</strong>
+                </button>
+                <button id="compact-toggle-auto-light" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-auto-light"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
                 <button id="compact-open-rookiller" type="button" class="compact-card-open"
@@ -674,42 +705,16 @@
                   data-proxy-click="#quick-toggle-rookiller"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card compact-split-card-single">
-                <button id="compact-open-cavebot-pause" type="button" class="compact-card-open danger"
-                  data-proxy-click="#quick-toggle-cavebot-pause">
-                  <span>Cavebot</span>
-                  <strong id="compact-cavebot-master-stop">Master Stop</strong>
-                </button>
-              </div>
-              <div class="compact-split-card compact-split-card-single">
                 <button id="compact-open-logs" type="button" class="compact-card-open" data-open-modal="logs">
                   <span>Logs</span>
                   <strong>Console</strong>
                 </button>
               </div>
-              <div class="compact-split-card">
-                <button id="compact-open-targeting" type="button" class="compact-card-open" data-open-modal="targeting"
-                  data-focus-target="#monster">
-                  <span>Hunt</span>
-                  <strong id="compact-targeting-summary">-</strong>
+              <div class="compact-split-card compact-split-card-single">
+                <button id="compact-open-decision-trace" type="button" class="compact-card-open" data-open-modal="logs">
+                  <span>Decision</span>
+                  <strong id="compact-decision-summary">Idle</strong>
                 </button>
-                <button id="compact-toggle-targeting" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-targeting"><span>Power</span><strong>On</strong></button>
-              </div>
-              <div class="compact-split-card">
-                <button id="compact-open-looting" type="button" class="compact-card-open" data-open-modal="looting">
-                  <span>Looting</span>
-                  <strong id="compact-looting-summary">-</strong>
-                </button>
-                <button id="compact-toggle-looting" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-looting"><span>Power</span><strong>Off</strong></button>
-              </div>
-              <div class="compact-split-card">
-                <button id="compact-open-banking" type="button" class="compact-card-open" data-open-modal="banking">
-                  <span>Banking</span>
-                  <strong id="compact-banking-summary">-</strong>
-                </button>
-                <button id="compact-toggle-banking" type="button" class="btn compact-card-toggle"
-                  data-proxy-click="#quick-toggle-banking"><span>Power</span><strong>Off</strong></button>
               </div>
             </div>
           </section>
@@ -882,6 +887,7 @@
                 <strong id="route-file-status">Route file pending</strong>
                 <span id="route-file-path">Save the route to create a named cavebot file.</span>
               </div>
+              <div id="route-validation-summary" class="route-validation-summary" data-tone="clear" hidden></div>
               <button id="new-blank-route" class="btn" type="button">Blank Draft</button>
             </div>
           </div>
@@ -1500,6 +1506,7 @@
         </div>
       </div>
       <div class="modal-body modal-body-console">
+        <div id="decision-trace-output" class="runtime-metrics" aria-live="polite"></div>
         <div id="runtime-metrics" class="runtime-metrics" aria-live="polite"></div>
         <pre id="log-output" class="log-output"></pre>
       </div>

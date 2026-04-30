@@ -23,6 +23,9 @@ for shared runtime modules. Do not add a second module guide.
 - Mechanical actions should go through
   [`lib/action-router.mjs`](../lib/action-router.mjs) and return normalized
   `{ ok, driver, reason, details }` results.
+- Risky modules should check snapshot confidence before acting. Unknown or
+  stale required families must skip with a normalized reason such as
+  `snapshot inventory unknown` instead of guessing.
 - Runtime behavior belongs in [`lib/`](../lib), not renderer event handlers.
 
 ## Runtime Order
@@ -53,17 +56,22 @@ That ordering is intentional. In particular, sustain/healer must stay ahead of
 non-heal casts during healing priority, and looting must happen before normal
 route movement.
 
+Every tick also records a decision trace. A record contains owner, action,
+acted/skipped/blocked state, reason, required snapshot families, action result,
+cooldown when known, and suppressed owners when a higher-priority owner wins the
+tick. The trace is runtime state, not configuration.
+
 ## Operator Modules
 
 These are the feature modules visible in the desktop app or route workspace.
 
 | Canonical name | Source | State keys | Current feature contract |
 | --- | --- | --- | --- |
-| `route` / `autowalk` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/config-store.mjs`](../lib/config-store.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `autowalkEnabled`, `autowalkLoop`, `routeRecording`, `showWaypointOverlay`, `waypoints`, `tileRules`, `waypointRadius`, `walkRepathMs`, `cavebotPaused`, `stopAggroHold`, `cavebotName` | Waypoint route execution, route recording, route library persistence, waypoint overlay, route reset, route resync, ambiguous-crossing recovery, helper recovery, corpse return, route spacing leases, route-local snapshots, route action execution, and route-owned bank/shop/NPC/daily-task waypoint dispatch. Route spacing uses live peer positions near the route spine before falling back to stored spacing indices. |
-| `avoidFields` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `avoidElementalFields`, `avoidFieldCategories` | Avoids configured field categories while choosing route and combat movement. Categories are `fire`, `energy`, `poison`, `holes`, `stairsLadders`, `teleports`, `traps`, and `invisibleWalls`. |
-| `targeting` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`lib/hunt-presets.mjs`](../lib/hunt-presets.mjs) | `monsterNames`, `targetProfiles`, `sharedSpawnMode`, `creatureLedger`, `rangeX`, `rangeY`, `combatRangeX`, `combatRangeY`, `floorTolerance`, `retargetMs` | Hunt queue, per-monster target profiles, shared-spawn policy, creature registry, visible monster/player/NPC ledgers, official hunt presets, target selection, target clearing, and fallback combat range rules. |
-| `sustain` | [`lib/modules/sustain.mjs`](../lib/modules/sustain.mjs), [`lib/vocation-pack.mjs`](../lib/vocation-pack.mjs) | `sustainEnabled`, `sustainCooldownMs`, `preferHotbarConsumables`, `vocation` | Vocation-aware emergency spell, health potion, mana potion, food, ammo, and supply status planning from vendored vocation packs. Runs before the legacy healer when a vocation profile exists. |
-| `healer` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `healerEnabled`, `healerRules`, `healerEmergencyHealthPercent`, `healerRuneName`, `healerRuneHotkey`, `healerRuneHealthPercent` plus legacy `healerWords`, `healerHotkey`, `healerHealthPercent`, `healerMinMana`, `healerMinManaPercent` | Ordered spell, healing-rune, mass-heal, and heal-friend tiers. Rules match HP bands and mana gates, then cast or use the configured self-heal. Hotbar-backed runes preserve self-targeting. The emergency threshold raises healing priority without reordering rules, and self emergency keeps friend-heal support behind self-heals. The lowest active tier covers down to `0%` HP. |
+| `route` / `autowalk` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/config-store.mjs`](../lib/config-store.mjs), [`lib/route-validation.mjs`](../lib/route-validation.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `autowalkEnabled`, `autowalkLoop`, `routeRecording`, `showWaypointOverlay`, `waypoints`, `tileRules`, `waypointRadius`, `walkRepathMs`, `cavebotPaused`, `stopAggroHold`, `cavebotName` | Waypoint route execution, route recording, route library persistence, validation reporting, waypoint overlay, route reset, route resync, ambiguous-crossing recovery, helper recovery, corpse return, route spacing leases, route-local snapshots, route action execution, and route-owned bank/shop/NPC/daily-task waypoint dispatch. Route spacing uses live peer positions near the route spine before falling back to stored spacing indices. |
+| `avoidFields` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `avoidElementalFields`, `avoidFieldCategories` | Avoids configured field categories while choosing route and combat movement. Categories are `fire`, `energy`, `poison`, `holes`, `stairsLadders`, `teleports`, `traps`, and `invisibleWalls`. Route safety may keep native chase standing only while there is no reachable combat target. |
+| `targeting` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`lib/hunt-presets.mjs`](../lib/hunt-presets.mjs) | `monsterNames`, `targetProfiles`, `sharedSpawnMode`, `creatureLedger`, `rangeX`, `rangeY`, `combatRangeX`, `combatRangeY`, `floorTolerance`, `retargetMs` | Hunt queue, per-monster target profiles, shared-spawn policy, creature registry, visible monster/player/NPC ledgers, official hunt presets, target selection, target clearing, and fallback combat range rules. Reachable combat targets in the combat window suspend route movement and allow the configured or profile chase stance to be restored. |
+| `sustain` | [`lib/modules/sustain.mjs`](../lib/modules/sustain.mjs), [`lib/vocation-pack.mjs`](../lib/vocation-pack.mjs) | `sustainEnabled`, `sustainCooldownMs`, `preferHotbarConsumables`, `vocation` | Vocation-aware emergency spell, health potion, mana potion, food, ammo, and supply status planning from vendored vocation packs. Health-potion fallback yields to live healer tiers and potion-healer rules. |
+| `healer` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `healerEnabled`, `healerRules`, `healerEmergencyHealthPercent` plus legacy `healerWords`, `healerHotkey`, `healerHealthPercent`, `healerMinMana`, `healerMinManaPercent`, `healerRuneName`, `healerRuneHotkey`, `healerRuneHealthPercent` | Ordered spell, healing-rune, mass-heal, and heal-friend tiers. Legacy auto-rune fields migrate into normal top-tier healer rules, so Ultimate Healing Rune is part of the same left-side priority stack instead of a separate fallback lane. Rules match HP bands and mana gates, then cast or use the configured self-heal. Hotbar-backed runes preserve self-targeting. The emergency threshold raises healing priority without reordering rules, and self emergency keeps friend-heal support behind self-heals. The lowest actionable tier covers down to `0%` HP. |
 | `potionHealer` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `potionHealerEnabled`, `potionHealerRules` | Ordered self-use healing potion rules inside the Healer modal. Rules match HP bands plus optional mana gates, prefer hotbar-first consumable resolution, preserve self-targeting for hotbar-backed potions, and run after spell self-heals but before support heals. Sustain still owns mana-potion behavior and health-potion fallback when no potion-healer rule matches. |
 | `conditionHealer` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`lib/minibia-snapshot.mjs`](../lib/minibia-snapshot.mjs) | `conditionHealerEnabled`, `conditionHealerRules` | Detectable condition reactions inside the Healer modal. Current live triggers are poison cure via `exana pox` and magic-shield renewal via `utamo vita` when the snapshot can detect the state and the current vocation supports the spell. Unsupported classics such as `utura` and `exana vita` stay explicitly unsupported until the runtime can truthfully drive them. |
 | `deathHeal` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/vocation-pack.mjs`](../lib/vocation-pack.mjs) | `deathHealEnabled`, `deathHealVocation`, `deathHealWords`, `deathHealHotkey`, `deathHealHealthPercent`, `deathHealCooldownMs` | Critical self-heal floor. Resolves spell by explicit words, configured vocation, active vocation, or route fallback, then prefers configured hotkey or matching hotbar spell before direct cast fallback. Also stays available to trainer mode. |
@@ -125,6 +133,12 @@ Route automation waypoint fields are preserved in route JSON when present:
 `npcName`, `keyword`, `shopKeyword`, `city`, `destination`, `residence`,
 `blessing`, `promotionName`, `taskTarget`, `taskKeyword`, `rewardKeyword`,
 `mode`, `progressionAction`, `steps`, and `advanceOnBlocked`.
+
+Route validation reports are generated by [`lib/route-validation.mjs`](../lib/route-validation.mjs).
+They flag empty enabled routes, unsupported control fields, broken `goto`
+targets, duplicate labels, floor jumps, missing NPC context, unknown catalog
+names, required tool waypoints, and helper gaps. The report is read-only; save
+compatibility remains separate from validation warnings.
 
 Supported tile-rule values:
 

@@ -1,5 +1,5 @@
 {
-  "name": "Venore Dragons West Tower",
+  "name": "Venore Dragons East",
   "port": 9224,
   "pageUrlPrefix": "https://minibia.com/play",
   "monster": "alpha dragon lord, alpha dragon, dragon lord, dragon",
@@ -77,7 +77,7 @@
   "combatRangeX": 2,
   "combatRangeY": 2,
   "floorTolerance": 1,
-  "autowalkEnabled": false,
+  "autowalkEnabled": true,
   "autowalkLoop": true,
   "routeStrictClear": false,
   "routeFollowExactWaypoints": true,
@@ -321,134 +321,326 @@
   "targetingEnabled": true,
   "waypoints": [
     {
-      "x": 32780,
-      "y": 32145,
-      "z": 7,
+      "x": 32822,
+      "y": 32144,
+      "z": 4,
       "type": "walk",
       "label": "Waypoint 001"
     },
     {
-      "x": 32779,
-      "y": 32143,
-      "z": 7,
-      "type": "stairs-up",
+      "x": 32821,
+      "y": 32144,
+      "z": 4,
+      "type": "stairs-down",
       "label": "Waypoint 002"
     },
     {
-      "x": 32779,
-      "y": 32147,
-      "z": 6,
-      "type": "stairs-up",
+      "x": 32820,
+      "y": 32144,
+      "z": 5,
+      "type": "walk",
       "label": "Waypoint 003"
     },
     {
-      "x": 32779,
-      "y": 32142,
+      "x": 32817,
+      "y": 32144,
       "z": 5,
       "type": "stairs-down",
       "label": "Waypoint 004"
     },
     {
-      "x": 32779,
-      "y": 32143,
+      "x": 32818,
+      "y": 32144,
       "z": 6,
-      "type": "stairs-down",
+      "type": "walk",
       "label": "Waypoint 005"
     },
     {
-      "x": 32779,
-      "y": 32147,
-      "z": 7,
-      "type": "stairs-down",
+      "x": 32823,
+      "y": 32145,
+      "z": 6,
+      "type": "walk",
       "label": "Waypoint 006"
     },
     {
-      "x": 32779,
-      "y": 32142,
-      "z": 8,
-      "type": "walk",
+      "x": 32825,
+      "y": 32143,
+      "z": 6,
+      "type": "stairs-down",
       "label": "Waypoint 007"
     },
     {
-      "x": 32785,
-      "y": 32138,
-      "z": 8,
+      "x": 32824,
+      "y": 32143,
+      "z": 7,
       "type": "walk",
       "label": "Waypoint 008"
     },
     {
-      "x": 32790,
-      "y": 32138,
-      "z": 8,
+      "x": 32819,
+      "y": 32144,
+      "z": 7,
       "type": "walk",
       "label": "Waypoint 009"
     },
     {
-      "x": 32789,
-      "y": 32133,
-      "z": 8,
+      "x": 32816,
+      "y": 32144,
+      "z": 7,
       "type": "stairs-down",
       "label": "Waypoint 010"
     },
     {
-      "x": 32789,
-      "y": 32133,
-      "z": 9,
-      "type": "stairs-up",
+      "x": 32815,
+      "y": 32144,
+      "z": 8,
+      "type": "walk",
       "label": "Waypoint 011"
     },
     {
-      "x": 32788,
-      "y": 32133,
+      "x": 32816,
+      "y": 32139,
       "z": 8,
       "type": "walk",
       "label": "Waypoint 012"
     },
     {
-      "x": 32783,
-      "y": 32137,
+      "x": 32821,
+      "y": 32143,
       "z": 8,
       "type": "walk",
       "label": "Waypoint 013"
     },
     {
-      "x": 32782,
-      "y": 32142,
+      "x": 32826,
+      "y": 32146,
       "z": 8,
       "type": "walk",
       "label": "Waypoint 014"
     },
     {
-      "x": 32779,
-      "y": 32147,
+      "x": 32831,
+      "y": 32144,
       "z": 8,
-      "type": "stairs-up",
+      "type": "walk",
       "label": "Waypoint 015"
     },
     {
-      "x": 32780,
+      "x": 32832,
+      "y": 32140,
+      "z": 8,
+      "type": "stairs-down",
+      "label": "Waypoint 016"
+    },
+    {
+      "x": 32833,
+      "y": 32140,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 017"
+    },
+    {
+      "x": 32838,
+      "y": 32135,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 018"
+    },
+    {
+      "x": 32833,
+      "y": 32139,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 019"
+    },
+    {
+      "x": 32832,
+      "y": 32140,
+      "z": 9,
+      "type": "stairs-up",
+      "label": "Waypoint 020"
+    },
+    {
+      "x": 32831,
+      "y": 32140,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 021"
+    },
+    {
+      "x": 32830,
+      "y": 32145,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 022"
+    },
+    {
+      "x": 32825,
       "y": 32147,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 023"
+    },
+    {
+      "x": 32819,
+      "y": 32148,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 024"
+    },
+    {
+      "x": 32814,
+      "y": 32150,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 025"
+    },
+    {
+      "x": 32812,
+      "y": 32155,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 026"
+    },
+    {
+      "x": 32811,
+      "y": 32160,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 027"
+    },
+    {
+      "x": 32811,
+      "y": 32161,
+      "z": 8,
+      "type": "stairs-down",
+      "label": "Waypoint 028"
+    },
+    {
+      "x": 32812,
+      "y": 32161,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 029"
+    },
+    {
+      "x": 32814,
+      "y": 32166,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 030"
+    },
+    {
+      "x": 32813,
+      "y": 32161,
+      "z": 9,
+      "type": "walk",
+      "label": "Waypoint 031"
+    },
+    {
+      "x": 32811,
+      "y": 32161,
+      "z": 9,
+      "type": "stairs-up",
+      "label": "Waypoint 032"
+    },
+    {
+      "x": 32810,
+      "y": 32161,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 033"
+    },
+    {
+      "x": 32810,
+      "y": 32156,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 034"
+    },
+    {
+      "x": 32811,
+      "y": 32151,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 035"
+    },
+    {
+      "x": 32812,
+      "y": 32146,
+      "z": 8,
+      "type": "walk",
+      "label": "Waypoint 036"
+    },
+    {
+      "x": 32816,
+      "y": 32144,
+      "z": 8,
+      "type": "stairs-up",
+      "label": "Waypoint 037"
+    },
+    {
+      "x": 32817,
+      "y": 32144,
       "z": 7,
       "type": "walk",
-      "label": "Waypoint 016"
-    }
-  ],
-  "tileRules": [
+      "label": "Waypoint 038"
+    },
     {
-      "id": "tile-rule-venore-dragons-west-tower-no-go-32778-32143-6",
-      "enabled": true,
-      "label": "No-go 32778,32143,6",
-      "shape": "tile",
-      "x": 32778,
+      "x": 32822,
+      "y": 32144,
+      "z": 7,
+      "type": "walk",
+      "label": "Waypoint 039"
+    },
+    {
+      "x": 32825,
+      "y": 32143,
+      "z": 7,
+      "type": "stairs-up",
+      "label": "Waypoint 040"
+    },
+    {
+      "x": 32826,
       "y": 32143,
       "z": 6,
-      "trigger": "approach",
-      "policy": "avoid",
-      "priority": 100,
-      "exactness": "exact",
-      "vicinityRadius": 0,
-      "waitMs": 0,
-      "cooldownMs": 0
+      "type": "walk",
+      "label": "Waypoint 041"
+    },
+    {
+      "x": 32821,
+      "y": 32145,
+      "z": 6,
+      "type": "walk",
+      "label": "Waypoint 042"
+    },
+    {
+      "x": 32817,
+      "y": 32144,
+      "z": 6,
+      "type": "stairs-up",
+      "label": "Waypoint 043"
+    },
+    {
+      "x": 32816,
+      "y": 32144,
+      "z": 5,
+      "type": "walk",
+      "label": "Waypoint 044"
+    },
+    {
+      "x": 32821,
+      "y": 32144,
+      "z": 5,
+      "type": "stairs-up",
+      "label": "Waypoint 045"
+    },
+    {
+      "x": 32822,
+      "y": 32144,
+      "z": 4,
+      "type": "walk",
+      "label": "Waypoint 046"
     }
   ]
 }

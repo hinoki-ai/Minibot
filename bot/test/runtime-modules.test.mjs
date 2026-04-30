@@ -68,7 +68,136 @@ test("tick records lightweight runtime timing samples", async () => {
   assert.ok(timing.tick.lastAt > 0);
 });
 
-test("tick uses the vocation sustain planner before falling back to the legacy healer", async () => {
+test("snapshot confidence blocks risky loot decisions with a normalized trace reason", async () => {
+  const bot = createBot({
+    lootingEnabled: true,
+  });
+  const snapshot = {
+    ready: true,
+    playerStats: { healthPercent: 100, manaPercent: 100 },
+    playerPosition: { x: 100, y: 100, z: 7 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    confidence: {
+      families: {
+        self: { status: "confident" },
+        creatures: { status: "confident" },
+        inventory: { status: "unknown", reason: "containers unavailable" },
+      },
+    },
+  };
+
+  bot.beginDecisionTrace(snapshot);
+  const attempt = await bot.attemptLoot(snapshot);
+  bot.finishDecisionTrace(snapshot);
+
+  assert.equal(attempt.action, null);
+  const trace = bot.getDecisionTrace();
+  assert.equal(trace.blocker.owner, "looting");
+  assert.equal(trace.blocker.reason, "snapshot inventory unknown");
+  assert.deepEqual(trace.blocker.requiredSnapshotFamilies, ["self", "creatures", "inventory"]);
+});
+
+test("route and targeter skip instead of guessing when required snapshot families are stale", () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    waypoints: [
+      { x: 100, y: 100, z: 7, type: "walk" },
+    ],
+  });
+  const snapshot = {
+    ready: true,
+    playerStats: { healthPercent: 100, manaPercent: 100 },
+    playerPosition: { x: 99, y: 100, z: 7 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    confidence: {
+      families: {
+        self: { status: "confident" },
+        route: { status: "confident" },
+        tiles: { status: "stale", reason: "tile cache old" },
+        creatures: { status: "unknown", reason: "creature list missing" },
+      },
+    },
+  };
+
+  bot.beginDecisionTrace(snapshot);
+
+  assert.equal(bot.chooseRouteAction(snapshot), null);
+  assert.equal(bot.chooseTarget(snapshot), null);
+
+  bot.finishDecisionTrace(snapshot);
+  const trace = bot.getDecisionTrace();
+  assert.equal(trace.records.some((record) => record.owner === "route" && record.reason === "snapshot tiles stale"), true);
+  assert.equal(trace.records.some((record) => record.owner === "targeter" && record.reason === "snapshot creatures unknown"), true);
+});
+
+test("friend healer rules require party confidence without suppressing self-heal planning", () => {
+  const bot = createBot({
+    healerEnabled: true,
+    healerRules: [
+      {
+        enabled: true,
+        words: "exura sio",
+        minHealthPercent: 0,
+        maxHealthPercent: 80,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+      {
+        enabled: true,
+        words: "exura",
+        minHealthPercent: 0,
+        maxHealthPercent: 80,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+  });
+  const snapshot = {
+    ready: true,
+    playerName: "Knight Alpha",
+    playerStats: {
+      health: 120,
+      maxHealth: 300,
+      healthPercent: 40,
+      mana: 80,
+      maxMana: 100,
+      manaPercent: 80,
+    },
+    visiblePlayers: [
+      { id: 8, name: "Scout Beta", healthPercent: 30 },
+    ],
+    hotbar: { slots: [] },
+    containers: [],
+    confidence: {
+      families: {
+        self: { status: "confident" },
+        inventory: { status: "confident" },
+        hotbar: { status: "confident" },
+        party: { status: "unknown", reason: "party roster unavailable" },
+      },
+    },
+  };
+
+  bot.beginDecisionTrace(snapshot);
+  const actions = bot.chooseHealActions(snapshot);
+  bot.finishDecisionTrace(snapshot);
+
+  assert.equal(actions.some((action) => action.type === "heal-friend"), false);
+  assert.equal(actions[0]?.type, "heal");
+  assert.equal(bot.getDecisionTrace().blocker.reason, "snapshot party unknown");
+});
+
+test("tick uses the healer tier stack before vocation sustain", async () => {
   const bot = createBot({
     vocation: "paladin",
   });
@@ -111,24 +240,28 @@ test("tick uses the vocation sustain planner before falling back to the legacy h
     hasLightCondition: true,
   });
 
+  const castActions = [];
   bot.useHotbarSlot = async (action) => {
     usedHotbarSlots.push(action);
     bot.markModuleAction(action.moduleKey, action.ruleIndex, Date.now());
     return { ok: true, label: action.label };
   };
-  bot.castWords = async () => {
-    throw new Error("legacy healer should not run when the sustain hotbar action succeeds");
+  bot.castWords = async (action) => {
+    castActions.push(action);
+    bot.markModuleAction(action.moduleKey, action.ruleIndex, Date.now());
+    return { ok: true, words: action.words };
   };
 
   const snapshot = await bot.tick();
 
   assert.equal(snapshot?.ready, true);
-  assert.equal(usedHotbarSlots.length, 1);
-  assert.equal(usedHotbarSlots[0].slotIndex, 0);
-  assert.equal(usedHotbarSlots[0].moduleKey, "sustain");
+  assert.equal(castActions.length, 1);
+  assert.equal(castActions[0]?.moduleKey, "healer");
+  assert.equal(castActions[0]?.words, "exura vita");
+  assert.equal(usedHotbarSlots.length, 0);
 });
 
-test("tick lets the configured healer rune threshold outrank sustain health potions", async () => {
+test("tick lets the migrated healer rune tier outrank sustain health potions", async () => {
   const bot = createBot({
     vocation: "druid",
     healerEnabled: true,
@@ -205,10 +338,11 @@ test("tick lets the configured healer rune threshold outrank sustain health poti
   assert.equal(usedItems.length, 1);
   assert.equal(usedItems[0]?.category, "rune");
   assert.equal(usedItems[0]?.name, "Ultimate Healing Rune");
-  assert.equal(usedItems[0]?.moduleKey, "healerRune");
+  assert.equal(usedItems[0]?.moduleKey, "healer");
+  assert.equal(usedItems[0]?.ruleIndex, 0);
 });
 
-test("tick automatically fires the configured healer rune hotkey before sustain or covered spell heals", async () => {
+test("tick fires the migrated healer rune hotkey before sustain or covered spell heals", async () => {
   const bot = createBot({
     vocation: "knight",
     healerEnabled: true,
@@ -258,7 +392,7 @@ test("tick automatically fires the configured healer rune hotkey before sustain 
     return { action: { type: "heal", moduleKey: "sustain" }, result: { ok: true } };
   };
   bot.castWords = async () => {
-    throw new Error("covered spell healer should not run before the configured auto rune");
+    throw new Error("covered spell healer should not run before the configured rune tier");
   };
   bot.useHotkey = async (action) => {
     pressedHotkeys.push(action);
@@ -271,7 +405,8 @@ test("tick automatically fires the configured healer rune hotkey before sustain 
   assert.equal(snapshot?.ready, true);
   assert.equal(sustainCalled, false);
   assert.equal(pressedHotkeys.length, 1);
-  assert.equal(pressedHotkeys[0]?.moduleKey, "healerRune");
+  assert.equal(pressedHotkeys[0]?.moduleKey, "healer");
+  assert.equal(pressedHotkeys[0]?.ruleIndex, 0);
   assert.equal(pressedHotkeys[0]?.hotkey, "F5");
   assert.equal(pressedHotkeys[0]?.target, "self");
 });

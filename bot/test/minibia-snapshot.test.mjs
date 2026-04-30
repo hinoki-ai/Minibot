@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   MINIBIA_SNAPSHOT_VERSION,
   collectSnapshotInventoryItems,
+  getSnapshotConfidenceGate,
   normalizeMinibiaSnapshot,
   summarizeSnapshotSupplies,
 } from "../lib/minibia-snapshot.mjs";
@@ -152,6 +153,49 @@ test("normalizeMinibiaSnapshot maps the current refresh payload into a stable ru
   assert.equal(normalized.dialogue.options.length, 2);
   assert.equal(normalized.dialogue.tradeState.open, true);
   assert.equal(normalized.dialogue.travelState.pendingConfirmation, true);
+  assert.equal(normalized.confidence.families.self.status, "confident");
+  assert.equal(normalized.confidence.families.creatures.status, "confident");
+  assert.equal(normalized.confidence.families.tiles.status, "confident");
+  assert.equal(normalized.confidence.families.inventory.status, "unknown");
+});
+
+test("normalizeMinibiaSnapshot exposes explicit unknown and stale snapshot family confidence", () => {
+  const normalized = normalizeMinibiaSnapshot({
+    ready: true,
+    playerStats: {
+      healthPercent: 100,
+    },
+    snapshotConfidence: {
+      self: "confident",
+      containers: {
+        status: "confident",
+        updatedAt: 1000,
+        staleMs: 250,
+        ageMs: 500,
+        reason: "container scan old",
+      },
+      creatures: {
+        status: "unknown",
+        reason: "creature pane missing",
+      },
+    },
+  });
+
+  assert.equal(normalized.confidence.families.self.status, "confident");
+  assert.equal(normalized.confidence.families.inventory.status, "stale");
+  assert.equal(normalized.confidence.families.inventory.reason, "container scan old");
+  assert.equal(normalized.confidence.families.creatures.status, "unknown");
+
+  assert.deepEqual(
+    getSnapshotConfidenceGate(normalized, ["self", "inventory"]),
+    {
+      ok: false,
+      family: "inventory",
+      status: "stale",
+      reason: "container scan old",
+      confidence: normalized.confidence.families.inventory,
+    },
+  );
 });
 
 test("normalizeMinibiaSnapshot preserves bootstrap connection lifecycle details", () => {

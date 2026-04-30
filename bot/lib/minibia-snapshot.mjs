@@ -6,6 +6,34 @@
 import { normalizeDialogueState } from "./modules/npc-dialogue.mjs";
 
 export const MINIBIA_SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_CONFIDENCE_STATUSES = Object.freeze(["unknown", "stale", "confident"]);
+export const SNAPSHOT_CONFIDENCE_FAMILIES = Object.freeze([
+  "self",
+  "creatures",
+  "tiles",
+  "inventory",
+  "hotbar",
+  "npc",
+  "messages",
+  "route",
+  "party",
+]);
+
+const SNAPSHOT_CONFIDENCE_ALIASES = Object.freeze({
+  player: "self",
+  players: "creatures",
+  monsters: "creatures",
+  npcs: "npc",
+  trade: "npc",
+  dialogue: "npc",
+  containers: "inventory",
+  items: "inventory",
+  equipment: "inventory",
+  movement: "route",
+  waypoints: "route",
+  follow: "party",
+  followTrain: "party",
+});
 
 const FOOD_KEYWORDS = Object.freeze([
   "ham",
@@ -25,6 +53,240 @@ const FOOD_KEYWORDS = Object.freeze([
 
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasOwn(value, key) {
+  return Boolean(value) && Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function normalizeSnapshotConfidenceFamily(value) {
+  const key = String(value || "").trim();
+  if (!key) {
+    return "";
+  }
+
+  return SNAPSHOT_CONFIDENCE_ALIASES[key] || SNAPSHOT_CONFIDENCE_ALIASES[key.toLowerCase()] || key;
+}
+
+function normalizeSnapshotConfidenceStatus(value, fallback = "unknown") {
+  const status = String(value || "").trim().toLowerCase();
+  return SNAPSHOT_CONFIDENCE_STATUSES.includes(status) ? status : fallback;
+}
+
+function hasAnySnapshotKey(snapshot = {}, keys = []) {
+  return keys.some((key) => hasOwn(snapshot, key));
+}
+
+function inferSnapshotFamilyConfidence(snapshot = {}, family = "") {
+  const inventory = isRecord(snapshot.inventory) ? snapshot.inventory : {};
+  const dialogue = isRecord(snapshot.dialogue) ? snapshot.dialogue : {};
+
+  switch (family) {
+    case "self":
+      return (
+        hasOwn(snapshot, "playerName")
+        || hasOwn(snapshot, "playerPosition")
+        || hasOwn(snapshot, "playerStats")
+        || hasOwn(snapshot, "player")
+      );
+    case "creatures":
+      return hasAnySnapshotKey(snapshot, [
+        "currentTarget",
+        "visibleCreatures",
+        "visibleMonsters",
+        "visiblePlayers",
+        "visibleNpcs",
+        "visibleMonsterNames",
+        "visibleCreatureNames",
+        "visiblePlayerNames",
+        "visibleNpcNames",
+        "monsterNames",
+        "candidates",
+      ]);
+    case "tiles":
+      return hasAnySnapshotKey(snapshot, [
+        "walkableTiles",
+        "reachableWalkableTiles",
+        "safeTiles",
+        "reachableTiles",
+        "hazardTiles",
+        "elementalFields",
+        "waypointAutoAvoidHazards",
+        "waypointElementalFields",
+      ]);
+    case "inventory":
+      return (
+        hasAnySnapshotKey(snapshot, ["inventory", "equipment", "containers", "currency", "ammo"])
+        || hasAnySnapshotKey(inventory, ["equipment", "containers", "currency", "ammo"])
+      );
+    case "hotbar":
+      return hasOwn(snapshot, "hotbar") || hasOwn(inventory, "hotbar");
+    case "npc":
+      return (
+        hasAnySnapshotKey(snapshot, ["dialogue", "trade", "bank", "task", "visibleNpcs", "visibleNpcNames"])
+        || dialogue.open === true
+      );
+    case "messages":
+      return (
+        hasAnySnapshotKey(snapshot, ["serverMessages", "recentMessages", "messages"])
+        || hasOwn(dialogue, "recentMessages")
+      );
+    case "route":
+      return (
+        hasAnySnapshotKey(snapshot, ["waypoints", "routeIndex", "routeState", "routeTelemetry"])
+        || Array.isArray(snapshot?.options?.waypoints)
+      );
+    case "party":
+      return hasAnySnapshotKey(snapshot, [
+        "party",
+        "partyMembers",
+        "partyState",
+        "followTrainStatus",
+        "followTrainState",
+        "currentFollowTarget",
+        "followTarget",
+      ]);
+    default:
+      return false;
+  }
+}
+
+function getExplicitSnapshotConfidenceSource(snapshot = {}) {
+  if (isRecord(snapshot?.confidence?.families)) {
+    return snapshot.confidence.families;
+  }
+  if (isRecord(snapshot?.snapshotConfidence?.families)) {
+    return snapshot.snapshotConfidence.families;
+  }
+  if (isRecord(snapshot?.snapshotConfidence)) {
+    return snapshot.snapshotConfidence;
+  }
+  if (isRecord(snapshot?.confidence) && !hasOwn(snapshot.confidence, "status")) {
+    return snapshot.confidence;
+  }
+  return {};
+}
+
+function normalizeSnapshotConfidenceEntry(entry = null, {
+  family = "",
+  inferred = false,
+  now = Date.now(),
+} = {}) {
+  const fallbackStatus = inferred ? "confident" : "unknown";
+  const source = isRecord(entry) ? entry : {};
+  const explicitStatus = typeof entry === "string"
+    ? entry
+    : source.status ?? (typeof source.confident === "boolean" ? (source.confident ? "confident" : "unknown") : null);
+  let status = normalizeSnapshotConfidenceStatus(explicitStatus, fallbackStatus);
+  const updatedAt = normalizeInteger(source.updatedAt ?? source.at ?? source.lastSeenAt);
+  const explicitAgeMs = normalizeInteger(source.ageMs);
+  const ageMs = explicitAgeMs ?? (
+    updatedAt != null && Number.isFinite(Number(now))
+      ? Math.max(0, Math.trunc(Number(now) - updatedAt))
+      : null
+  );
+  const staleMs = normalizeInteger(source.staleMs ?? source.maxAgeMs ?? source.ttlMs);
+
+  if (status === "confident" && staleMs != null && ageMs != null && ageMs > staleMs) {
+    status = "stale";
+  }
+
+  return {
+    family,
+    status,
+    reason: normalizeText(source.reason) || (inferred ? "inferred" : status),
+    updatedAt,
+    ageMs,
+    staleMs,
+    source: inferred ? "inferred" : "explicit",
+  };
+}
+
+export function normalizeSnapshotConfidence(rawSnapshot = {}, {
+  now = Date.now(),
+} = {}) {
+  const snapshot = isRecord(rawSnapshot) ? rawSnapshot : {};
+  const explicit = getExplicitSnapshotConfidenceSource(snapshot);
+  const families = {};
+
+  for (const family of SNAPSHOT_CONFIDENCE_FAMILIES) {
+    const explicitKey = Object.keys(explicit).find((key) => normalizeSnapshotConfidenceFamily(key) === family);
+    const explicitEntry = explicitKey ? explicit[explicitKey] : null;
+    const inferred = !explicitKey && inferSnapshotFamilyConfidence(snapshot, family);
+
+    families[family] = normalizeSnapshotConfidenceEntry(
+      explicitKey ? explicitEntry : null,
+      {
+        family,
+        inferred,
+        now,
+      },
+    );
+  }
+
+  return {
+    schemaVersion: 1,
+    generatedAt: normalizeInteger(snapshot?.confidence?.generatedAt ?? snapshot?.snapshotAt ?? now) ?? now,
+    families,
+  };
+}
+
+export function getSnapshotFamilyConfidence(snapshotOrConfidence = {}, family = "", {
+  defaultStatus = "unknown",
+} = {}) {
+  const normalizedFamily = normalizeSnapshotConfidenceFamily(family);
+  const source = isRecord(snapshotOrConfidence?.families)
+    ? snapshotOrConfidence
+    : isRecord(snapshotOrConfidence?.confidence?.families)
+      ? snapshotOrConfidence.confidence
+      : null;
+  const entry = source?.families?.[normalizedFamily];
+
+  if (entry && typeof entry === "object") {
+    return {
+      family: normalizedFamily,
+      ...entry,
+      status: normalizeSnapshotConfidenceStatus(entry.status, defaultStatus),
+    };
+  }
+
+  return {
+    family: normalizedFamily,
+    status: normalizeSnapshotConfidenceStatus(defaultStatus, "unknown"),
+    reason: "not reported",
+    updatedAt: null,
+    ageMs: null,
+    staleMs: null,
+    source: "default",
+  };
+}
+
+export function getSnapshotFamilyStatus(snapshotOrConfidence = {}, family = "", options = {}) {
+  return getSnapshotFamilyConfidence(snapshotOrConfidence, family, options).status;
+}
+
+export function getSnapshotConfidenceGate(snapshotOrConfidence = {}, families = [], options = {}) {
+  const requiredFamilies = Array.isArray(families) ? families : [families];
+  for (const family of requiredFamilies) {
+    const entry = getSnapshotFamilyConfidence(snapshotOrConfidence, family, options);
+    if (entry.status !== "confident") {
+      return {
+        ok: false,
+        family: entry.family,
+        status: entry.status,
+        reason: entry.reason || entry.status,
+        confidence: entry,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    family: null,
+    status: "confident",
+    reason: "",
+    confidence: null,
+  };
 }
 
 function normalizeText(value) {
@@ -966,6 +1228,7 @@ export function normalizeMinibiaSnapshot(rawSnapshot = {}) {
   const trade = normalizeTradeState(snapshot);
   const bank = normalizeBankState(snapshot, dialogue);
   const task = normalizeTaskState(snapshot);
+  const confidence = normalizeSnapshotConfidence(snapshot);
   const supplies = summarizeSnapshotSupplies({
     schemaVersion: MINIBIA_SNAPSHOT_VERSION,
     inventory: {
@@ -979,6 +1242,7 @@ export function normalizeMinibiaSnapshot(rawSnapshot = {}) {
     schemaVersion: MINIBIA_SNAPSHOT_VERSION,
     ready: snapshot.ready === true,
     reason: normalizeText(snapshot.reason),
+    confidence,
     player: {
       name: normalizeText(snapshot.playerName ?? snapshot.player?.name),
       position: normalizePosition(snapshot.playerPosition ?? snapshot.player?.position),

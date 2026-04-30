@@ -13,6 +13,21 @@ When documents disagree, follow the precedence in [`AGENTS.md`](./AGENTS.md).
 Roadmap or backlog notes must never silently redefine the live parser, desktop
 UI, action surface, module rule shape, or persistence schema.
 
+## Repository Boundary
+
+- The bundle root is a portable wrapper. It owns only the root README, launchers,
+  desktop entry, client metadata/assets, bundle manifest, and the `bot/` source
+  package.
+- The `bot/` directory is the canonical source package. Application JavaScript,
+  tests, docs, vendored Minibia data, route examples, packaging configuration,
+  and maintenance scripts live there.
+- Generated or machine-local state must stay out of tracked source paths unless
+  it is an intentional portable seed under `bot/storage/home`. Runtime browser
+  state, Electron user data, account secrets, active claims, route-spacing
+  leases, logs, build output, and dependency installs are ignored.
+- `npm run check:structure` is the executable guard for this boundary and should
+  pass before structural changes are considered complete.
+
 ## Product Invariants
 
 - The Electron desktop app is the canonical interface.

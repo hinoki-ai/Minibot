@@ -470,6 +470,10 @@ button {
   padding: 0 6px;
   font-size: 9px;
   line-height: 1.08;
+  white-space: normal;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .desk-actions .desk-action-primary,
@@ -1259,6 +1263,7 @@ button {
 .compact-card-toggle strong {
   font-size: 9px;
   line-height: 1.12;
+  overflow-wrap: anywhere;
   white-space: normal;
 }
 
@@ -2318,12 +2323,15 @@ select[data-feedback="error"] {
 
 .quick-module-open strong {
   max-width: 100%;
+  display: -webkit-box;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.05;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .route-toggle-open strong {
@@ -2389,13 +2397,13 @@ select[data-feedback="error"] {
   line-height: 1.05;
 }
 
+.route-toggle-button strong {
+  font-size: 10px;
+}
+
 .route-toggle-button:not(.route-reset-button) span,
 .route-toggle-button:not(.route-reset-button) strong {
   display: none;
-}
-
-.route-toggle-button strong {
-  font-size: 10px;
 }
 
 .route-reset-button {
@@ -2615,9 +2623,13 @@ select[data-feedback="error"] {
   line-height: 1.35;
 }
 
+.route-overview-metric,
 .route-overview-metric-button {
   min-height: 0;
   padding: 5px 6px;
+}
+
+.route-overview-metric-button {
   appearance: none;
   font: inherit;
   color: inherit;
@@ -6399,6 +6411,16 @@ select[data-feedback="error"] {
   gap: 4px;
 }
 
+.module-rule-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.module-rule-inline-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .module-rule-actions .btn.danger {
   margin-left: 0;
 }
@@ -9274,6 +9296,34 @@ input[type="checkbox"]:disabled {
     inset 0 0 0 1px rgba(247, 213, 138, 0.03);
 }
 
+.route-validation-summary {
+  min-height: 26px;
+  padding: 5px 7px;
+  border: 1px solid rgba(169, 141, 99, 0.24);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.route-validation-summary[data-tone="clear"] {
+  border-color: rgba(137, 167, 77, 0.28);
+  color: #d8efb7;
+}
+
+.route-validation-summary[data-tone="warning"] {
+  border-color: rgba(231, 183, 92, 0.42);
+  color: #f1cf8f;
+}
+
+.route-validation-summary[data-tone="error"] {
+  border-color: rgba(224, 105, 86, 0.48);
+  color: #f0a293;
+}
+
 .waypoint-list-grid .waypoint-row {
   min-width: 0;
   min-height: 0;
@@ -9299,6 +9349,16 @@ input[type="checkbox"]:disabled {
 
 .waypoint-list-grid .waypoint-row.selected {
   outline-offset: -3px;
+}
+
+.waypoint-row.validation-warning {
+  border-color: rgba(231, 183, 92, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(231, 183, 92, 0.22);
+}
+
+.waypoint-row.validation-error {
+  border-color: rgba(224, 105, 86, 0.54);
+  box-shadow: inset 0 0 0 1px rgba(224, 105, 86, 0.28);
 }
 
 .waypoint-row-main {
@@ -14691,6 +14751,10 @@ select[data-feedback="success"] {
   color: rgba(239, 228, 207, 0.86);
 }
 
+.modal-panel-module.module-modal-headless {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
 .modal-panel input[type="checkbox"]:checked {
   border-color: rgba(139, 190, 172, 0.72);
   background:
@@ -14826,4 +14890,44 @@ select[data-feedback="success"] {
     min-height: 32px;
     padding: 4px 5px;
   }
+}
+
+/* Unified checkbox switches. Button tiles are intentionally not touched here. */
+:root {
+  --live-switch-track: #35291d;
+  --live-switch-track-on: #456f30;
+  --live-switch-border: rgba(206, 180, 116, 0.56);
+  --live-switch-border-on: rgba(167, 214, 120, 0.82);
+}
+
+input[type="checkbox"] {
+  width: 38px;
+  min-width: 38px;
+  height: 22px;
+  min-height: 22px;
+  padding: 2px;
+  border-color: rgba(206, 180, 116, 0.56);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%),
+    linear-gradient(180deg, #35291d, #17110c);
+}
+
+input[type="checkbox"]::before {
+  width: 16px;
+  height: 16px;
+  background:
+    radial-gradient(circle at 32% 28%, #fff, #f4e7cc 58%, #c9aa70);
+}
+
+input[type="checkbox"]:checked {
+  border-color: rgba(167, 214, 120, 0.82);
+  background:
+    linear-gradient(180deg, rgba(231, 255, 199, 0.26), transparent 48%),
+    linear-gradient(180deg, #456f30, #223715);
+}
+
+input[type="checkbox"]:checked::before {
+  background:
+    radial-gradient(circle at 32% 28%, #fff, #f2ffd9 58%, #b9dd7a);
+  transform: translateX(16px);
 }

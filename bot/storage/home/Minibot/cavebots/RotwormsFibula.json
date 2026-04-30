@@ -711,13 +711,13 @@
   "deathHealHealthPercent": 20,
   "deathHealCooldownMs": 900,
   "healerEnabled": true,
-  "healerWords": "exura",
-  "healerHealthPercent": 80,
+  "healerWords": "Ultimate Healing Rune",
+  "healerHealthPercent": 50,
   "healerEmergencyHealthPercent": 30,
-  "healerRuneName": "Ultimate Healing Rune",
+  "healerRuneName": "",
   "healerRuneHotkey": "",
-  "healerRuneHealthPercent": 50,
-  "healerMinMana": 80,
+  "healerRuneHealthPercent": 0,
+  "healerMinMana": 0,
   "healerMinManaPercent": 0,
   "potionHealerEnabled": false,
   "potionHealerRules": [],
@@ -808,6 +808,17 @@
     {
       "enabled": true,
       "label": "",
+      "words": "Ultimate Healing Rune",
+      "hotkey": "",
+      "minHealthPercent": 0,
+      "maxHealthPercent": 50,
+      "minMana": 0,
+      "minManaPercent": 0,
+      "cooldownMs": 900
+    },
+    {
+      "enabled": true,
+      "label": "",
       "words": "exura",
       "hotkey": "",
       "minHealthPercent": 70,
@@ -818,6 +829,12 @@
     }
   ],
   "healerTiers": [
+    {
+      "words": "Ultimate Healing Rune",
+      "healthPercent": 50,
+      "minMana": 0,
+      "minManaPercent": 0
+    },
     {
       "words": "exura",
       "healthPercent": 80,

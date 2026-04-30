@@ -15,6 +15,9 @@ import {
   serializeTileRule,
 } from "./bot-core.mjs";
 import { resolveRuntimeLayout } from "./runtime-layout.mjs";
+import { validateRouteConfig } from "./route-validation.mjs";
+
+export { validateRouteConfig };
 
 const RUNTIME_LAYOUT = resolveRuntimeLayout({
   baseDir: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -378,16 +381,23 @@ export async function loadRouteProfile(name = DEFAULTS.cavebotName) {
 
   const description = describeRouteProfile(name);
   const raw = await fs.readFile(description.path, "utf8");
-  const normalizedProfile = parseRouteProfileRaw(raw, description.name);
+  const rawPayload = JSON.parse(String(raw || "").trim() || "{}");
+  const normalizedProfile = normalizeRouteProfilePayload(rawPayload, description.name);
   const legacyCharacterSettings = normalizedProfile.legacyCharacterSettings
     && Object.keys(normalizedProfile.legacyCharacterSettings).length
       ? normalizedProfile.legacyCharacterSettings
       : null;
+  const validation = validateRouteConfig(normalizedProfile.options, {
+    sourceName: normalizedProfile.routeName,
+    sourcePath: description.path,
+    rawConfig: rawPayload,
+  });
 
   return {
     ...describeRouteProfile(normalizedProfile.routeName),
     exists: true,
     options: normalizedProfile.options,
+    validation,
     ...(legacyCharacterSettings ? { legacyCharacterSettings } : {}),
   };
 }
@@ -407,8 +417,14 @@ export async function listRouteProfiles() {
 
     try {
       const raw = await fs.readFile(filePath, "utf8");
-      const normalizedProfile = parseRouteProfileRaw(raw, routeNameFromFileName(entry.name));
+      const rawPayload = JSON.parse(String(raw || "").trim() || "{}");
+      const normalizedProfile = normalizeRouteProfilePayload(rawPayload, routeNameFromFileName(entry.name));
       const stats = await fs.stat(filePath);
+      const validation = validateRouteConfig(normalizedProfile.options, {
+        sourceName: normalizedProfile.routeName,
+        sourcePath: filePath,
+        rawConfig: rawPayload,
+      });
 
       profiles.push({
         name: normalizedProfile.routeName,
@@ -417,6 +433,7 @@ export async function listRouteProfiles() {
         exists: true,
         waypointCount: normalizedProfile.options.waypoints.length,
         tileRuleCount: normalizedProfile.options.tileRules.length,
+        validation,
         updatedAt: stats.mtimeMs,
       });
     } catch {
@@ -997,6 +1014,10 @@ export async function saveRouteProfile(config, { previousName = null } = {}) {
       ? "updated"
       : "created";
   const serializedPayload = serializeJsonFile(buildRouteProfilePayload(normalized));
+  const validation = validateRouteConfig(normalized, {
+    sourceName: normalized.cavebotName,
+    sourcePath: nextProfile.path,
+  });
 
   await fs.mkdir(PROFILE_DIR, { recursive: true });
   const changed = await writeTextFileIfChanged(nextProfile.path, serializedPayload);
@@ -1014,6 +1035,7 @@ export async function saveRouteProfile(config, { previousName = null } = {}) {
       previousPath: previousProfile && previousProfile.path !== nextProfile.path
         ? previousProfile.path
         : null,
+      validation,
     },
   };
 }

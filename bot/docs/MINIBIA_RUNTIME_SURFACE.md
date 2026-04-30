@@ -13,6 +13,7 @@ The current normalized snapshot is nested. The stable top-level shape is:
   "schemaVersion": 1,
   "ready": true,
   "reason": "",
+  "confidence": {},
   "player": {},
   "connection": {},
   "movement": {},
@@ -147,6 +148,26 @@ The current normalized snapshot is nested. The stable top-level shape is:
 ### `sourceHints`
 
 - normalized text hints extracted from noisy raw inputs to help diagnose what source fields were seen during normalization
+
+### `confidence`
+
+`confidence.families` reports `unknown`, `stale`, or `confident` for snapshot
+families that can make automation unsafe when guessed:
+
+- `self`
+- `creatures`
+- `tiles`
+- `inventory`
+- `hotbar`
+- `npc`
+- `messages`
+- `route`
+- `party`
+
+Each family entry includes `status`, `reason`, optional `updatedAt`, optional
+`ageMs`, optional `staleMs`, and a `source` of `explicit`, `inferred`, or
+`default`. Runtime code should gate risky actions on these family statuses and
+emit a normalized skip reason instead of acting on unknown state.
 
 ## Key Nested Records
 

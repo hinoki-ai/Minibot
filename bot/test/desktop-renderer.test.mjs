@@ -1745,7 +1745,16 @@ test("route overview file shortcuts open the saved-route picker", async () => {
 
   const routeLibraryQuickSelect = document.getElementById("route-library-quick-select");
 
-  document.getElementById("route-overview-open-library").click();
+  const routeLibraryMetric = document.getElementById("route-overview-library-cell");
+  assert.equal(routeLibraryMetric.tagName, "DIV");
+  assert.equal(routeLibraryMetric.hasAttribute("data-open-route-library"), false);
+  routeLibraryMetric.click();
+  await flush();
+  assert.equal(document.getElementById("modal-route-library-picker").classList.contains("open"), false);
+  assert.notEqual(document.activeElement, routeLibraryQuickSelect);
+  assert.equal(routeLibraryQuickSelect.dataset.showPickerCalls, undefined);
+
+  document.getElementById("route-overview-open-files").click();
   await flush();
   assert.equal(document.getElementById("modal-route-library-picker").classList.contains("open"), true);
   assert.equal(document.getElementById("modal-autowalk").classList.contains("open"), false);
@@ -1754,7 +1763,7 @@ test("route overview file shortcuts open the saved-route picker", async () => {
 
   document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await flush();
-  document.getElementById("route-overview-open-files").click();
+  document.getElementById("desk-route-files").click();
   await flush();
   assert.equal(document.activeElement, routeLibraryQuickSelect);
   assert.equal(routeLibraryQuickSelect.dataset.showPickerCalls, "2");
@@ -1764,7 +1773,7 @@ test("saved-route picker loads the selected cavebot through the existing route b
   const desk = await createDesk();
   const { document, window, calls, currentState } = desk;
 
-  document.getElementById("route-overview-open-library").click();
+  document.getElementById("route-overview-open-files").click();
   await flush();
 
   const quickSelect = document.getElementById("route-library-quick-select");
@@ -2044,11 +2053,13 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "off");
+  assert.equal(document.getElementById("compact-toggle-anti-idle").closest(".compact-split-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-alarms").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "On");
   assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "on");
   assert.equal(document.querySelector("#compact-toggle-alarms strong")?.textContent?.trim(), "On");
   assert.equal(document.getElementById("quick-toggle-party-follow").closest(".quick-module-card")?.dataset.state, "off");
+  assert.equal(document.getElementById("compact-toggle-party-follow").closest(".compact-split-card")?.dataset.state, "off");
   assert.match(document.getElementById("route-toggle-open-record").title, /record/i);
 
   document.getElementById("refresh").click();
@@ -2165,11 +2176,13 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "on");
+  assert.equal(document.getElementById("compact-toggle-anti-idle").closest(".compact-split-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-alarms").closest(".quick-module-card")?.dataset.state, "off");
   assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "Off");
   assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "off");
   assert.equal(document.querySelector("#compact-toggle-alarms strong")?.textContent?.trim(), "Off");
   assert.equal(document.getElementById("quick-toggle-party-follow").closest(".quick-module-card")?.dataset.state, "on");
+  assert.equal(document.getElementById("compact-toggle-party-follow").closest(".compact-split-card")?.dataset.state, "on");
 
   const sessionWaypointsBeforeToggle = currentState().options.showWaypointOverlay;
   const sessionOverlayCallCount = calls.setSessionWaypointOverlays.length;
@@ -2231,17 +2244,14 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   document.querySelector('[data-module-key="healer"][data-rule-index="1"][data-rule-field="hotkey"]').value = "F6";
   document.querySelector('[data-module-key="healer"][data-rule-index="1"][data-rule-field="maxHealthPercent"]').value = "50";
   document.querySelector('[data-module-key="healer"][data-module-option-field="healerEmergencyHealthPercent"]').value = "35";
-  document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneName"]').value = "Ultimate Healing Rune";
-  document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHotkey"]').value = "F5";
-  document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHealthPercent"]').value = "32";
   document.querySelector('[data-save-modules]').click();
   await flush();
   assert.equal(calls.updateOptions.at(-1).healerRules[1].words, "Ultimate Healing Rune");
   assert.equal(calls.updateOptions.at(-1).healerRules[1].hotkey, "F6");
   assert.equal(calls.updateOptions.at(-1).healerEmergencyHealthPercent, 35);
-  assert.equal(calls.updateOptions.at(-1).healerRuneName, "Ultimate Healing Rune");
-  assert.equal(calls.updateOptions.at(-1).healerRuneHotkey, "F5");
-  assert.equal(calls.updateOptions.at(-1).healerRuneHealthPercent, 32);
+  assert.equal(calls.updateOptions.at(-1).healerRuneName, "");
+  assert.equal(calls.updateOptions.at(-1).healerRuneHotkey, "");
+  assert.equal(calls.updateOptions.at(-1).healerRuneHealthPercent, 0);
   assert.deepEqual(currentState().options.healerRules, [
     {
       enabled: true,
@@ -2278,9 +2288,9 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     },
   ]);
   assert.equal(currentState().options.healerEmergencyHealthPercent, 35);
-  assert.equal(currentState().options.healerRuneName, "Ultimate Healing Rune");
-  assert.equal(currentState().options.healerRuneHotkey, "F5");
-  assert.equal(currentState().options.healerRuneHealthPercent, 32);
+  assert.equal(currentState().options.healerRuneName, "");
+  assert.equal(currentState().options.healerRuneHotkey, "");
+  assert.equal(currentState().options.healerRuneHealthPercent, 0);
   assert.deepEqual(currentState().options.healerTiers, [
     {
       words: "exura vita",
@@ -2603,6 +2613,7 @@ test("master stop reflects running live sessions across the full desk, not only 
   const { document } = desk;
 
   assert.equal(getCompactText(document.getElementById("quick-toggle-cavebot-pause")), "StatusRunning");
+  assert.equal(document.getElementById("compact-cavebot-master-stop").textContent.trim(), "Stop 1");
   assert.match(document.getElementById("quick-open-cavebot-pause")?.title || "", /stop 1 live character/i);
 });
 
@@ -2701,6 +2712,102 @@ test("recent activity console refreshes the active summary even when feed rows m
   assert.match(document.getElementById("event-feed-meta").textContent, /1 shown/i);
 });
 
+test("decision trace is visible in desktop, compact, and logs surfaces", async () => {
+  const decisionTrace = {
+    updatedAt: Date.parse("2026-04-28T12:00:00Z"),
+    current: {
+      owner: "looting",
+      state: "acted",
+      acted: true,
+      reason: "move-item",
+      action: {
+        type: "loot",
+        label: "Gold Coin",
+        moduleKey: "looting",
+        ruleIndex: null,
+      },
+      requiredSnapshotFamilies: ["self", "creatures", "inventory"],
+      result: { ok: true, reason: "" },
+    },
+    blocker: {
+      owner: "route",
+      state: "blocked",
+      acted: false,
+      reason: "snapshot tiles stale",
+      action: null,
+      requiredSnapshotFamilies: ["self", "route", "tiles"],
+      result: null,
+    },
+    records: [],
+  };
+  decisionTrace.records = [decisionTrace.current, decisionTrace.blocker];
+  const desk = await createDesk({
+    initialState: createState({
+      snapshot: { decisionTrace },
+    }),
+  });
+  const { document } = desk;
+
+  assert.match(document.getElementById("event-feed-summary").textContent, /Decision\s+Looting/i);
+  assert.match(document.getElementById("event-feed-summary").textContent, /Blocker\s+Route/i);
+  assert.equal(document.getElementById("compact-decision-summary").textContent.trim(), "Looting");
+
+  document.getElementById("open-logs").click();
+  await flush();
+
+  assert.match(document.getElementById("decision-trace-output").textContent, /Current\s+Looting/i);
+  assert.match(document.getElementById("decision-trace-output").textContent, /Blocker\s+Route/i);
+  assert.match(document.getElementById("decision-trace-output").textContent, /snapshot tiles stale/i);
+});
+
+test("route validation report is visible and highlights broken waypoints", async () => {
+  const routeValidation = {
+    schemaVersion: 1,
+    sourceName: "dararotworms",
+    signature: "validation-test",
+    ok: false,
+    requiresAcknowledgement: true,
+    summary: {
+      ok: false,
+      errorCount: 1,
+      warningCount: 1,
+      infoCount: 0,
+      highestSeverity: "error",
+      firstProblemWaypointIndex: 1,
+    },
+    issues: [
+      {
+        severity: "error",
+        code: "broken-goto",
+        message: "waypoint 2 has a goto action without a valid target waypoint.",
+        waypointIndex: 1,
+        field: "targetIndex",
+        requiresAcknowledgement: true,
+      },
+      {
+        severity: "warning",
+        code: "duplicate-position",
+        message: "waypoint 3 repeats the previous waypoint position.",
+        waypointIndex: 2,
+        field: "position",
+        requiresAcknowledgement: false,
+      },
+    ],
+  };
+  const desk = await createDesk({
+    initialState: createState({ routeValidation }),
+  });
+  const { document } = desk;
+
+  const summary = document.getElementById("route-validation-summary");
+  assert.equal(summary.hidden, false);
+  assert.equal(summary.dataset.tone, "error");
+  assert.match(summary.textContent, /Validation blocked at waypoint 2/i);
+  assert.match(document.getElementById("route-overview-note").textContent, /Validation blocked/i);
+  assert.equal(document.querySelector('.waypoint-row[data-index="1"]')?.classList.contains("validation-error"), true);
+  assert.equal(document.querySelector('.waypoint-row[data-index="2"]')?.classList.contains("validation-warning"), true);
+});
+
 test("main window controls expose brief informative tooltips", async () => {
   const desk = await createDesk();
   const { document } = desk;
@@ -2750,7 +2857,7 @@ test("main window hover tooltips wait briefly before showing and hide on leave",
   assert.equal(target.title, initialTitle);
 });
 
-test("healer modal shows downward-safe live HP coverage for risky band gaps", async () => {
+test("healer modal renders tier cards without repeated headers or summaries", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
@@ -2785,20 +2892,25 @@ test("healer modal shows downward-safe live HP coverage for risky band gaps", as
   await flush();
 
   assert.match(document.getElementById("module-note").textContent, /covers 0% hp/i);
+  assert.equal(document.querySelector("#modal-module > .modal-head").hidden, true);
+  assert.equal(document.getElementById("modal-module").classList.contains("module-modal-headless"), true);
+  assert.equal(document.getElementById("add-module-rule").hidden, true);
+  assert.equal(document.querySelector("#module-rule-list > .module-rule-inline-toolbar [data-add-module-rule='healer']")?.textContent.trim(), "Add Tier");
 
-  const firstSummary = document.querySelector('[data-module-key="healer"][data-rule-index="0"] .module-rule-summary');
-  const secondSummary = document.querySelector('[data-module-key="healer"][data-rule-index="1"] .module-rule-summary');
-  const firstText = firstSummary.textContent.replace(/\s+/g, " ");
-  const secondText = secondSummary.textContent.replace(/\s+/g, " ");
+  const cards = [...document.querySelectorAll('[data-module-key="healer"].module-rule-card')];
+  assert.equal(cards.length, 2);
+  assert.equal(document.querySelector(".healer-priority-head"), null);
 
-  assert.match(firstText, /Configured band/i);
-  assert.match(firstText, /10%-30%/);
-  assert.match(firstText, /Live coverage/i);
-  assert.match(firstText, /0%-30%/);
-  assert.match(secondText, /Configured band/i);
-  assert.match(secondText, /40%-60%/);
-  assert.match(secondText, /Live coverage/i);
-  assert.match(secondText, /31%-60%/);
+  for (const card of cards) {
+    assert.equal(card.querySelector(".module-rule-head"), null);
+    assert.equal(card.querySelector(".module-rule-name"), null);
+    assert.equal(card.querySelector(".module-rule-summary"), null);
+    assert.equal(card.querySelector(".module-rule-section-title"), null);
+    assert.ok(card.querySelector(".module-rule-footer [data-delete-module-rule='healer']"));
+    assert.ok(card.querySelector('[data-module-key="healer"][data-rule-field="words"]'));
+    assert.ok(card.querySelector('[data-module-key="healer"][data-rule-field="minHealthPercent"]'));
+    assert.ok(card.querySelector('[data-module-key="healer"][data-rule-field="maxHealthPercent"]'));
+  }
 });
 
 test("route stack rows double click opens the editor and right click resumes from that waypoint", async () => {
@@ -3173,11 +3285,15 @@ test("compact view mirrors looting and banking summaries from the full desk", as
     document.getElementById("summary-looting").textContent,
   );
   assert.equal(document.getElementById("compact-looting-summary").textContent.trim(), "2 keep");
+  assert.equal(document.getElementById("compact-toggle-looting").closest(".compact-split-card")?.dataset.state, "on");
+  assert.equal(document.querySelector("#compact-toggle-looting strong")?.textContent?.trim(), "On");
   assert.equal(
     document.getElementById("compact-banking-summary").textContent,
     document.getElementById("summary-banking").textContent,
   );
   assert.equal(document.getElementById("compact-banking-summary").textContent.trim(), "1 rule");
+  assert.equal(document.getElementById("compact-toggle-banking").closest(".compact-split-card")?.dataset.state, "on");
+  assert.equal(document.querySelector("#compact-toggle-banking strong")?.textContent?.trim(), "On");
 });
 
 test("distance and ammo summaries disclose hidden owners instead of only raw toggles", async () => {
@@ -3354,6 +3470,39 @@ test("modal shell keeps polished spacing without compact-view runtime overrides"
   assert.equal(modalHeadStyle.gap, "8px");
   assert.equal(modalBodyStyle.gap, "6px");
   assert.equal(modalActionsStyle.gap, "8px");
+});
+
+test("toggles keep the original checkbox-based switch contract", async () => {
+  assert.doesNotMatch(stylesSource, /Final frontend audit polish/);
+  assert.match(stylesSource, /input\[type="checkbox"\]\s*\{/);
+  assert.match(stylesSource, /input\[type="checkbox"\]::before/);
+  assert.doesNotMatch(stylesSource, /\.toggle-native\s*\{/);
+  assert.doesNotMatch(stylesSource, /\.toggle-switch/);
+  assert.doesNotMatch(stylesSource, /\.btn\.quick-module-toggle::before/);
+
+  const desk = await createDesk();
+  const { document, window } = desk;
+  attachStyles(document);
+  const routeToggle = document.getElementById("quick-toggle-autowalk");
+  const moduleToggle = document.getElementById("quick-toggle-healer");
+  const compactToggle = document.getElementById("compact-toggle-healer");
+  const modalToggle = document.getElementById("targeting-distance-enabled");
+
+  assert.equal(modalToggle.classList.contains("toggle-native"), false);
+  assert.equal(modalToggle.nextElementSibling?.classList.contains("toggle-switch"), false);
+
+  for (const toggle of [routeToggle, moduleToggle, compactToggle]) {
+    assert.equal(toggle.getAttribute("role"), null);
+    assert.equal(toggle.getAttribute("aria-checked"), null);
+  }
+
+  const routeStateLabel = routeToggle.querySelector("strong");
+  const routeStateStyle = window.getComputedStyle(routeStateLabel);
+  assert.equal(routeStateStyle.display, "none");
+
+  const moduleStateLabel = moduleToggle.querySelector("strong");
+  const moduleStateStyle = window.getComputedStyle(moduleStateLabel);
+  assert.notEqual(moduleStateStyle.color, "transparent");
 });
 
 test("compact view does not propagate to the modal layer at runtime", async () => {
@@ -3902,7 +4051,6 @@ test("keyboard hotkey fields render for healing, rune, and spell actions", async
 
   await openModule("healer");
   assert.ok(document.querySelector('[data-module-key="healer"][data-rule-index="0"][data-rule-field="hotkey"]'));
-  assert.ok(document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHotkey"]'));
   assert.ok(document.querySelector('[data-module-key="potionHealer"][data-rule-index="0"][data-rule-field="hotkey"]'));
   assert.ok(document.querySelector('[data-module-key="conditionHealer"][data-rule-index="0"][data-rule-field="hotkey"]'));
 
@@ -4020,8 +4168,8 @@ test("healer action choices follow the detected session vocation", async () => {
   assert.match(healerCoverage, /Potion Healer/i);
   assert.match(healerCoverage, /Condition Healer/i);
   assert.match(healerCoverage, /Healer Setup/i);
-  assert.match(healerCoverage, /Auto rune/i);
-  assert.match(healerCoverage, /Auto rune at\/below HP %/i);
+  assert.match(healerCoverage, /Rune Tiers/i);
+  assert.equal(document.querySelector('[data-module-key="healer"][data-module-option-field="healerRuneHealthPercent"]'), null);
   assert.match(healerCoverage, /Enable potion healer/i);
   assert.match(healerCoverage, /Enable condition healer/i);
 });
@@ -6032,6 +6180,10 @@ test("hunt workspace saves per-monster target profiles from the target panel", a
   document.getElementById("targeting-distance-enabled").dispatchEvent(new window.Event("change", { bubbles: true }));
 
   const combatRule = document.querySelector('#targeting-distance-rule-list .module-rule-card[data-rule-index="0"]');
+  assert.equal(combatRule.querySelector(".module-rule-head"), null);
+  assert.equal(combatRule.querySelector(".module-rule-summary"), null);
+  assert.equal(combatRule.querySelector(".module-rule-section-title"), null);
+  assert.ok(combatRule.querySelector(".module-rule-footer [data-targeting-distance-delete]"));
   const setCombatField = (field, value, type = "input") => {
     const element = combatRule.querySelector(`[data-rule-field="${field}"]`);
     if (element.type === "checkbox") {
@@ -6101,27 +6253,18 @@ test("mana trainer rules render as grouped rule cards", async () => {
   await flush();
 
   const card = document.querySelector("#module-rule-list .module-rule-card");
+  assert.equal(document.querySelector("#modal-module > .modal-head").hidden, true);
+  assert.equal(document.getElementById("modal-module").classList.contains("module-modal-headless"), true);
+  assert.equal(document.getElementById("add-module-rule").hidden, true);
+  assert.equal(document.querySelector("#module-rule-list > .module-rule-inline-toolbar [data-add-module-rule='manaTrainer']")?.textContent.trim(), "Add Window");
   assert.equal(document.getElementById("module-state-line").textContent.trim(), "On - 1 active - 1 total");
   assert.match(document.getElementById("module-note").textContent, /first active window/i);
-  assert.equal(card.querySelector(".module-rule-name").textContent.trim(), "Mana Window 1");
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Cast utani hur/);
-  assert.equal(card.querySelector(".mana-rule-window-value").textContent.trim(), "95%-100%");
-  assert.ok(card.querySelector(".mana-rule-window-track"));
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Open at 95%/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Target gate\s*No target/i);
-  assert.deepEqual(
-    [...card.querySelectorAll(".module-rule-section-title")].map((node) => node.textContent.trim()),
-    ["Window Identity", "Cast Cadence", "Mana Band", "Safety Gates"],
-  );
-  assert.equal(
-    card
-      .querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="requireNoTargets"]')
-      .closest(".module-rule-section")
-      .querySelector(".module-rule-section-title")
-      .textContent
-      .trim(),
-    "Safety Gates",
-  );
+  assert.equal(card.querySelector(".module-rule-head"), null);
+  assert.equal(card.querySelector(".module-rule-name"), null);
+  assert.equal(card.querySelector(".module-rule-summary"), null);
+  assert.equal(card.querySelector(".module-rule-section-title"), null);
+  assert.ok(card.querySelector(".module-rule-footer [data-delete-module-rule='manaTrainer']"));
+  assert.ok(card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="requireNoTargets"]'));
 
   const spellInput = card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="words"]');
   const hotkeyInput = card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="hotkey"]');
@@ -6131,11 +6274,17 @@ test("mana trainer rules render as grouped rule cards", async () => {
   hotkeyInput.dispatchEvent(new window.Event("input", { bubbles: true }));
   await flush();
 
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Cast utevo res/);
+  assert.equal(spellInput.value, "utevo res");
   document.querySelector("#modal-module [data-save-modules]").click();
   await flush();
   assert.equal(calls.updateOptions.at(-1).manaTrainerRules[0].words, "utevo res");
   assert.equal(calls.updateOptions.at(-1).manaTrainerRules[0].hotkey, "F9");
+
+  document.querySelector('[data-open-modal="runeMaker"]').click();
+  await flush();
+  assert.equal(document.querySelector("#modal-module > .modal-head").hidden, false);
+  assert.equal(document.getElementById("modal-module").classList.contains("module-modal-headless"), false);
+  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Rune Maker");
 });
 
 test("light module renders live detail lines and saves edited light rules", async () => {
@@ -6170,10 +6319,12 @@ test("light module renders live detail lines and saves edited light rules", asyn
   await flush();
 
   const card = document.querySelector("#module-rule-list .module-rule-card");
-  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Light");
+  assert.equal(document.querySelector("#modal-module > .modal-head").hidden, true);
   assert.equal(document.getElementById("module-state-line").textContent.trim(), "On - 1 active - 1 total");
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Cast utevo gran lux/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Light gate\s*Light allowed/i);
+  assert.equal(card.querySelector(".module-rule-head"), null);
+  assert.equal(card.querySelector(".module-rule-summary"), null);
+  assert.equal(card.querySelector(".module-rule-section-title"), null);
+  assert.ok(document.querySelector("#module-rule-list > .module-rule-inline-toolbar [data-add-module-rule='autoLight']"));
 
   const wordsInput = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="words"]');
   const hotkeyInput = card.querySelector('[data-module-key="autoLight"][data-rule-index="0"][data-rule-field="hotkey"]');
@@ -6196,9 +6347,8 @@ test("light module renders live detail lines and saves edited light rules", asyn
   movementToggle.dispatchEvent(new window.Event("change", { bubbles: true }));
   await flush();
 
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Cast utevo lux/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Light gate\s*Dark only/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Target gate\s*Target allowed/i);
+  assert.equal(wordsInput.value, "utevo lux");
+  assert.equal(targetToggle.checked, false);
 
   document.querySelector("#modal-module [data-save-modules]").click();
   await flush();
@@ -6250,10 +6400,12 @@ test("gold transform renders live detail lines and saves edited coin rules", asy
   await flush();
 
   const card = document.querySelector("#module-rule-list .module-rule-card");
-  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Gold Transform");
+  assert.equal(document.querySelector("#modal-module > .modal-head").hidden, true);
   assert.equal(document.getElementById("module-state-line").textContent.trim(), "On - 1 active - 1 total");
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Convert coins/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Movement\s*Movement allowed/i);
+  assert.equal(card.querySelector(".module-rule-head"), null);
+  assert.equal(card.querySelector(".module-rule-summary"), null);
+  assert.equal(card.querySelector(".module-rule-section-title"), null);
+  assert.ok(document.querySelector("#module-rule-list > .module-rule-inline-toolbar [data-add-module-rule='autoConvert']"));
 
   const cooldownInput = card.querySelector('[data-module-key="autoConvert"][data-rule-index="0"][data-rule-field="cooldownMs"]');
   const targetToggle = card.querySelector('[data-module-key="autoConvert"][data-rule-index="0"][data-rule-field="requireNoTargets"]');
@@ -6267,9 +6419,9 @@ test("gold transform renders live detail lines and saves edited coin rules", asy
   movementToggle.dispatchEvent(new window.Event("change", { bubbles: true }));
   await flush();
 
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Cooldown\s*2500 ms/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Target gate\s*Target allowed/i);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Movement\s*Idle only/i);
+  assert.equal(cooldownInput.value, "2500");
+  assert.equal(targetToggle.checked, false);
+  assert.equal(movementToggle.checked, true);
 
   document.querySelector("#modal-module [data-save-modules]").click();
   await flush();
@@ -7455,14 +7607,16 @@ test("banking modal renders banking rules and saves edited bank actions", async 
   await flush();
 
   const card = document.querySelector("#module-rule-list .module-rule-card");
+  assert.equal(document.querySelector("#modal-module > .modal-head").hidden, true);
+  assert.equal(document.getElementById("modal-module").classList.contains("module-modal-headless"), true);
+  assert.equal(document.getElementById("add-module-rule").hidden, true);
+  assert.equal(document.querySelector("#module-rule-list > .module-rule-inline-toolbar [data-add-module-rule='banking']")?.textContent.trim(), "Add Rule");
   assert.equal(document.getElementById("module-state-line").textContent.trim(), "On - 1 active - 1 total");
-  assert.equal(card.querySelector(".module-rule-name").textContent.trim(), "Bank Rule 1");
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Deposit Excess/);
-  assert.match(card.querySelector(".module-rule-summary").textContent, /Augusto/);
-  assert.deepEqual(
-    [...card.querySelectorAll(".module-rule-section-title")].map((node) => node.textContent.trim()),
-    ["Priority", "Banker", "Action", "Safety Gates"],
-  );
+  assert.equal(card.querySelector(".module-rule-head"), null);
+  assert.equal(card.querySelector(".module-rule-name"), null);
+  assert.equal(card.querySelector(".module-rule-summary"), null);
+  assert.equal(card.querySelector(".module-rule-section-title"), null);
+  assert.ok(card.querySelector(".module-rule-footer [data-delete-module-rule='banking']"));
 
   const bankerInput = card.querySelector('[data-module-key="banking"][data-rule-index="0"][data-rule-field="bankerNames"]');
   const operationSelect = card.querySelector('[data-module-key="banking"][data-rule-index="0"][data-rule-field="operation"]');
@@ -7643,7 +7797,7 @@ test("loading a route clears stale targeting drafts so Hunt Studio shows the loa
   document.querySelector("#modal-targeting [data-close-modal]").click();
   await flush();
 
-  document.getElementById("route-overview-open-library").click();
+  document.getElementById("route-overview-open-files").click();
   await flush();
 
   const quickSelect = document.getElementById("route-library-quick-select");

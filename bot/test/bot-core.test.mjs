@@ -233,7 +233,8 @@ test("normalizeOptions defaults the route recorder to 3 SQM and shows waypoint o
   assert.equal(options.cavebotPaused, false);
   assert.equal(options.healerEmergencyHealthPercent, 30);
   assert.equal(options.healerRuneName, "");
-  assert.equal(options.healerRuneHealthPercent, 50);
+  assert.equal(options.healerRuneHealthPercent, 0);
+  assert.equal(options.healerRules[0]?.words, "Ultimate Healing Rune");
   assert.equal(options.rookillerEnabled, false);
   assert.equal(options.antiIdleEnabled, false);
   assert.equal(options.antiIdleIntervalMs, 60000);
@@ -4883,6 +4884,86 @@ test("refresh scans visible floor tiles once while building combat tile state", 
   assert.ok(snapshot.safeTiles.some((tile) => tile.x === 100 && tile.y === 200 && tile.z === 7));
 });
 
+test("refresh trusts explicit field labels over ambiguous elemental field ids", async () => {
+  const bot = new MinibiaTargetBot({});
+  const fireField = {
+    id: 2124,
+    name: "fire field",
+  };
+  const fireTile = {
+    __position: { x: 101, y: 200, z: 7 },
+    position: { x: 101, y: 200, z: 7 },
+    isWalkable() {
+      return true;
+    },
+    getPosition() {
+      return this.__position;
+    },
+    getThings() {
+      return [fireField];
+    },
+    things: [fireField],
+  };
+  const player = {
+    id: 1,
+    name: "Knight Alpha",
+    __position: { x: 100, y: 200, z: 7 },
+    state: {
+      health: 250,
+      maxHealth: 300,
+      mana: 90,
+      maxMana: 120,
+    },
+    isMoving() {
+      return false;
+    },
+    hasCondition() {
+      return false;
+    },
+  };
+
+  bot.page = { id: "page-tiles", title: "Minibia" };
+  bot.cdp = {
+    async evaluate(expression) {
+      return evaluatePageExpression(expression, {
+        gameClient: {
+          player,
+          world: {
+            activeCreatures: new Map([[player.id, player]]),
+            pathfinder: {},
+            chunks: [
+              {
+                getFloorTiles() {
+                  return [fireTile];
+                },
+              },
+            ],
+          },
+          interface: {
+            hotbarManager: {
+              __findFullCoinStack() {
+                return null;
+              },
+            },
+          },
+        },
+      });
+    },
+  };
+
+  const snapshot = await bot.refresh({ emitSnapshot: false });
+
+  assert.deepEqual(snapshot.hazardTiles[0]?.categories, ["fire"]);
+  assert.deepEqual(snapshot.hazardTiles[0]?.elementalTypes, ["fire"]);
+  assert.deepEqual(snapshot.elementalFields, [
+    {
+      position: { x: 101, y: 200, z: 7 },
+      types: ["fire"],
+      ids: [2124],
+    },
+  ]);
+});
+
 test("refresh detects stair and ramp tile names as floor-transition hazards", async () => {
   const bot = new MinibiaTargetBot({});
   const stairTile = {
@@ -5669,10 +5750,48 @@ test("chooseHeal resolves UH aliases and Minibia rune item ids without a Rune su
   assert.equal(action?.name, "Ultimate Healing Rune");
 });
 
-test("chooseHeal uses the default UH auto rune at fifty percent before potion healing", () => {
+test("chooseHeal falls through to lower tiers when a higher rune tier has no usable action", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
-    healerRules: [],
+    healerRules: [
+      {
+        enabled: true,
+        words: "Ultimate Healing Rune",
+        minHealthPercent: 0,
+        maxHealthPercent: 50,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+      {
+        enabled: true,
+        words: "exura",
+        minHealthPercent: 70,
+        maxHealthPercent: 80,
+        minMana: 20,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+  });
+
+  const action = bot.chooseHeal(createModuleSnapshot({
+    playerStats: {
+      healthPercent: 43,
+      mana: 220,
+      manaPercent: 90,
+    },
+    containers: [],
+  }));
+
+  assert.equal(action?.type, "heal");
+  assert.equal(action?.words, "exura");
+  assert.equal(action?.ruleIndex, 1);
+});
+
+test("chooseHeal uses the default UH rune tier at fifty percent before potion healing", () => {
+  const bot = new MinibiaTargetBot({
+    healerEnabled: true,
     potionHealerEnabled: true,
     potionHealerRules: [
       {
@@ -5715,7 +5834,17 @@ test("chooseHeal uses the default UH auto rune at fifty percent before potion he
 test("chooseHeal preserves self-targeting for hotbar healing runes", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
-    healerRules: [],
+    healerRules: [
+      {
+        enabled: true,
+        words: "Ultimate Healing Rune",
+        minHealthPercent: 0,
+        maxHealthPercent: 50,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
   });
 
   const action = bot.chooseHeal(createModuleSnapshot({
@@ -5748,7 +5877,7 @@ test("chooseHeal preserves self-targeting for hotbar healing runes", () => {
   assert.equal(action?.hotkey, "F5");
 });
 
-test("chooseHeal uses the configured auto rune hotkey without requiring inventory discovery", () => {
+test("chooseHeal migrates the configured legacy rune hotkey into a healer tier", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
     healerRules: [],
@@ -5769,14 +5898,15 @@ test("chooseHeal uses the configured auto rune hotkey without requiring inventor
   }));
 
   assert.equal(action?.type, "useHotkey");
-  assert.equal(action?.moduleKey, "healerRune");
+  assert.equal(action?.moduleKey, "healer");
+  assert.equal(action?.ruleIndex, 0);
   assert.equal(action?.hotkey, "F5");
   assert.equal(action?.target, "self");
   assert.equal(action?.category, "rune");
   assert.equal(action?.name, "Ultimate Healing Rune");
 });
 
-test("chooseHeal prioritizes the auto rune hotkey below its threshold before covered spell tiers", () => {
+test("chooseHeal prioritizes the migrated rune tier before covered spell tiers", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
     healerRules: [
@@ -5804,13 +5934,13 @@ test("chooseHeal prioritizes the auto rune hotkey below its threshold before cov
   }));
 
   assert.equal(actions[0]?.type, "useHotkey");
-  assert.equal(actions[0]?.moduleKey, "healerRune");
+  assert.equal(actions[0]?.moduleKey, "healer");
+  assert.equal(actions[0]?.ruleIndex, 0);
   assert.equal(actions[0]?.hotkey, "F5");
-  assert.equal(actions[1]?.type, "heal");
-  assert.equal(actions[1]?.words, "exura");
+  assert.equal(actions.length, 1);
 });
 
-test("chooseHeal inserts the configured auto rune before potion healing", () => {
+test("chooseHeal inserts the configured legacy rune as a top tier before potion healing", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
     healerRules: [],
@@ -6277,7 +6407,7 @@ test("tick falls through to the next heal tier when the top heal fails requireme
   assert.equal(bot.getLastModuleActionAt("healer", 1) > 0, true);
 });
 
-test("tick lets vocation sustain preempt legacy healer work during healing priority", async () => {
+test("tick lets the healer tier stack run before vocation sustain during healing priority", async () => {
   const bot = new MinibiaTargetBot({
     vocation: "paladin",
     deathHealEnabled: false,
@@ -6330,7 +6460,7 @@ test("tick lets vocation sustain preempt legacy healer work during healing prior
   const result = await bot.tick();
 
   assert.equal(result, snapshot);
-  assert.equal(healCalled, false);
+  assert.equal(healCalled, true);
 });
 
 test("attemptSustain records module cooldown after a successful consumable action", async () => {
@@ -11189,6 +11319,58 @@ test("chooseTarget lets dragon profile intent beat raw dragon-lord threat but ke
   assert.equal(stickySelection, null);
 });
 
+test("chooseTarget keeps a sticky damaged reach target over a fresh close dragon", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Dragon", "Dragon Lord"],
+    combatRangeX: 1,
+    combatRangeY: 1,
+    targetProfiles: [
+      {
+        name: "Dragon",
+        priority: 100,
+        stickToTarget: true,
+      },
+      {
+        name: "Dragon Lord",
+        priority: 100,
+        stickToTarget: true,
+      },
+    ],
+  });
+  const currentDragon = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 103, y: 101, z: 8 },
+    chebyshevDistance: 3,
+    distance: 4,
+    withinCombatBox: false,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 22,
+  };
+  const freshDragonLord = {
+    id: 11,
+    name: "Dragon Lord",
+    position: { x: 101, y: 100, z: 8 },
+    chebyshevDistance: 1,
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: currentDragon,
+    visibleCreatures: [freshDragonLord, currentDragon],
+    candidates: [freshDragonLord],
+  });
+
+  assert.equal(selection, null);
+});
+
 test("chooseTarget uses finish windows as a standalone directive only below the threshold", () => {
   const bot = new MinibiaTargetBot({
     monsterNames: ["Dragon", "Dragon Lord"],
@@ -13261,6 +13443,69 @@ test("chooseDistanceKeeper hard-chases melee hold profiles instead of freezing o
   assert.deepEqual(action?.destination, { x: 101, y: 100, z: 8 });
 });
 
+test("chooseDistanceKeeper advances one safe tile toward reach-window melee targets outside the combat box", () => {
+  const bot = new MinibiaTargetBot({
+    chaseMode: "aggressive",
+    distanceKeeperEnabled: false,
+    monsterNames: ["Dragon"],
+    targetProfiles: [
+      {
+        name: "Dragon",
+        behavior: "hold",
+        avoidBeam: true,
+        stickToTarget: false,
+      },
+    ],
+  });
+
+  const currentTarget = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 106, y: 101, z: 8 },
+    dx: 6,
+    dy: 1,
+    dz: 0,
+    chebyshevDistance: 6,
+    distance: 7,
+    withinCombatBox: false,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    isCurrentTarget: true,
+  };
+
+  const action = bot.chooseDistanceKeeper({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget,
+    candidates: [],
+    visibleCreatures: [currentTarget],
+    hazardTiles: [
+      {
+        position: { x: 101, y: 100, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["Stairs"],
+      },
+    ],
+    reachableWalkableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+      { x: 101, y: 100, z: 8 },
+    ],
+    safeTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  });
+
+  assert.equal(action?.type, "distance-keeper");
+  assert.equal(action?.reason, "approach");
+  assert.equal(action?.currentDistance, 6);
+  assert.equal(action?.nextDistance, 6);
+  assert.deepEqual(action?.destination, { x: 100, y: 101, z: 8 });
+});
+
 test("chooseDistanceKeeper does not diagonal-step through avoid tile rules", () => {
   const bot = new MinibiaTargetBot({
     distanceKeeperEnabled: false,
@@ -13923,6 +14168,78 @@ test("chooseRouteAction ignores long walk repath cooldowns after 2 seconds stati
   } finally {
     Date.now = realDateNow;
   }
+});
+
+test("chooseRouteAction immediately reissues a route walk after the last click made progress", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    walkRepathMs: 10_000,
+    waypoints: [
+      { x: 10, y: 0, z: 8, type: "walk" },
+    ],
+  });
+
+  let now = 1_000;
+  const realDateNow = Date.now;
+  Date.now = () => now;
+  bot.getNow = () => now;
+  bot.resetRoute(0);
+  bot.lastWalkAt = now - 100;
+  bot.lastWalkKey = "10,0,8";
+  bot.lastWalkDestinationKey = "4,0,8";
+  bot.lastWalkOriginKey = "0,0,8";
+  bot.lastWalkProgressPending = false;
+
+  try {
+    const action = bot.chooseRouteAction({
+      ready: true,
+      playerPosition: { x: 3, y: 0, z: 8 },
+      currentTarget: null,
+      candidates: [],
+      visibleCreatures: [],
+      isMoving: false,
+      pathfinderAutoWalking: false,
+      pathfinderFinalDestination: null,
+    });
+
+    assert.equal(action?.kind, "walk");
+    assert.deepEqual(action?.waypoint, bot.options.waypoints[0]);
+    assert.deepEqual(action?.destination, bot.options.waypoints[0]);
+  } finally {
+    Date.now = realDateNow;
+  }
+});
+
+test("chooseRouteAction chains the next waypoint while the movement flag is settling", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    walkRepathMs: 1200,
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "walk" },
+      { x: 103, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  bot.resetRoute(0);
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: true,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(bot.routeIndex, 1);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.waypoint, bot.options.waypoints[1]);
+  assert.deepEqual(action?.destination, bot.options.waypoints[1]);
 });
 
 test("resyncRouteProgress relatches to the exact confirmed waypoint even without reachable-tile proof", () => {
@@ -16108,6 +16425,108 @@ test("chooseRouteAction lets a stair waypoint click the final stair sqm even whe
   assert.equal(action?.walkReason, "direct");
 });
 
+test("chooseRouteAction treats stairs as no-go during combat even in strict clear mode", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    routeStrictClear: true,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "stairs-down" },
+    ],
+  });
+
+  bot.resetRoute(0);
+
+  const combatSnapshot = {
+    ready: true,
+    playerPosition: { x: 99, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 99, y: 101, z: 8 },
+      withinCombatBox: true,
+      reachableForCombat: true,
+    },
+    candidates: [],
+    visibleCreatures: [],
+    visiblePlayers: [],
+    elementalFields: [],
+    hazardTiles: [
+      {
+        position: { x: 100, y: 100, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["Stairs"],
+      },
+    ],
+    safeTiles: [
+      { x: 99, y: 100, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 99, y: 100, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  };
+
+  assert.equal(bot.chooseRouteAction(combatSnapshot), null);
+  assert.equal(bot.routeIndex, 0);
+
+  const clearAction = bot.chooseRouteAction({
+    ...combatSnapshot,
+    currentTarget: null,
+  });
+
+  assert.equal(clearAction?.kind, "walk");
+  assert.deepEqual(clearAction?.destination, bot.options.waypoints[0]);
+  assert.equal(clearAction?.walkReason, "direct");
+});
+
+test("chooseNoGoZoneEscape steps off a visible stair tile during combat", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: false,
+    waypoints: [
+      { x: 102, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  const action = bot.chooseNoGoZoneEscape({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 102, y: 100, z: 8 },
+      withinCombatBox: true,
+      reachableForCombat: true,
+    },
+    visibleCreatures: [],
+    visiblePlayers: [],
+    candidates: [],
+    hazardTiles: [
+      {
+        position: { x: 100, y: 100, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["Stairs"],
+      },
+    ],
+    safeTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 100, y: 101, z: 8 },
+    ],
+  });
+
+  assert.equal(action?.type, "danger-zone-escape");
+  assert.notDeepEqual(action?.destination, { x: 100, y: 100, z: 8 });
+});
+
 test("chooseRouteAction uses a non-walkable use-item waypoint from an adjacent tile", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -17487,6 +17906,75 @@ test("chooseRouteAction breaks a distant waypoint into a visible reachable viewp
     currentTarget: null,
     visibleCreatures: [],
     candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+    reachableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 102, y: 100, z: 8 },
+      { x: 103, y: 100, z: 8 },
+      { x: 104, y: 100, z: 8 },
+    ],
+  });
+
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.destination, { x: 104, y: 100, z: 8 });
+  assert.equal(action?.progressKey, "108,100,8");
+});
+
+test("chooseRouteAction keeps the recorded stride when a no-go sqm is off the current route segment", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    waypoints: [
+      { x: 108, y: 100, z: 8, type: "walk" },
+      { x: 100, y: 104, z: 8, type: "danger-zone" },
+    ],
+  });
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+    reachableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 102, y: 100, z: 8 },
+      { x: 103, y: 100, z: 8 },
+      { x: 104, y: 100, z: 8 },
+    ],
+  });
+
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.destination, { x: 104, y: 100, z: 8 });
+  assert.equal(action?.progressKey, "108,100,8");
+});
+
+test("chooseRouteAction keeps the recorded stride when a visible stair hazard is off the current route segment", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    waypoints: [
+      { x: 108, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    hazardTiles: [
+      {
+        position: { x: 100, y: 104, z: 8 },
+        categories: ["stairsLadders"],
+      },
+    ],
     isMoving: false,
     pathfinderAutoWalking: false,
     pathfinderFinalDestination: null,
@@ -18991,7 +19479,76 @@ test("restorePreferredChaseMode keeps native chase standing on route safety cons
   assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "stand");
 });
 
-test("route-safe combat hold ignores reach-only targets but holds for close targets", () => {
+test("restorePreferredChaseMode keeps aggressive chase during route-safe combat", async () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    chaseMode: "aggressive",
+    monsterNames: ["Dragon"],
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "walk" },
+      { x: 101, y: 100, z: 8, type: "danger-zone" },
+    ],
+  });
+  const selector = {
+    currentChaseMode: 0,
+    setChaseMode(mode) {
+      this.currentChaseMode = mode;
+    },
+  };
+  bot.page = { id: "page-1", title: "Minibia" };
+  bot.cdp = {
+    async evaluate(expression) {
+      return evaluatePageExpression(expression, {
+        gameClient: {
+          interface: {
+            fightModeSelector: selector,
+          },
+        },
+      });
+    },
+  };
+  bot.lastSnapshot = createModuleSnapshot({
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 104, y: 100, z: 8 },
+      withinCombatBox: false,
+      withinCombatWindow: true,
+      reachableForCombat: true,
+    },
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 104, y: 100, z: 8 },
+        withinCombatBox: false,
+        withinCombatWindow: true,
+        reachableForCombat: true,
+      },
+    ],
+    candidates: [],
+    combatModes: {
+      chaseMode: {
+        key: "stand",
+        label: "Stand",
+        rawValue: "0",
+      },
+    },
+  });
+
+  const result = await bot.restorePreferredChaseMode();
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.routeSafetyClamped, false);
+  assert.equal(result?.preferredMode, 2);
+  assert.equal(result?.appliedMode, 2);
+  assert.equal(selector.currentChaseMode, 2);
+  assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "chase");
+});
+
+test("route-safe combat hold still holds for reach targets and close targets", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     autowalkLoop: true,
@@ -19033,7 +19590,8 @@ test("route-safe combat hold ignores reach-only targets but holds for close targ
   });
 
   assert.equal(bot.getReachCombatCandidates(farSnapshot).length, 1);
-  assert.equal(bot.shouldHoldRouteForCombat(farSnapshot), false);
+  assert.equal(bot.shouldKeepNativeChaseStandingForRouteSafety(farSnapshot), false);
+  assert.equal(bot.shouldHoldRouteForCombat(farSnapshot), true);
   assert.equal(bot.shouldHoldRouteForCombat(closeSnapshot), true);
 });
 
@@ -19056,6 +19614,205 @@ test("walk restores preferred chase mode after a successful bot move", async () 
 
   assert.equal(result?.ok, true);
   assert.equal(restoreCalls, 1);
+});
+
+test("walk uses a keyboard step before viewport click when standing in an elemental field", async () => {
+  const bot = new MinibiaTargetBot();
+  const destination = { x: 100, y: 101, z: 8 };
+  const events = [];
+  let clickCalls = 0;
+  let keyboardCalls = 0;
+  let nativeCalls = 0;
+
+  bot.on((event) => events.push(event));
+  bot.lastSnapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    hazardTiles: [
+      {
+        position: { x: 100, y: 100, z: 8 },
+        categories: ["fire"],
+        labels: ["fire field"],
+      },
+    ],
+    elementalFields: [],
+  };
+  bot.clickViewportWalk = async () => {
+    clickCalls += 1;
+    return { ok: true, transport: "viewport-click" };
+  };
+  bot.executeKeyboardStep = async (target, origin) => {
+    keyboardCalls += 1;
+    assert.deepEqual(target, destination);
+    assert.deepEqual(origin, { x: 100, y: 100, z: 8 });
+    return { ok: true, transport: "keyboard-step", key: "ArrowDown", destination: target };
+  };
+  bot.executeNativeWalk = async () => {
+    nativeCalls += 1;
+    return { ok: false, reason: "native pathfinder should not run" };
+  };
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+
+  const result = await bot.walk(
+    destination,
+    {
+      destination,
+      origin: { x: 100, y: 100, z: 8 },
+    },
+  );
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "keyboard-step");
+  assert.equal(keyboardCalls, 1);
+  assert.equal(clickCalls, 0);
+  assert.equal(nativeCalls, 0);
+  assert.equal(events.find((event) => event.type === "walk")?.payload?.transport, "keyboard-step");
+});
+
+test("reposition uses a viewport click for one-sqm combat setup steps", async () => {
+  const bot = new MinibiaTargetBot();
+  const destination = { x: 101, y: 100, z: 8 };
+  const events = [];
+  let nativeCalls = 0;
+  let restoreCalls = 0;
+
+  bot.on((event) => events.push(event));
+  bot.clickViewportWalk = async (target) => ({
+    ok: true,
+    transport: "viewport-click",
+    destination: target,
+  });
+  bot.executeNativeWalk = async () => {
+    nativeCalls += 1;
+    return { ok: false, reason: "native pathfinder should not run" };
+  };
+  bot.restorePreferredChaseMode = async ({ force = false } = {}) => {
+    restoreCalls += 1;
+    return { ok: true, force };
+  };
+
+  const result = await bot.reposition({
+    type: "distance-keeper",
+    moduleKey: "targetProfile:dragon",
+    destination,
+    reason: "approach",
+  });
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "viewport-click");
+  assert.equal(nativeCalls, 0);
+  assert.equal(restoreCalls, 1);
+  assert.equal(bot.lastWalkKey, "101,100,8");
+  assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "viewport-click");
+});
+
+test("reposition falls back to native pathfinder when viewport click is unavailable", async () => {
+  const bot = new MinibiaTargetBot();
+  const destination = { x: 101, y: 100, z: 8 };
+  const events = [];
+  let nativeCalls = 0;
+
+  bot.on((event) => events.push(event));
+  bot.clickViewportWalk = async () => ({ ok: false, reason: "target outside viewport" });
+  bot.executeNativeWalk = async (target) => {
+    nativeCalls += 1;
+    return {
+      ok: true,
+      transport: "native-pathfinder",
+      destination: target,
+    };
+  };
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+
+  const result = await bot.reposition({
+    type: "distance-keeper",
+    moduleKey: "targetProfile:dragon",
+    destination,
+    reason: "approach",
+  });
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "native-pathfinder");
+  assert.equal(nativeCalls, 1);
+  assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "native-pathfinder");
+  assert.equal(events.find((event) => event.type === "move")?.payload?.fallbackReason, "target outside viewport");
+});
+
+test("executeKeyboardStep sends a cardinal arrow pulse", async () => {
+  const bot = new MinibiaTargetBot();
+  const sentEvents = [];
+
+  bot.cdp = {
+    isOpen: () => true,
+    send: async (method, params) => {
+      sentEvents.push({ method, params });
+      return {};
+    },
+  };
+  bot.attach = async () => ({ id: "test-page" });
+
+  const result = await bot.executeKeyboardStep(
+    { x: 100, y: 101, z: 8 },
+    { x: 100, y: 100, z: 8 },
+  );
+  const keyEvents = sentEvents.filter((event) => event.method === "Input.dispatchKeyEvent");
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "keyboard-step");
+  assert.equal(result?.key, "ArrowDown");
+  assert.equal(keyEvents.length, 2);
+  assert.equal(keyEvents[0]?.params?.type, "rawKeyDown");
+  assert.equal(keyEvents[0]?.params?.key, "ArrowDown");
+  assert.equal(keyEvents[1]?.params?.type, "keyUp");
+  assert.equal(keyEvents[1]?.params?.key, "ArrowDown");
+});
+
+test("reposition uses keyboard step before another click when the same one-sqm move did not progress", async () => {
+  const bot = new MinibiaTargetBot({ intervalMs: 250 });
+  const destination = { x: 100, y: 101, z: 8 };
+  const events = [];
+  let clickCalls = 0;
+  let keyboardCalls = 0;
+  let nativeCalls = 0;
+
+  bot.on((event) => events.push(event));
+  bot.lastSnapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+  };
+  bot.lastWalkOriginKey = "100,100,8";
+  bot.lastWalkKey = "100,101,8";
+  bot.lastWalkDestinationKey = "100,101,8";
+  bot.lastWalkAt = Date.now() - 1_000;
+  bot.clickViewportWalk = async () => {
+    clickCalls += 1;
+    return { ok: true, transport: "viewport-click" };
+  };
+  bot.executeKeyboardStep = async (target) => {
+    keyboardCalls += 1;
+    return { ok: true, transport: "keyboard-step", key: "ArrowDown", destination: target };
+  };
+  bot.executeNativeWalk = async () => {
+    nativeCalls += 1;
+    return { ok: false, reason: "native pathfinder should not run" };
+  };
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+
+  const result = await bot.reposition({
+    type: "distance-keeper",
+    moduleKey: "targetProfile:dragon",
+    destination,
+    reason: "approach",
+  });
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "keyboard-step");
+  assert.equal(keyboardCalls, 1);
+  assert.equal(clickCalls, 0);
+  assert.equal(nativeCalls, 0);
+  assert.equal(bot.lastWalkOriginKey, "100,100,8");
+  assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "keyboard-step");
+  assert.equal(events.find((event) => event.type === "move")?.payload?.fallbackReason, "same step did not move");
 });
 
 test("followTrainWalk records recovery telemetry on regroup moves", async () => {

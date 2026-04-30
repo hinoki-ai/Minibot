@@ -80,6 +80,7 @@ import {
   syncRouteSpacingLease,
   releaseRouteSpacingLease,
   touchCharacterClaim,
+  validateRouteConfig,
 } from "../lib/config-store.mjs";
 import { buildHuntPresetCatalog } from "../lib/hunt-presets.mjs";
 import { resolveMinibiaItemName, resolveMinibiaItemSlotType } from "../lib/minibia-item-metadata.mjs";
@@ -1254,6 +1255,9 @@ function serializeSnapshot(snapshot) {
   return {
     ready: snapshot.ready !== false,
     reason: snapshot.ready === false ? String(snapshot.reason || "") : "",
+    confidence: snapshot.confidence && typeof snapshot.confidence === "object" ? snapshot.confidence : null,
+    decisionTrace: snapshot.decisionTrace && typeof snapshot.decisionTrace === "object" ? snapshot.decisionTrace : null,
+    routeState: snapshot.routeState && typeof snapshot.routeState === "object" ? snapshot.routeState : null,
     playerName: snapshot.playerName || "",
     playerPosition: serializePosition(snapshot.playerPosition),
     playerStats: serializePlayerStats(snapshot.playerStats),
@@ -1318,6 +1322,41 @@ function serializeRouteProfile(config, routeProfile = null) {
     ...description,
     exists: fs.existsSync(description.path),
   };
+}
+
+function getSessionRouteValidation(session = getActiveSession()) {
+  if (!session?.config) {
+    return null;
+  }
+
+  const routeProfile = serializeRouteProfile(session.config, session.routeProfile);
+  return validateRouteConfig(session.config, {
+    sourceName: session.config.cavebotName || routeProfile?.name || "",
+    sourcePath: routeProfile?.path || "",
+  });
+}
+
+function assertRouteValidationAcknowledged(session) {
+  const validation = getSessionRouteValidation(session);
+  if (!validation?.requiresAcknowledgement || session?.config?.autowalkEnabled !== true) {
+    return validation;
+  }
+
+  if (session.routeValidationAcknowledgedSignature === validation.signature) {
+    pushSessionLog(session, `Route validation acknowledged for ${validation.summary.errorCount} high-risk issue${validation.summary.errorCount === 1 ? "" : "s"}.`);
+    return validation;
+  }
+
+  session.routeValidationAcknowledgedSignature = validation.signature;
+  const firstIssue = validation.issues.find((issue) => issue.severity === "error")
+    || validation.issues[0]
+    || null;
+  const location = Number.isInteger(firstIssue?.waypointIndex)
+    ? ` at waypoint ${firstIssue.waypointIndex + 1}`
+    : "";
+  const message = firstIssue?.message || "route validation found high-risk issues";
+  pushSessionLog(session, `Route validation blocked start${location}: ${message} Start again to acknowledge.`);
+  throw new Error(`Route validation requires review${location}: ${message}. Start again to acknowledge.`);
 }
 
 async function refreshRouteLibrary() {
@@ -1507,6 +1546,8 @@ function serializeSession(session) {
     stopAggroHold: Boolean(session.config?.stopAggroHold),
     routeIndex: session.bot.routeIndex || 0,
     routeComplete: session.bot.routeComplete || false,
+    routeState: session.bot.getRouteStateTelemetry?.(snapshot) || null,
+    decisionTrace: session.bot.getDecisionTrace?.() || null,
     routeResetActive: routeResetStatus.active,
     routeResetPhase: routeResetStatus.phase,
     routeResetTargetIndex: routeResetStatus.targetIndex,
@@ -1531,6 +1572,7 @@ function serializeSession(session) {
     overlayFocusIndex: session.bot.overlayFocusIndex ?? null,
     routeName: session.config?.cavebotName || "",
     routeProfile: serializeRouteProfile(session.config, session.routeProfile),
+    routeValidation: getSessionRouteValidation(session),
     page: serializePage(session.bot.page),
   };
 }
@@ -1580,6 +1622,7 @@ function serializeState() {
     ...serializeLiveState(activeSession, routeResetStatus),
     options: activeSession?.config || normalizeOptions(defaultConfig || {}),
     routeProfile: activeSession ? serializeRouteProfile(activeSession.config, activeSession.routeProfile) : null,
+    routeValidation: activeSession ? getSessionRouteValidation(activeSession) : null,
     routeLibrary: serializeRouteLibrary(),
     accounts: serializeAccountLibrary(),
     trainerCharacters: serializeTrainerCharacterLibrary(),
@@ -2943,6 +2986,8 @@ async function startSessionBot(sessionOrId, {
       );
     }
   }
+
+  assertRouteValidationAcknowledged(session);
 
   session = await attachSession(session);
   await refreshSession(session);

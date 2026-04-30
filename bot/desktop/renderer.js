@@ -1,10 +1,12 @@
 const logOutput = document.getElementById("log-output");
 const runtimeMetricsOutput = document.getElementById("runtime-metrics");
+const decisionTraceOutput = document.getElementById("decision-trace-output");
 const eventFeed = document.getElementById("event-feed");
 const eventFeedMeta = document.getElementById("event-feed-meta");
 const eventFeedSummary = document.getElementById("event-feed-summary");
 const routeFileStatus = document.getElementById("route-file-status");
 const routeFilePath = document.getElementById("route-file-path");
+const routeValidationSummary = document.getElementById("route-validation-summary");
 const routeLibrarySelect = document.getElementById("route-library-select");
 const routeLibraryMeta = document.getElementById("route-library-meta");
 const routeLibraryQuickSelect = document.getElementById("route-library-quick-select");
@@ -102,6 +104,8 @@ const routeLivePreviewToggleButton = document.getElementById("route-live-preview
 const routeStackSelectionBar = document.getElementById("route-stack-selection-bar");
 const tileRuleSelectionSummary = document.getElementById("tile-rule-selection-summary");
 const tileRulePolicyHelp = document.getElementById("tile-rule-policy-help");
+const moduleModalPanel = document.getElementById("modal-module");
+const moduleModalHead = document.querySelector("#modal-module > .modal-head");
 const sharedModulePanel = document.querySelector('[data-module-panel="shared"]');
 const moduleModalTitle = document.getElementById("module-modal-title");
 const moduleModalMeta = document.getElementById("module-modal-meta");
@@ -200,12 +204,14 @@ const compactPanelFields = {
   alarms: document.getElementById("compact-alarms-summary"),
   partyFollow: document.getElementById("compact-party-follow-summary"),
   rookiller: document.getElementById("compact-rookiller-summary"),
+  decision: document.getElementById("compact-decision-summary"),
 };
 
 const sessionWaypointVisibilityButton = document.getElementById("quick-toggle-session-waypoints");
 const cavebotPauseOpenButton = document.getElementById("quick-open-cavebot-pause");
 const cavebotMasterStopSummary = document.getElementById("summary-cavebot-master-stop");
 const cavebotMasterStopDetail = document.getElementById("summary-cavebot-master-stop-detail");
+const compactCavebotMasterStopSummary = document.getElementById("compact-cavebot-master-stop");
 
 const quickButtons = {
   autowalk: document.getElementById("quick-toggle-autowalk"),
@@ -252,9 +258,13 @@ const compactQuickButtons = {
   spellCaster: document.getElementById("compact-toggle-spell-caster"),
   autoLight: document.getElementById("compact-toggle-auto-light"),
   autoConvert: document.getElementById("compact-toggle-convert"),
+  looting: document.getElementById("compact-toggle-looting"),
+  banking: document.getElementById("compact-toggle-banking"),
   trainer: document.getElementById("compact-toggle-trainer"),
   reconnect: document.getElementById("compact-toggle-reconnect"),
+  antiIdle: document.getElementById("compact-toggle-anti-idle"),
   alarms: document.getElementById("compact-toggle-alarms"),
+  partyFollow: document.getElementById("compact-toggle-party-follow"),
   rookiller: document.getElementById("compact-toggle-rookiller"),
 };
 
@@ -491,6 +501,7 @@ let logOutputRenderedLast = "";
 let logOutputRenderedLength = 0;
 let logOutputRenderedText = "";
 let runtimeMetricsRenderedKey = "";
+let decisionTraceRenderedKey = "";
 let pendingDangerAction = null;
 let pendingDangerTimer = null;
 let routeUndoState = null;
@@ -653,11 +664,6 @@ const HEALING_RUNE_ACTION_CANONICAL_VALUE_BY_KEY = Object.freeze({
   "uh rune": "Ultimate Healing Rune",
   uh: "Ultimate Healing Rune",
 });
-const HEALER_AUTO_RUNE_OPTIONS = Object.freeze([
-  { value: "", label: "Auto strongest available" },
-  { value: "Ultimate Healing Rune", label: "Ultimate Healing Rune / self" },
-  { value: "Intense Healing Rune", label: "Intense Healing Rune / self" },
-]);
 const HEALER_HEAL_FRIEND_ACTION_PATTERN = /\bheal friend\b|\bexura sio\b/i;
 const HEALER_MASS_HEAL_ACTION_PATTERN = /\bmass healing\b|\bexura gran mas res\b/i;
 const HEALER_ACTION_GROUPS = Object.freeze([
@@ -820,26 +826,6 @@ const MODULE_RULE_SCHEMAS = {
         label: "Healing priority at/below HP %",
         type: "number",
         help: "Below this HP the bot prioritizes healer rules and delays other spell casts so they do not starve healing. Set 0 to disable.",
-      },
-      {
-        key: "healerRuneName",
-        label: "Auto rune",
-        type: "select",
-        options: HEALER_AUTO_RUNE_OPTIONS,
-        help: "Leave on Auto to try Ultimate Healing Rune first, then Intense Healing Rune.",
-      },
-      {
-        key: "healerRuneHotkey",
-        label: "Auto rune hotkey",
-        type: "text",
-        placeholder: "F5",
-        help: "Optional keyboard key for the dedicated auto rune. Use the same key bound in the game hotbar.",
-      },
-      {
-        key: "healerRuneHealthPercent",
-        label: "Auto rune at/below HP %",
-        type: "number",
-        help: "Dedicated self-rune fallback after spell tiers and before potion healer. Set 0 to disable.",
       },
     ],
     flags: [],
@@ -1536,8 +1522,22 @@ const MODULE_RULE_SCHEMAS = {
   },
 };
 
+const HEADLESS_RULE_CARD_UI = Object.freeze({
+  showListHead: false,
+  showRuleHeader: false,
+  showRuleSummary: false,
+  showSectionTitles: false,
+  hideModalHead: true,
+  inlineAddRule: true,
+});
+
+const HEADLESS_SETTINGS_UI = Object.freeze({
+  hideModalHead: true,
+});
+
 const MODULE_RULE_UI = {
   deathHeal: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Death Heal",
     modalMeta: "critical self-heal",
     cardTitle: "Death Heal",
@@ -1545,6 +1545,7 @@ const MODULE_RULE_UI = {
     settingsOnly: true,
   },
   healer: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Heal Tier",
     modalTitle: "Healer",
     modalMeta: "heal tiers",
@@ -1560,6 +1561,7 @@ const MODULE_RULE_UI = {
     ],
   },
   potionHealer: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Potion Rule",
     addLabel: "Add Potion Rule",
     sections: [
@@ -1570,6 +1572,7 @@ const MODULE_RULE_UI = {
     ],
   },
   conditionHealer: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Condition Rule",
     addLabel: "Add Condition Rule",
     sections: [
@@ -1580,6 +1583,7 @@ const MODULE_RULE_UI = {
     ],
   },
   manaTrainer: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Mana Window",
     modalTitle: "Mana Trainer",
     modalMeta: "mana windows",
@@ -1610,6 +1614,7 @@ const MODULE_RULE_UI = {
     ],
   },
   spellCaster: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Spell Rule",
     modalTitle: "Spell Caster",
     modalMeta: "spell priority",
@@ -1625,6 +1630,7 @@ const MODULE_RULE_UI = {
     ],
   },
   distanceKeeper: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Distance Rule",
     modalTitle: "Distance Keeper",
     modalMeta: "kite and dodge",
@@ -1640,6 +1646,7 @@ const MODULE_RULE_UI = {
     ],
   },
   autoLight: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Light Rule",
     modalTitle: "Light",
     modalMeta: "light trigger",
@@ -1655,6 +1662,7 @@ const MODULE_RULE_UI = {
     ],
   },
   autoConvert: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Coin Rule",
     modalTitle: "Gold Transform",
     modalMeta: "coin convert",
@@ -1669,6 +1677,7 @@ const MODULE_RULE_UI = {
     ],
   },
   antiIdle: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Anti Idle",
     modalMeta: "idle pulse",
     cardTitle: "Anti Idle",
@@ -1676,6 +1685,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   alarms: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Alarms",
     modalMeta: "player proximity",
     cardTitle: "Alarms",
@@ -1683,6 +1693,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   trainer: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Trainer",
     modalMeta: "training guardrails",
     cardTitle: "Trainer",
@@ -1690,6 +1701,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   reconnect: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Reconnect",
     modalMeta: "disconnect recovery",
     cardTitle: "Reconnect",
@@ -1697,6 +1709,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   autoEat: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Auto Eat",
     modalMeta: "food cadence",
     cardTitle: "Auto Eat",
@@ -1704,6 +1717,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   ammo: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Ammunition",
     modalMeta: "quiver reload",
     cardTitle: "Ammo",
@@ -1711,6 +1725,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   ringAutoReplace: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Ring Amulet",
     modalMeta: "",
     cardTitle: "Ring Amulet",
@@ -1718,6 +1733,7 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   amuletAutoReplace: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Amulet Replace",
     modalMeta: "bag refill",
     cardTitle: "Amulet Replace",
@@ -1725,12 +1741,14 @@ const MODULE_RULE_UI = {
     settingsOnly: false,
   },
   looting: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Looting",
     modalMeta: "filters and routing",
     cardTitle: "Looting",
     note: "Empty keep list loots everything except blocked items.",
   },
   banking: {
+    ...HEADLESS_RULE_CARD_UI,
     fallbackName: "Bank Rule",
     modalTitle: "Banking",
     modalMeta: "bank flows",
@@ -1746,6 +1764,7 @@ const MODULE_RULE_UI = {
     ],
   },
   partyFollow: {
+    ...HEADLESS_SETTINGS_UI,
     modalTitle: "Follow Chain",
     modalMeta: "follow chain",
     cardTitle: "Follow Chain",
@@ -1783,9 +1802,6 @@ const MODULE_RULE_FIELD_LABELS = {
   requireNoTargets: "Only with no target",
   requireStationary: "Only while idle",
   healerEmergencyHealthPercent: "Healing priority at/below HP %",
-  healerRuneName: "Auto rune",
-  healerRuneHotkey: "Auto rune hotkey",
-  healerRuneHealthPercent: "Auto rune at/below HP %",
   potionHealerEnabled: "Enable potion healer",
   conditionHealerEnabled: "Enable condition healer",
   itemName: "Potion",
@@ -1851,6 +1867,14 @@ const MODULE_RULE_FIELD_LABELS = {
   partyFollowDistance: "Spacing sqm",
   partyFollowCombatMode: "Default stance",
 };
+const MODULE_RULE_FIELD_LABELS_BY_MODULE = Object.freeze({
+  healer: Object.freeze({
+    words: "Heal action",
+  }),
+  conditionHealer: Object.freeze({
+    words: "Condition action",
+  }),
+});
 
 const LOOTING_KEEP_SHORTCUTS = [
   { value: "potions", label: "Potions" },
@@ -6130,6 +6154,7 @@ function resetSessionScopedUiState(nextState) {
   monsterArchiveRenderedKey = "";
   logsRenderedKey = "";
   runtimeMetricsRenderedKey = "";
+  decisionTraceRenderedKey = "";
   resetLogOutputRenderCache();
   selectedWaypointIndex = getSessionResetWaypointIndex(nextState);
   markedWaypointIndexes = new Set();
@@ -6657,26 +6682,13 @@ function formatHealerActionScope(value = "") {
   return "Self";
 }
 
-function getHealerAutoRuneConfig(options = state?.options || {}) {
-  const configuredName = normalizeHealerActionValue(options?.healerRuneName);
-  const threshold = Math.max(0, Math.trunc(Number(options?.healerRuneHealthPercent) || 0));
-  return {
-    name: isHealerRuneActionValue(configuredName) ? configuredName : "",
-    threshold,
-    enabled: threshold > 0,
-  };
+function getHealerTierRules(options = state?.options || {}) {
+  return Array.isArray(options?.healerRules) ? options.healerRules : [];
 }
 
-function formatHealerAutoRuneSummary(options = state?.options || {}, { short = false } = {}) {
-  const config = getHealerAutoRuneConfig(options);
-  if (!config.enabled) {
-    return short ? "Off" : "Auto rune off";
-  }
-
-  const runeLabel = config.name
-    ? formatHealerActionLabel(config.name)
-    : (short ? "Auto strongest" : "Auto strongest healing rune");
-  return `${runeLabel} <= ${formatPercent(config.threshold)}`;
+function getHealerRuneTierCount(options = state?.options || {}) {
+  return getActiveRules(getHealerTierRules(options))
+    .filter((rule) => isHealerRuneActionValue(rule?.words)).length;
 }
 
 function formatPotionHealerItemLabel(value = "") {
@@ -6838,10 +6850,10 @@ function formatConditionHealerRuleSummary(rules = [], vocation = "") {
 }
 
 function getHealerFamilyCounts(options = state?.options || {}) {
-  const autoRune = getHealerAutoRuneConfig(options);
+  const activeTierRules = getActiveRules(getHealerTierRules(options));
   return {
-    spell: getActiveRules(options?.healerRules || []).length,
-    rune: autoRune.enabled ? 1 : 0,
+    tier: activeTierRules.length,
+    rune: getHealerRuneTierCount(options),
     potion: getActiveRules(options?.potionHealerRules || []).length,
     condition: getActiveRules(options?.conditionHealerRules || []).length,
   };
@@ -6851,8 +6863,7 @@ function formatHealerFamilyCountSummary(options = state?.options || {}) {
   const counts = getHealerFamilyCounts(options);
   const segments = [];
 
-  if (counts.spell) segments.push(`Spell ${counts.spell}`);
-  if (counts.rune) segments.push("Rune");
+  if (counts.tier) segments.push(`Tier ${counts.tier}`);
   if (counts.potion) segments.push(`Potion ${counts.potion}`);
   if (counts.condition) segments.push(`Condition ${counts.condition}`);
 
@@ -6870,10 +6881,7 @@ function formatHealerCombinedDetail(options = state?.options || {}, sourceState 
   const segments = [];
 
   if (getActiveRules(options?.healerRules || []).length) {
-    segments.push(`Spell ${formatHealerRuleSummary(options.healerRules)}`);
-  }
-  if (getHealerAutoRuneConfig(options).enabled) {
-    segments.push(`Rune ${formatHealerAutoRuneSummary(options)}`);
+    segments.push(`Tier ${formatHealerRuleSummary(options.healerRules)}`);
   }
   if (getActiveRules(options?.potionHealerRules || []).length) {
     segments.push(`Potion ${formatPotionHealerRuleSummary(options.potionHealerRules)}`);
@@ -6988,6 +6996,7 @@ function renderHealerFamilyPanel(moduleKey, {
   addLabel = "Add Rule",
 } = {}, modulesState = ensureModulesDraft()) {
   const schema = getModuleSchema(moduleKey);
+  const ui = getModuleUi(moduleKey);
   const enabledField = schema?.enabledKey
     ? getModuleOptionFieldSpec(moduleKey, schema.enabledKey)
     : null;
@@ -7017,9 +7026,9 @@ function renderHealerFamilyPanel(moduleKey, {
       <div class="healer-family-rule-list" data-healer-family-rule-list="${escapeAttributeValue(moduleKey)}">
         ${renderModuleRuleList(moduleKey, familyStatus.rules)}
       </div>
-      <div class="healer-family-toolbar">
+      ${ui.inlineAddRule ? "" : `<div class="healer-family-toolbar">
         <button type="button" class="btn mini" data-add-module-rule="${escapeAttributeValue(moduleKey)}">${escapeHtml(addLabel)}</button>
-      </div>
+      </div>`}
     </section>
   `;
 }
@@ -7029,20 +7038,18 @@ function renderHealerFields(modulesState = ensureModulesDraft()) {
   const detected = getDetectedVocationInfo(sourceState);
   const resolvedVocation = getHealerResolvedVocation(sourceState);
   const emergencyField = getModuleOptionFieldSpec("healer", "healerEmergencyHealthPercent");
-  const runeNameField = getModuleOptionFieldSpec("healer", "healerRuneName");
-  const runeHotkeyField = getModuleOptionFieldSpec("healer", "healerRuneHotkey");
-  const runeThresholdField = getModuleOptionFieldSpec("healer", "healerRuneHealthPercent");
   const potionEnabledField = getModuleOptionFieldSpec("potionHealer", "potionHealerEnabled");
   const conditionEnabledField = getModuleOptionFieldSpec("conditionHealer", "conditionHealerEnabled");
   const threshold = Math.max(0, Math.trunc(Number(modulesState?.healerEmergencyHealthPercent) || 0));
-  const autoRune = getHealerAutoRuneConfig(modulesState);
   const runtimeLabel = detected.vocation
     ? `${formatVocationLabel(detected.vocation)} via ${detected.source || "live data"}`
     : (state?.options?.vocation ? `Route fallback ${formatVocationLabel(state.options.vocation)}` : "No live vocation detected yet");
-  const activeSpellRules = getActiveRules(modulesState?.healerRules || []);
-  const spellSummary = activeSpellRules.length
+  const activeHealRules = getActiveRules(modulesState?.healerRules || []);
+  const healSummary = activeHealRules.length
     ? formatHealerRuleSummary(modulesState?.healerRules || [])
-    : "No active spell tiers";
+    : "No active heal tiers";
+  const potionRules = getActiveRules(modulesState?.potionHealerRules || []);
+  const conditionRules = getActiveRules(modulesState?.conditionHealerRules || []);
   const emergencySummary = threshold > 0
     ? `Heals stay ahead of non-heal casts at ${threshold}% HP and below.`
     : "Priority is off; rules still run top to bottom.";
@@ -7055,28 +7062,26 @@ function renderHealerFields(modulesState = ensureModulesDraft()) {
           <div class="healer-setup-copy">
             <span class="healer-overview-kicker">Healer Setup</span>
             <h3 class="healer-overview-title">${escapeHtml(resolvedVocation ? `${formatVocationLabel(resolvedVocation)} healer quick setup` : "Healer quick setup")}</h3>
-            <p class="healer-overview-detail">Set the priority floor, arm the auto-rune threshold, then tune spell tiers below.</p>
+            <p class="healer-overview-detail">Set the priority floor, then tune heal tiers in the ordered list.</p>
           </div>
           <div class="healer-setup-stats">
             ${renderHealerMetricCard("Runtime", formatVocationLabel(resolvedVocation), runtimeLabel, "safe")}
-            ${renderHealerMetricCard("Spell Tiers", `${activeSpellRules.length} active`, spellSummary, activeSpellRules.length ? "gate" : "timing")}
-            ${renderHealerMetricCard("Auto Rune", autoRune.enabled ? `<= ${autoRune.threshold}%` : "Off", formatHealerAutoRuneSummary(modulesState), autoRune.enabled ? "trigger" : "timing")}
-            ${renderHealerMetricCard("Support", "Target routing", "Partner -> current target -> solo visible player", "open")}
+            ${renderHealerMetricCard("Heal Tiers", `${activeHealRules.length} active`, healSummary, activeHealRules.length ? "gate" : "timing")}
+            ${renderHealerMetricCard("Rune Tiers", `${getHealerRuneTierCount(modulesState)} active`, "Healing runes share the tier list", getHealerRuneTierCount(modulesState) ? "trigger" : "timing")}
+            ${renderHealerMetricCard("Potions", `${potionRules.length} active`, formatPotionHealerRuleSummary(modulesState?.potionHealerRules || []), potionRules.length ? "open" : "timing")}
+            ${renderHealerMetricCard("Conditions", `${conditionRules.length} active`, formatConditionHealerRuleSummary(modulesState?.conditionHealerRules || [], resolvedVocation), conditionRules.length ? "open" : "timing")}
           </div>
         </div>
 
         <div class="form-grid healer-setup-grid">
           ${emergencyField ? renderModuleOptionField("healer", emergencyField, modulesState?.healerEmergencyHealthPercent) : ""}
-          ${runeNameField ? renderModuleOptionField("healer", runeNameField, modulesState?.healerRuneName) : ""}
-          ${runeHotkeyField ? renderModuleOptionField("healer", runeHotkeyField, modulesState?.healerRuneHotkey) : ""}
-          ${runeThresholdField ? renderModuleOptionField("healer", runeThresholdField, modulesState?.healerRuneHealthPercent) : ""}
           ${potionEnabledField ? renderModuleOptionField("potionHealer", potionEnabledField, modulesState?.potionHealerEnabled) : ""}
           ${conditionEnabledField ? renderModuleOptionField("conditionHealer", conditionEnabledField, modulesState?.conditionHealerEnabled) : ""}
         </div>
 
         <div class="healer-setup-note">
           <div class="field-note">${escapeHtml(emergencySummary)}</div>
-          <div class="field-note">Auto rune is a self-heal fallback after spell tiers and before potion healer or friend-heal.</div>
+          <div class="field-note">Runes, spells, potions, and condition support resolve through the same healing stack.</div>
         </div>
       </section>
 
@@ -7668,7 +7673,10 @@ function renderModuleRulePills(items = []) {
 
 function renderManaTrainerRuleSummary(rule = {}, context = {}) {
   const { minPercent, maxPercent, left, width } = getManaWindowTrackMetrics(rule);
-  const pills = renderModuleRulePills(getModuleRuleSummaryItems("manaTrainer", rule, context).filter((item) => item.label !== "Mana Window"));
+  const ui = getModuleUi("manaTrainer");
+  const pills = ui.showRulePills === false
+    ? ""
+    : renderModuleRulePills(getModuleRuleSummaryItems("manaTrainer", rule, context).filter((item) => item.label !== "Mana Window"));
 
   return `
     <div class="mana-rule-summary-shell">
@@ -7700,7 +7708,7 @@ function renderManaTrainerRuleSummary(rule = {}, context = {}) {
           <span>Close at ${escapeHtml(formatPercent(maxPercent))}</span>
         </div>
       </div>
-      <div class="module-rule-pills">${pills}</div>
+      ${pills ? `<div class="module-rule-pills">${pills}</div>` : ""}
     </div>
   `;
 }
@@ -7710,7 +7718,10 @@ function renderModuleRuleSummary(moduleKey, rule = {}, context = {}) {
     return renderManaTrainerRuleSummary(rule, context);
   }
 
-  const pills = renderModuleRulePills(getModuleRuleSummaryItems(moduleKey, rule, context));
+  const ui = getModuleUi(moduleKey);
+  const pills = ui.showRulePills === false
+    ? ""
+    : renderModuleRulePills(getModuleRuleSummaryItems(moduleKey, rule, context));
   const tierLine = moduleKey === "healer"
     ? (() => {
       const minHp = Math.max(0, Math.round(Number(rule?.minHealthPercent) || 0));
@@ -7725,7 +7736,7 @@ function renderModuleRuleSummary(moduleKey, rule = {}, context = {}) {
   return `
     <div class="module-rule-action-line">${escapeHtml(formatModuleRuleAction(moduleKey, rule))}</div>
     ${tierLine}
-    <div class="module-rule-pills">${pills}</div>
+    ${pills ? `<div class="module-rule-pills">${pills}</div>` : ""}
   `;
 }
 
@@ -8019,9 +8030,9 @@ function cloneModuleOptions(options = {}) {
     healerEnabled: Boolean(options.healerEnabled),
     healerRules: cloneValue(options.healerRules || []),
     healerEmergencyHealthPercent: Number(options.healerEmergencyHealthPercent) || 0,
-    healerRuneName: normalizeHealerActionValue(options.healerRuneName),
-    healerRuneHotkey: String(options.healerRuneHotkey || "").trim(),
-    healerRuneHealthPercent: Number(options.healerRuneHealthPercent) || 0,
+    healerRuneName: "",
+    healerRuneHotkey: "",
+    healerRuneHealthPercent: 0,
     potionHealerEnabled: Boolean(options.potionHealerEnabled),
     potionHealerRules: cloneValue(options.potionHealerRules || []),
     conditionHealerEnabled: Boolean(options.conditionHealerEnabled),
@@ -8217,7 +8228,7 @@ function getModuleRuleFieldSpec(moduleKey, key) {
 
   return {
     ...source,
-    label: MODULE_RULE_FIELD_LABELS[key] || source.label || key,
+    label: MODULE_RULE_FIELD_LABELS_BY_MODULE[moduleKey]?.[key] || MODULE_RULE_FIELD_LABELS[key] || source.label || key,
   };
 }
 
@@ -9978,10 +9989,8 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
       };
     case "healer":
       {
-        const autoRuneEnabled = rawEnabled && getHealerAutoRuneConfig(options).enabled;
         const anyHealerFamilyEnabled = Boolean(
           rawEnabled
-          || autoRuneEnabled
           || options?.potionHealerEnabled
           || options?.conditionHealerEnabled,
         );
@@ -11123,6 +11132,7 @@ function renderModuleOptionFields(moduleKey, modulesState = ensureModulesDraft()
 }
 
 function renderModuleRuleFieldSection(moduleKey, index, rule = {}, section = {}) {
+  const ui = MODULE_RULE_UI[moduleKey] || {};
   const fields = (section.fields || [])
     .map((key) => getModuleRuleFieldSpec(moduleKey, key))
     .filter(Boolean)
@@ -11133,9 +11143,27 @@ function renderModuleRuleFieldSection(moduleKey, index, rule = {}, section = {})
 
   return `
     <section class="module-rule-section">
-      <div class="module-rule-section-title">${escapeHtml(section.title || "Fields")}</div>
+      ${ui.showSectionTitles === false ? "" : `<div class="module-rule-section-title">${escapeHtml(section.title || "Fields")}</div>`}
       <div class="form-grid module-rule-grid">${fields}</div>
     </section>
+  `;
+}
+
+function renderModuleRuleActions(moduleKey, title, index, rulesLength) {
+  return `
+    <div class="module-rule-actions">
+      <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} up">Move Up</button>
+      <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rulesLength - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} down">Move Down</button>
+      <button type="button" class="btn mini danger" data-delete-module-rule="${moduleKey}" data-rule-index="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
+    </div>
+  `;
+}
+
+function renderModuleRuleInlineToolbar(moduleKey, addLabel = "Add Rule") {
+  return `
+    <div class="module-rule-inline-toolbar">
+      <button type="button" class="btn mini" data-add-module-rule="${escapeAttributeValue(moduleKey)}">${escapeHtml(addLabel)}</button>
+    </div>
   `;
 }
 
@@ -11143,12 +11171,16 @@ function renderModuleRuleList(moduleKey, rules = []) {
   const schema = getModuleSchema(moduleKey);
   if (!schema) return "";
   if (schema.allowRules === false) return "";
+  const ui = MODULE_RULE_UI[moduleKey] || {};
+  const inlineToolbar = ui.inlineAddRule
+    ? renderModuleRuleInlineToolbar(moduleKey, ui.addLabel || "Add Rule")
+    : "";
 
   if (!rules.length) {
-    return '<div class="empty-state">No rules yet</div>';
+    return `${inlineToolbar}<div class="empty-state">No rules yet</div>`;
   }
 
-  const listHead = moduleKey === "healer"
+  const listHead = moduleKey === "healer" && ui.showListHead !== false
     ? `
       <div class="module-rule-list-head healer-priority-head">
         <span>Applied Healing Priority</span>
@@ -11157,31 +11189,28 @@ function renderModuleRuleList(moduleKey, rules = []) {
     `
     : "";
 
-  return listHead + rules
+  return inlineToolbar + listHead + rules
     .map((rule, index) => {
       const enabled = rule?.enabled !== false;
-      const ui = MODULE_RULE_UI[moduleKey] || {};
       const title = formatRuleDisplayName(moduleKey, rule, index);
+      const ruleActions = renderModuleRuleActions(moduleKey, title, index, rules.length);
       const sections = (ui.sections || [])
         .map((section) => renderModuleRuleFieldSection(moduleKey, index, rule, section))
         .join("");
 
       return `
         <div class="module-rule-card ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="${moduleKey}" data-rule-index="${index}">
-          <div class="module-rule-head">
+          ${ui.showRuleHeader === false ? "" : `<div class="module-rule-head">
             <div class="module-rule-title-row">
               <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
               <strong class="module-rule-name">${escapeHtml(title)}</strong>
               <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
             </div>
-            <div class="module-rule-actions">
-              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} up">Move Up</button>
-              <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} down">Move Down</button>
-              <button type="button" class="btn mini danger" data-delete-module-rule="${moduleKey}" data-rule-index="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
-            </div>
-          </div>
-          <div class="module-rule-summary">${renderModuleRuleSummary(moduleKey, rule, { rules, index })}</div>
+            ${ruleActions}
+          </div>`}
+          ${ui.showRuleSummary === false ? "" : `<div class="module-rule-summary">${renderModuleRuleSummary(moduleKey, rule, { rules, index })}</div>`}
           <div class="module-rule-sections">${sections}</div>
+          ${ui.showRuleHeader === false ? `<div class="module-rule-footer">${ruleActions}</div>` : ""}
         </div>
       `;
     })
@@ -11208,7 +11237,7 @@ function getModulesRenderKey(modulesState) {
       : moduleKey === "healer"
         ? (() => {
           const detected = getDetectedVocationInfo();
-          return `:${detected.vocation}:${detected.source}:${String(state?.options?.vocation || "").trim().toLowerCase()}:${String(modulesState?.healerRuneName || "")}:${Number(modulesState?.healerRuneHealthPercent) || 0}:${Boolean(modulesState?.potionHealerEnabled) ? "1" : "0"}:${JSON.stringify(modulesState?.potionHealerRules || [])}:${Boolean(modulesState?.conditionHealerEnabled) ? "1" : "0"}:${JSON.stringify(modulesState?.conditionHealerRules || [])}`;
+          return `:${detected.vocation}:${detected.source}:${String(state?.options?.vocation || "").trim().toLowerCase()}:${Boolean(modulesState?.potionHealerEnabled) ? "1" : "0"}:${JSON.stringify(modulesState?.potionHealerRules || [])}:${Boolean(modulesState?.conditionHealerEnabled) ? "1" : "0"}:${JSON.stringify(modulesState?.conditionHealerRules || [])}`;
         })()
         : moduleKey === "deathHeal"
           ? (() => {
@@ -11310,6 +11339,7 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
 
   const ui = getModuleUi(moduleKey);
   const view = getModuleView(moduleKey);
+  const hideModalHead = ui.hideModalHead === true;
   const enabled = moduleKey === "ringAutoReplace"
     ? getEquipmentReplaceCombinedEnabled(modulesState)
     : moduleKey === "ammo"
@@ -11337,7 +11367,7 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
     view.extraFields.classList.toggle("module-extra-fields-alarms", moduleKey === "alarms");
   }
   if (view.addRuleButton) {
-    view.addRuleButton.hidden = schema.allowRules === false;
+    view.addRuleButton.hidden = schema.allowRules === false || hideModalHead;
     view.addRuleButton.dataset.addModuleRule = moduleKey;
   }
   const settingsOnly = schema.allowRules === false
@@ -11372,6 +11402,13 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
   }
   if (view.note) {
     view.note.hidden = !noteText;
+  }
+  if (moduleModalPanel) {
+    moduleModalPanel.dataset.activeModuleKey = moduleKey;
+    moduleModalPanel.classList.toggle("module-modal-headless", hideModalHead);
+  }
+  if (moduleModalHead) {
+    moduleModalHead.hidden = hideModalHead;
   }
   view.panel?.classList.toggle("module-card-looting", moduleKey === "looting");
 
@@ -11543,6 +11580,71 @@ function renderRouteFileInfo(routeProfile = state?.routeProfile) {
   setTextContent(routeFilePath, routeProfile.path);
   routeFileStatus.dataset.state = routeProfile.exists ? "ready" : "pending";
   routeFilePath.title = routeProfile.path;
+}
+
+function getActiveRouteValidation() {
+  const activeSession = (state?.sessions || []).find((session) => (
+    String(session.id || "") === String(state?.activeSessionId || "")
+  )) || null;
+  return state?.routeValidation
+    || activeSession?.routeValidation
+    || state?.routeProfile?.validation
+    || null;
+}
+
+function getRouteValidationIssueCounts(validation = getActiveRouteValidation()) {
+  const summary = validation?.summary || {};
+  return {
+    errorCount: Math.max(0, Math.trunc(Number(summary.errorCount) || 0)),
+    warningCount: Math.max(0, Math.trunc(Number(summary.warningCount) || 0)),
+    infoCount: Math.max(0, Math.trunc(Number(summary.infoCount) || 0)),
+  };
+}
+
+function formatRouteValidationSummary(validation = getActiveRouteValidation()) {
+  if (!validation) {
+    return "";
+  }
+
+  const { errorCount, warningCount } = getRouteValidationIssueCounts(validation);
+  if (errorCount > 0) {
+    const firstIssue = (Array.isArray(validation.issues) ? validation.issues : [])
+      .find((issue) => issue?.severity === "error")
+      || validation.issues?.[0]
+      || null;
+    const location = Number.isInteger(firstIssue?.waypointIndex)
+      ? ` at waypoint ${firstIssue.waypointIndex + 1}`
+      : "";
+    return `Validation blocked${location}: ${firstIssue?.message || `${errorCount} high-risk issue${errorCount === 1 ? "" : "s"}`}`;
+  }
+  if (warningCount > 0) {
+    return `Validation warnings: ${warningCount} route warning${warningCount === 1 ? "" : "s"}`;
+  }
+  return "Validation clear";
+}
+
+function getRouteValidationTone(validation = getActiveRouteValidation()) {
+  const { errorCount, warningCount } = getRouteValidationIssueCounts(validation);
+  if (errorCount > 0) return "error";
+  if (warningCount > 0) return "warning";
+  return validation ? "clear" : "";
+}
+
+function getWaypointValidationIssue(index, validation = getActiveRouteValidation()) {
+  const issues = Array.isArray(validation?.issues) ? validation.issues : [];
+  return issues.find((issue) => Number(issue?.waypointIndex) === Number(index) && issue.severity === "error")
+    || issues.find((issue) => Number(issue?.waypointIndex) === Number(index) && issue.severity === "warning")
+    || issues.find((issue) => Number(issue?.waypointIndex) === Number(index))
+    || null;
+}
+
+function renderRouteValidation(validation = getActiveRouteValidation()) {
+  if (!routeValidationSummary) return;
+  const text = formatRouteValidationSummary(validation);
+  routeValidationSummary.hidden = !text;
+  routeValidationSummary.textContent = text;
+  routeValidationSummary.title = text;
+  routeValidationSummary.dataset.tone = getRouteValidationTone(validation) || "clear";
 }
 
 function getDashboardRenderKey(
@@ -12079,7 +12181,21 @@ function formatRouteLibraryMeta(routeEntry = null) {
   const updatedLabel = Number.isFinite(updatedAt) && updatedAt > 0
     ? new Date(updatedAt).toLocaleString()
     : "unknown";
-  return `${waypointCount} waypoint${waypointCount === 1 ? "" : "s"} / ${routeEntry.fileName} / ${updatedLabel}`;
+  const validation = routeEntry.validation || null;
+  const { errorCount, warningCount } = getRouteValidationIssueCounts(validation);
+  const validationText = errorCount
+    ? `${errorCount} validation error${errorCount === 1 ? "" : "s"}`
+    : warningCount
+      ? `${warningCount} validation warning${warningCount === 1 ? "" : "s"}`
+      : validation
+        ? "validation clear"
+        : "";
+  return [
+    `${waypointCount} waypoint${waypointCount === 1 ? "" : "s"}`,
+    routeEntry.fileName,
+    updatedLabel,
+    validationText,
+  ].filter(Boolean).join(" / ");
 }
 
 function getRouteLibraryRenderKey(routeLibrary = getRouteLibrary()) {
@@ -12093,6 +12209,9 @@ function getRouteLibraryRenderKey(routeLibrary = getRouteLibrary()) {
       entry.waypointCount,
       entry.updatedAt,
       entry.active ? "1" : "0",
+      entry.validation?.signature || "",
+      entry.validation?.summary?.errorCount || 0,
+      entry.validation?.summary?.warningCount || 0,
     ].join(":"))
     .join("|");
 
@@ -12406,6 +12525,9 @@ function renderRouteOverview(routeProfile = state?.routeProfile, waypoints = get
   const savedRouteCount = getRouteLibrary().length;
   const routeResetStatus = getRouteResetStatus();
   const autowalkState = getAutowalkEffectiveState(state?.options || {}, state);
+  const routeValidation = getActiveRouteValidation();
+  const routeValidationTone = getRouteValidationTone(routeValidation);
+  const routeValidationText = formatRouteValidationSummary(routeValidation);
   const focusIndex = waypoints.length
     ? Math.max(0, Math.min(selectedWaypointIndex, waypoints.length - 1))
     : null;
@@ -12422,6 +12544,9 @@ function renderRouteOverview(routeProfile = state?.routeProfile, waypoints = get
     autowalkState.state,
     autowalkState.label,
     autowalkState.detail,
+    routeValidation?.signature || "",
+    routeValidationTone,
+    routeValidationText,
   ].join("::");
 
   if (routeOverviewRenderedKey !== renderKey) {
@@ -12466,7 +12591,7 @@ function renderRouteOverview(routeProfile = state?.routeProfile, waypoints = get
       const blockerNote = autowalkState.state === "blocked"
         ? autowalkState.detail
         : "";
-      const noteText = routeResetNote || blockerNote;
+      const noteText = routeResetNote || blockerNote || (routeValidationTone === "error" || routeValidationTone === "warning" ? routeValidationText : "");
       routeOverviewFields.note.hidden = !noteText;
       routeOverviewFields.note.textContent = noteText;
     }
@@ -12903,6 +13028,7 @@ function renderCompactPanel() {
   setTextContent(compactPanelFields.alarms, alarmSummary.headline || "-");
   setTextContent(compactPanelFields.partyFollow, summaryFields.partyFollow?.textContent || "-");
   setTextContent(compactPanelFields.rookiller, summaryFields.rookiller?.textContent || "-");
+  setTextContent(compactPanelFields.decision, formatDecisionCompactSummary(getActiveDecisionTrace()?.current));
 
   Object.values(compactPanelFields).forEach(syncTextTitle);
 }
@@ -15007,6 +15133,11 @@ function openModal(name) {
     renderModules({ force: true });
   }
 
+  if (name === "logs") {
+    renderDecisionTrace();
+    renderRuntimeMetrics();
+  }
+
   if (name === "runeMaker" && focusRuneMakerPrimaryControl(targetPanel)) {
     return targetPanel;
   }
@@ -15490,6 +15621,15 @@ function renderDashboard() {
     );
     syncTextTitle(cavebotMasterStopDetail);
   }
+  if (compactCavebotMasterStopSummary instanceof HTMLElement) {
+    setTextContent(
+      compactCavebotMasterStopSummary,
+      deskCavebotControlState.anyRunning
+        ? `Stop ${deskCavebotControlState.runningCount}`
+        : "Stopped",
+    );
+    syncTextTitle(compactCavebotMasterStopSummary);
+  }
   if (cavebotPauseOpenButton instanceof HTMLElement) {
     cavebotPauseOpenButton.dataset.titleDefault = !deskCavebotControlState.liveCount
       ? "Master stop is unavailable until a live character tab is linked."
@@ -15704,30 +15844,35 @@ function renderTargetingDistanceRuleList(rules = []) {
     return '<div class="empty-state">No fallback combat rules yet. Creature profiles still handle per-creature priority, danger, focus, spacing, and escape behavior.</div>';
   }
 
+  const ui = getModuleUi("distanceKeeper");
   return rules
     .map((rule, index) => {
       const enabled = rule?.enabled !== false;
       const title = formatRuleDisplayName("distanceKeeper", rule, index);
+      const ruleActions = `
+        <div class="module-rule-actions">
+          <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Raise priority for ${escapeHtml(title)}">Higher</button>
+          <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Lower priority for ${escapeHtml(title)}">Lower</button>
+          <button type="button" class="btn mini danger" data-targeting-distance-delete="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
+        </div>
+      `;
       const sections = (MODULE_RULE_UI.distanceKeeper?.sections || [])
         .map((section) => renderModuleRuleFieldSection("distanceKeeper", index, rule, section))
         .join("");
 
       return `
         <div class="module-rule-card ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="distanceKeeper" data-rule-index="${index}">
-          <div class="module-rule-head">
+          ${ui.showRuleHeader === false ? "" : `<div class="module-rule-head">
             <div class="module-rule-title-row">
               <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
               <strong class="module-rule-name">${escapeHtml(title)}</strong>
               <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
             </div>
-            <div class="module-rule-actions">
-              <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Raise priority for ${escapeHtml(title)}">Higher</button>
-              <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="1" ${index === rules.length - 1 ? "disabled" : ""} aria-label="Lower priority for ${escapeHtml(title)}">Lower</button>
-              <button type="button" class="btn mini danger" data-targeting-distance-delete="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
-            </div>
-          </div>
-          <div class="module-rule-summary">${renderModuleRuleSummary("distanceKeeper", rule, { rules, index })}</div>
+            ${ruleActions}
+          </div>`}
+          ${ui.showRuleSummary === false ? "" : `<div class="module-rule-summary">${renderModuleRuleSummary("distanceKeeper", rule, { rules, index })}</div>`}
           <div class="module-rule-sections">${sections}</div>
+          ${ui.showRuleHeader === false ? `<div class="module-rule-footer">${ruleActions}</div>` : ""}
         </div>
       `;
     })
@@ -16178,7 +16323,8 @@ function getWaypointListStructureKey(waypoints = getWaypoints()) {
 }
 
 function getWaypointListStateKey(waypoints = getWaypoints(), markedKey = getMarkedWaypointIndexes(waypoints).join(",")) {
-  return `${state?.routeIndex ?? -1}::${state?.overlayFocusIndex ?? -1}::${shouldSuppressLiveWaypointHighlights() ? "reset-returning" : "live-highlight"}::${selectedWaypointIndex}::${markedKey}`;
+  const validation = getActiveRouteValidation();
+  return `${state?.routeIndex ?? -1}::${state?.overlayFocusIndex ?? -1}::${shouldSuppressLiveWaypointHighlights() ? "reset-returning" : "live-highlight"}::${selectedWaypointIndex}::${markedKey}::${validation?.signature || ""}`;
 }
 
 function isWaypointListGridLayout() {
@@ -16204,14 +16350,23 @@ function renderWaypointListRow(waypoint, index, {
   const isMarked = isWaypointMarked(index);
   const tone = getWaypointCardTone(waypoint.type);
   const detail = formatWaypointCardDetail(waypoint);
+  const validationIssue = getWaypointValidationIssue(index);
+  const validationClass = validationIssue?.severity === "error"
+    ? "validation-error"
+    : validationIssue?.severity === "warning"
+      ? "validation-warning"
+      : "";
   const { heading, title } = getWaypointListItemTitle(waypoint, index);
+  const titleWithValidation = validationIssue?.message
+    ? `${title} / Validation: ${validationIssue.message}`
+    : title;
 
   if (gridLayout) {
     return `
       <article
-        class="waypoint-row ${isCurrent ? "current active" : ""} ${isFocus ? "focus" : ""} ${isSelected ? "selected" : ""} ${isMarked ? "marked" : ""}"
+        class="waypoint-row ${isCurrent ? "current active" : ""} ${isFocus ? "focus" : ""} ${isSelected ? "selected" : ""} ${isMarked ? "marked" : ""} ${validationClass}"
         data-index="${index}"
-        title="${escapeHtml(title)}"
+        title="${escapeHtml(titleWithValidation)}"
         ${tone ? `data-tone="${tone}"` : ""}
       >
         <button
@@ -16220,7 +16375,7 @@ function renderWaypointListRow(waypoint, index, {
           data-index="${index}"
           aria-pressed="${isSelected ? "true" : "false"}"
           aria-label="${escapeHtml(`${heading}. Click to select this waypoint.`)}"
-          title="${escapeHtml(title)}"
+          title="${escapeHtml(titleWithValidation)}"
         >
           <div class="waypoint-chip-top">
             <span class="waypoint-row-index">${formatWaypointOrdinal(index)}</span>
@@ -16248,9 +16403,9 @@ function renderWaypointListRow(waypoint, index, {
 
   return `
     <article
-      class="waypoint-row ${isCurrent ? "current active" : ""} ${isFocus ? "focus" : ""} ${isSelected ? "selected" : ""} ${isMarked ? "marked" : ""}"
+      class="waypoint-row ${isCurrent ? "current active" : ""} ${isFocus ? "focus" : ""} ${isSelected ? "selected" : ""} ${isMarked ? "marked" : ""} ${validationClass}"
       data-index="${index}"
-      title="${escapeHtml(title)}"
+      title="${escapeHtml(titleWithValidation)}"
       ${tone ? `data-tone="${tone}"` : ""}
     >
       <button
@@ -16259,8 +16414,8 @@ function renderWaypointListRow(waypoint, index, {
         data-index="${index}"
         aria-pressed="${isSelected ? "true" : "false"}"
         aria-label="${escapeHtml(`${heading}. Click to select this waypoint.`)}"
-        title="${escapeHtml(title)}"
-      >
+      title="${escapeHtml(titleWithValidation)}"
+    >
         <span class="waypoint-row-index">${formatWaypointOrdinal(index)}</span>
         <strong>${escapeHtml(getWaypointDisplayLabel(waypoint, index))}</strong>
         <span class="waypoint-chip-position">${escapeHtml(formatPosition(waypoint))}</span>
@@ -16299,6 +16454,10 @@ function syncWaypointListRowState(waypoints = getWaypoints()) {
     const isMarked = isWaypointMarked(index, waypoints);
     const tone = getWaypointCardTone(waypoint.type);
     const { heading, title } = getWaypointListItemTitle(waypoint, index);
+    const validationIssue = getWaypointValidationIssue(index);
+    const titleWithValidation = validationIssue?.message
+      ? `${title} / Validation: ${validationIssue.message}`
+      : title;
     const mainButton = row.querySelector(".waypoint-row-main");
     const markButton = row.querySelector("[data-waypoint-mark]");
 
@@ -16307,7 +16466,9 @@ function syncWaypointListRowState(waypoints = getWaypoints()) {
     row.classList.toggle("focus", isFocus);
     row.classList.toggle("selected", isSelected);
     row.classList.toggle("marked", isMarked);
-    row.title = title;
+    row.classList.toggle("validation-error", validationIssue?.severity === "error");
+    row.classList.toggle("validation-warning", validationIssue?.severity === "warning");
+    row.title = titleWithValidation;
     if (tone) {
       row.dataset.tone = tone;
     } else {
@@ -16317,7 +16478,7 @@ function syncWaypointListRowState(waypoints = getWaypoints()) {
     if (mainButton instanceof HTMLElement) {
       mainButton.setAttribute("aria-pressed", isSelected ? "true" : "false");
       mainButton.setAttribute("aria-label", `${heading}. Click to select this waypoint.`);
-      mainButton.title = title;
+      mainButton.title = titleWithValidation;
     }
 
     if (markButton instanceof HTMLElement) {
@@ -16503,6 +16664,7 @@ function renderAutowalk({ liveOnly = false } = {}) {
   if (!liveOnly) {
     renderAvoidFieldControls(preserveRouteDraft ? getAvoidFieldDraft(options) : options);
     renderRouteFileInfo(state.routeProfile);
+    renderRouteValidation();
     renderRouteLibrary();
   }
 
@@ -16885,6 +17047,101 @@ function formatRuntimeMetricDetail(metric = null) {
   return parts.join(" / ");
 }
 
+function getActiveDecisionTrace() {
+  const activeSession = (state?.sessions || []).find((session) => (
+    String(session.id || "") === String(state?.activeSessionId || "")
+  )) || null;
+
+  return activeSession?.decisionTrace
+    || state?.snapshot?.decisionTrace
+    || null;
+}
+
+function formatDecisionOwner(owner = "") {
+  const text = humanizeIdentifier(owner || "runtime");
+  return text ? toSentenceCase(text) : "Runtime";
+}
+
+function formatDecisionRecord(record = null, fallback = "Idle") {
+  if (!record) return fallback;
+  const owner = formatDecisionOwner(record.owner);
+  const action = record.action?.label || record.action?.type || "";
+  const reason = record.reason || record.result?.reason || "";
+  if (action && reason && reason !== "acted") {
+    return `${owner}: ${action} / ${reason}`;
+  }
+  if (action) {
+    return `${owner}: ${action}`;
+  }
+  if (reason) {
+    return `${owner}: ${reason}`;
+  }
+  return owner;
+}
+
+function formatDecisionCompactSummary(record = null) {
+  if (!record) return "Idle";
+  const owner = formatDecisionOwner(record.owner);
+  if (record.acted || record.state === "acted") {
+    return owner;
+  }
+  return record.reason ? `${owner} wait` : owner;
+}
+
+function renderDecisionTrace() {
+  if (!decisionTraceOutput) return;
+  if (activeModalName !== "logs") {
+    decisionTraceRenderedKey = "";
+    return;
+  }
+
+  const trace = getActiveDecisionTrace() || {};
+  const current = trace.current || null;
+  const blocker = trace.blocker || null;
+  const records = Array.isArray(trace.records) ? trace.records.slice(-6).reverse() : [];
+  const renderKey = JSON.stringify({
+    updatedAt: trace.updatedAt || 0,
+    current,
+    blocker,
+    records: records.map((record) => [record.owner, record.state, record.reason, record.action?.type, record.action?.label]),
+  });
+
+  if (decisionTraceRenderedKey === renderKey) {
+    return;
+  }
+
+  const rows = records.length
+    ? records.map((record) => `
+      <div class="runtime-metric">
+        <span>${escapeHtml(formatDecisionOwner(record.owner))}</span>
+        <strong>${escapeHtml(record.state || "skipped")}</strong>
+        <small>${escapeHtml(formatDecisionRecord(record, "no action"))}</small>
+      </div>
+    `).join("")
+    : `
+      <div class="runtime-metric">
+        <span>Decision</span>
+        <strong>Idle</strong>
+        <small>No decision trace has been emitted yet</small>
+      </div>
+    `;
+
+  decisionTraceOutput.innerHTML = `
+    <div class="runtime-metric">
+      <span>Current</span>
+      <strong>${escapeHtml(formatDecisionOwner(current?.owner || ""))}</strong>
+      <small>${escapeHtml(formatDecisionRecord(current, "No current decision"))}</small>
+    </div>
+    <div class="runtime-metric">
+      <span>Blocker</span>
+      <strong>${escapeHtml(blocker ? formatDecisionOwner(blocker.owner) : "Clear")}</strong>
+      <small>${escapeHtml(formatDecisionRecord(blocker, "No active blocker"))}</small>
+    </div>
+    ${rows}
+  `;
+  decisionTraceRenderedKey = renderKey;
+}
+
 function renderRuntimeMetrics() {
   if (!runtimeMetricsOutput) return;
   if (activeModalName !== "logs") {
@@ -16945,6 +17202,9 @@ function renderLogs() {
   const latest = logs.slice(-8).reverse();
   const lifecycle = getDeskLifecycle();
   const activeLabel = getBindingLabel() || "No Live Character";
+  const decisionTrace = getActiveDecisionTrace() || {};
+  const currentDecision = decisionTrace.current || null;
+  const currentBlocker = decisionTrace.blocker || null;
   const renderKey = [
     String(state?.activeSessionId || ""),
     lifecycle.phase,
@@ -16955,6 +17215,11 @@ function renderLogs() {
     logs.length,
     logs[0] || "",
     logs.at(-1) || "",
+    decisionTrace.updatedAt || 0,
+    currentDecision?.owner || "",
+    currentDecision?.reason || "",
+    currentBlocker?.owner || "",
+    currentBlocker?.reason || "",
   ].join("::");
 
   try {
@@ -16992,6 +17257,14 @@ function renderLogs() {
             <div class="feed-summary-metric">
               <span>Last</span>
               <strong>${escapeHtml(latestEntry?.time || "--:--:--")}</strong>
+            </div>
+            <div class="feed-summary-metric">
+              <span>Decision</span>
+              <strong>${escapeHtml(currentDecision ? formatDecisionOwner(currentDecision.owner) : "Idle")}</strong>
+            </div>
+            <div class="feed-summary-metric">
+              <span>Blocker</span>
+              <strong>${escapeHtml(currentBlocker ? formatDecisionOwner(currentBlocker.owner) : "Clear")}</strong>
             </div>
           </div>
         </div>
@@ -17051,6 +17324,7 @@ function renderLoadingState() {
   accountDraftRenderedKey = "";
   logsRenderedKey = "";
   runtimeMetricsRenderedKey = "";
+  decisionTraceRenderedKey = "";
   resetLogOutputRenderCache();
   routeOverviewRenderedKey = "";
   Object.values(targetingRegistryFields).forEach((field) => setTextContent(field, "-"));
@@ -17064,6 +17338,11 @@ function renderLoadingState() {
   setTextContent(huntPresetCount, "-");
   if (routeOverviewFields.note) {
     routeOverviewFields.note.textContent = "Waiting for route state.";
+  }
+  if (routeValidationSummary) {
+    routeValidationSummary.hidden = true;
+    routeValidationSummary.textContent = "";
+    routeValidationSummary.dataset.tone = "clear";
   }
   if (routeOverviewFields.preview) {
     routeOverviewFields.preview.innerHTML = '<div class="empty-state">Waiting for live route state</div>';
@@ -17105,6 +17384,9 @@ function renderLoadingState() {
     `;
   }
   eventFeed.innerHTML = '<div class="empty-state">Waiting for log feed</div>';
+  if (decisionTraceOutput) {
+    decisionTraceOutput.innerHTML = "";
+  }
   logOutput.textContent = "Waiting for log output...";
   if (accountSelect) {
     accountSelect.innerHTML = '<option value="">Waiting for saved accounts</option>';
@@ -17169,6 +17451,7 @@ function render(renderScope = "full") {
       scope: normalizedRenderScope,
       stateReady: Boolean(state),
     });
+    renderDecisionTrace();
     renderRuntimeMetrics();
   }
 }
@@ -17479,9 +17762,9 @@ function modulesPayload() {
     healerEnabled: draft.healerEnabled,
     healerRules: cloneValue(draft.healerRules),
     healerEmergencyHealthPercent: draft.healerEmergencyHealthPercent,
-    healerRuneName: draft.healerRuneName,
-    healerRuneHotkey: draft.healerRuneHotkey,
-    healerRuneHealthPercent: draft.healerRuneHealthPercent,
+    healerRuneName: "",
+    healerRuneHotkey: "",
+    healerRuneHealthPercent: 0,
     potionHealerEnabled: draft.potionHealerEnabled,
     potionHealerRules: cloneValue(draft.potionHealerRules),
     conditionHealerEnabled: draft.conditionHealerEnabled,

@@ -668,7 +668,13 @@ test("blank route profile files load as empty saved routes", async () => {
     ]);
 
     const routeProfile = await loadRouteProfile("dararotworms");
-    assert.deepEqual(routeProfile, {
+    assert.deepEqual({
+      ...routeProfile,
+      validation: {
+        ...routeProfile.validation,
+        checkedAt: 0,
+      },
+    }, {
       name: "dararotworms",
       fileName: "dararotworms.json",
       path: path.join(PROFILE_DIR, "dararotworms.json"),
@@ -676,6 +682,24 @@ test("blank route profile files load as empty saved routes", async () => {
       options: normalizeOptions({
         cavebotName: "dararotworms",
       }),
+      validation: {
+        schemaVersion: 1,
+        sourceName: "dararotworms",
+        sourcePath: path.join(PROFILE_DIR, "dararotworms.json"),
+        signature: routeProfile.validation.signature,
+        checkedAt: 0,
+        ok: true,
+        requiresAcknowledgement: false,
+        summary: {
+          ok: true,
+          errorCount: 0,
+          warningCount: 0,
+          infoCount: 0,
+          highestSeverity: "clear",
+          firstProblemWaypointIndex: null,
+        },
+        issues: [],
+      },
     });
   } finally {
     if (previousHome == null) {

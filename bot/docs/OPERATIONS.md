@@ -194,6 +194,17 @@ Named cavebot files are saved separately from character config. Saving the route
 
 Because the route name becomes the JSON filename, keep route names filesystem-safe. Avoid `<>:"/\\|?*`, trailing spaces or periods, and reserved Windows names such as `CON` or `LPT1`.
 
+Validate saved routes without rewriting them:
+
+```bash
+node scripts/validate-routes.mjs
+```
+
+Use `--path <file-or-dir>` to validate a specific route file or directory, and
+`--json` for machine-readable output. High-risk validation errors block starting
+an enabled route until the operator repeats the start action for the same
+validation signature.
+
 ### 5. Manage Shared Modules
 
 Use the left-rail cards and the shared module modal to configure:
@@ -548,6 +559,13 @@ Check:
 ### Route Name Refuses To Save
 
 Check that the route name does not contain filesystem-invalid characters, trailing spaces or periods, or reserved Windows names such as `CON` or `LPT1`.
+
+### Route Validation Blocks Start
+
+Open Route Builder and review the validation summary. The affected waypoint row
+is highlighted when the issue points to a specific waypoint. If the route is
+intentionally risky, repeat the start action after reviewing the warning; a
+config change creates a new validation signature and requires review again.
 
 ### Presets Modal Is Empty
 

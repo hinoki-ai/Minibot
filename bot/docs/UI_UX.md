@@ -90,6 +90,7 @@ The right rail is the console:
 
 - recent activity feed
 - log modal entry point
+- current decision and current blocker summaries
 
 It is the passive visibility surface for runtime state and operator feedback.
 
@@ -101,6 +102,7 @@ Compact view is an alternate presentation of the same desk. It mirrors:
 - route toggles and quick actions
 - module quick opens and power toggles
 - route file access and logs entry points
+- current decision state
 
 Compact view must never introduce a second configuration model.
 
@@ -178,6 +180,7 @@ Current ownership split:
 - Live next-waypoint highlighting is separate from editor selection and should suppress itself while reset return is still active.
 - Route overview metrics should deep-link into the route builder modal or the saved-route quick picker as appropriate.
 - Waypoint quick-open shortcuts land on the relevant control inside the route builder modal.
+- Route validation warnings belong in the route builder and route overview. Waypoint-specific validation issues should highlight the affected waypoint row without changing route JSON.
 - Route reset, clear, delete, and archive clear flows require explicit confirmation or undo paths.
 - The route overview should show live metrics only. Placeholder cards or dead slots are not acceptable in the shipping desk.
 
@@ -200,6 +203,16 @@ Current ownership split:
 - Session waypoint overlays are an all-live-tabs view control, not a second route editor; route waypoint overlay remains the route-persisted preference for the active character.
 - `Cavebot Pause` pauses route and hunt automation across live tabs while keeping healer and utility rules available.
 - `Compact View` is a layout toggle, not a stateful mode that changes session behavior.
+
+### Runtime Visibility
+
+- The full desk, compact view, and logs modal all surface the same active
+  decision trace from live session state.
+- The console summary shows current decision owner and current blocker.
+- The logs modal may expand the trace into recent owner/state/reason rows, but
+  it must not invent a separate runtime state model.
+- Snapshot-confidence blockers should be worded as concrete runtime reasons,
+  for example `snapshot tiles stale` or `snapshot inventory unknown`.
 
 ### Alerts And Feedback
 

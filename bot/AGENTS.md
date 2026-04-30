@@ -67,6 +67,8 @@ Rules:
 6. Delete stale duplicate documentation once canon is updated.
 7. Runtime behavior belongs in `lib/`; renderer event handlers should stay
    presentation-oriented.
+8. Run `npm run check:structure` after changing repository layout, canonical
+   documentation, package entry points, or portable storage boundaries.
 
 ## Task Entry Points
 

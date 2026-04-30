@@ -65,6 +65,7 @@ bb
 Useful scripts:
 
 ```bash
+npm run check:structure
 npm run refresh:minibia-data
 npm run pack
 npm run dist
@@ -188,7 +189,7 @@ Useful flags: `--character`, `--route`, `--max-minutes`, `--poll-ms`,
 - [`data/minibia/`](./data/minibia): vendored normalized Minibia datasets,
   the latest retained source snapshot, and vocation packs
 - [`scripts/`](./scripts): data refresh, portable bundle creation, route capture,
-  launch helpers, and brand asset generation
+  structure checks, launch helpers, and brand asset generation
 - [`test/`](./test): Node test suite
 - [`cavebots/`](./cavebots): workspace route examples
 - [`storage/`](./storage): portable bundle state when this repo is running from a
@@ -216,8 +217,11 @@ in [`temporals/`](./temporals).
 ## Verification
 
 ```bash
+npm run check:structure
 npm test
 ```
 
-`npm run pack` produces an unpacked release bundle. `npm run dist` creates
-installable artifacts for the current platform.
+`npm run check:structure` verifies the portable root boundary, canonical
+markdown set, generated-state exclusions, and package entry points. `npm run
+pack` produces an unpacked release bundle. `npm run dist` creates installable
+artifacts for the current platform.

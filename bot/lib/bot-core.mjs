@@ -36,7 +36,11 @@ import {
   chooseRefillAction as chooseRefillModuleAction,
   hasRefillNeed as hasRefillModuleNeed,
 } from "./modules/refill.mjs";
-import { normalizeMinibiaSnapshot } from "./minibia-snapshot.mjs";
+import {
+  getSnapshotConfidenceGate,
+  normalizeMinibiaSnapshot,
+  normalizeSnapshotConfidence,
+} from "./minibia-snapshot.mjs";
 import { resolveMinibiaItemName } from "./minibia-item-metadata.mjs";
 import {
   buildDailyTaskStep,
@@ -83,6 +87,27 @@ import {
 export { BANKING_OPERATION_TYPES, DEFAULT_BANKING_RULE };
 
 const RUNTIME_TIMING_EWMA_ALPHA = 0.18;
+const DECISION_TRACE_LIMIT = 80;
+const MODULE_REQUIRED_SNAPSHOT_FAMILIES = Object.freeze({
+  sustain: Object.freeze(["self", "inventory", "hotbar"]),
+  healer: Object.freeze(["self", "inventory", "hotbar"]),
+  potionHealer: Object.freeze(["self", "inventory", "hotbar"]),
+  conditionHealer: Object.freeze(["self"]),
+  deathHeal: Object.freeze(["self", "hotbar"]),
+  route: Object.freeze(["self", "route", "tiles"]),
+  targeter: Object.freeze(["self", "creatures"]),
+  distanceKeeper: Object.freeze(["self", "creatures", "tiles"]),
+  spellCaster: Object.freeze(["self", "creatures", "hotbar"]),
+  looting: Object.freeze(["self", "creatures", "inventory"]),
+  refill: Object.freeze(["self", "creatures", "inventory", "npc"]),
+  banking: Object.freeze(["self", "npc"]),
+  reconnect: Object.freeze(["self"]),
+  trainer: Object.freeze(["self", "party", "creatures"]),
+  followChain: Object.freeze(["self", "party", "creatures", "tiles"]),
+  autoEat: Object.freeze(["inventory", "hotbar"]),
+  ammo: Object.freeze(["inventory", "hotbar"]),
+  antiIdle: Object.freeze(["self", "inventory"]),
+});
 
 function getMonotonicNowMs() {
   return typeof globalThis.performance?.now === "function" ? globalThis.performance.now() : Date.now();
@@ -134,6 +159,94 @@ function serializeRuntimeTimingStore(store = {}) {
         },
       ])),
   );
+}
+
+function normalizeDecisionText(value, fallback = "") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function normalizeDecisionOwner(value) {
+  const owner = normalizeDecisionText(value, "runtime");
+  switch (owner) {
+    case "looter":
+      return "looting";
+    case "banker":
+      return "banking";
+    case "routeBuilder":
+      return "route";
+    case "followTrain":
+    case "partyFollow":
+      return "followChain";
+    default:
+      return owner;
+  }
+}
+
+function normalizeDecisionState(value, { acted = false } = {}) {
+  const state = normalizeDecisionText(value).toLowerCase();
+  if (["acted", "skipped", "blocked", "suppressed", "failed", "idle"].includes(state)) {
+    return state;
+  }
+  return acted ? "acted" : "skipped";
+}
+
+function normalizeDecisionFamilies(value = []) {
+  const list = Array.isArray(value) ? value : [value];
+  return Array.from(new Set(
+    list
+      .map((entry) => normalizeDecisionText(entry))
+      .filter(Boolean),
+  ));
+}
+
+function summarizeDecisionAction(action = null) {
+  if (!action || typeof action !== "object") {
+    return null;
+  }
+
+  const type = normalizeDecisionText(action.type || action.kind || action.actionType, "action");
+  const label = normalizeDecisionText(
+    action.label
+    || action.words
+    || action.name
+    || action.sustainKind
+    || action.reason
+    || action.walkReason,
+  );
+
+  return {
+    type,
+    label,
+    moduleKey: normalizeDecisionText(action.moduleKey),
+    ruleIndex: Number.isInteger(action.ruleIndex) ? action.ruleIndex : null,
+  };
+}
+
+function summarizeDecisionResult(result = null) {
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+
+  return {
+    ok: result.ok == null ? null : result.ok === true,
+    reason: normalizeDecisionText(result.reason || result.status || result.phase),
+    action: normalizeDecisionText(result.action || result.kind),
+  };
+}
+
+function formatDecisionReason(record = null) {
+  const reason = normalizeDecisionText(record?.reason);
+  if (reason) {
+    return reason;
+  }
+
+  const resultReason = normalizeDecisionText(record?.result?.reason);
+  if (resultReason) {
+    return resultReason;
+  }
+
+  return record?.state === "acted" ? "acted" : "no action";
 }
 
 export const AVOID_FIELD_CATEGORIES = Object.freeze([
@@ -478,6 +591,7 @@ const ROUTE_RESYNC_DIRECT_SKIP = 1;
 const ROUTE_RESYNC_EXACT_RELATCH_SKIP = 2;
 const ROUTE_RESYNC_REQUIRED_BRIDGE_TOUCHES = 2;
 const ROUTE_FLOOR_RECOVERY_MAX_DISTANCE = ROUTE_RESYNC_FORCE_FULL_SWEEP_DISTANCE;
+const ROUTE_SAFETY_SEGMENT_VICINITY = 1;
 const ROUTE_SPACING_LOG_COOLDOWN_MS = 4_000;
 const ROUTE_SPACING_STALE_HOLD_BREAK_MS = 6_000;
 const ROUTE_SPACING_STALE_HOLD_BYPASS_MS = 4_000;
@@ -575,6 +689,12 @@ const ANTI_IDLE_FALLBACK_KEY_EVENT = Object.freeze({
   code: "ShiftLeft",
   windowsVirtualKeyCode: 16,
   nativeVirtualKeyCode: 16,
+});
+const MOVEMENT_KEY_EVENTS = Object.freeze({
+  north: Object.freeze({ key: "ArrowUp", code: "ArrowUp", windowsVirtualKeyCode: 38, nativeVirtualKeyCode: 38 }),
+  east: Object.freeze({ key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39, nativeVirtualKeyCode: 39 }),
+  south: Object.freeze({ key: "ArrowDown", code: "ArrowDown", windowsVirtualKeyCode: 40, nativeVirtualKeyCode: 40 }),
+  west: Object.freeze({ key: "ArrowLeft", code: "ArrowLeft", windowsVirtualKeyCode: 37, nativeVirtualKeyCode: 37 }),
 });
 const HOTKEY_MODIFIER_EVENTS = Object.freeze({
   alt: Object.freeze({ key: "Alt", code: "AltLeft", windowsVirtualKeyCode: 18, nativeVirtualKeyCode: 18, modifiers: 1 }),
@@ -2372,6 +2492,52 @@ function buildHealerRulesFromLegacyTiers(value = []) {
   }));
 }
 
+function buildLegacyHealerRuneRules(options = {}) {
+  const threshold = clampPercent(options?.healerRuneHealthPercent, 0);
+  if (threshold <= 0) {
+    return [];
+  }
+
+  const configuredName = normalizeHealingRuneRuleName(options?.healerRuneName);
+  const hotkey = normalizeHotkey(options?.healerRuneHotkey);
+  const runeNames = configuredName
+    ? [configuredName]
+    : (hotkey ? ["Ultimate Healing Rune"] : ["Ultimate Healing Rune", "Intense Healing Rune"]);
+
+  return runeNames.map((runeName, index) => normalizeHealerRule({
+    enabled: true,
+    label: "",
+    words: runeName,
+    hotkey: index === 0 ? hotkey : "",
+    minHealthPercent: 0,
+    maxHealthPercent: threshold,
+    minMana: 0,
+    minManaPercent: 0,
+    cooldownMs: DEFAULT_HEALER_RULE.cooldownMs,
+  }, EMPTY_HEALER_RULE));
+}
+
+function mergeLegacyHealerRuneRules(legacyRuneRules = [], healerRules = []) {
+  const existingRuneNames = new Set(
+    healerRules
+      .map((rule) => normalizeHealingRuneRuleName(rule?.words))
+      .filter(Boolean),
+  );
+  const promotedRules = [];
+
+  for (const rule of legacyRuneRules) {
+    const runeName = normalizeHealingRuneRuleName(rule?.words);
+    if (!runeName || existingRuneNames.has(runeName)) {
+      continue;
+    }
+
+    existingRuneNames.add(runeName);
+    promotedRules.push(rule);
+  }
+
+  return [...promotedRules, ...healerRules];
+}
+
 function normalizePotionHealerRule(rule = {}, fallback = DEFAULT_POTION_HEALER_RULE) {
   const normalizedFallback = {
     enabled: normalizeBoolean(fallback?.enabled, DEFAULT_POTION_HEALER_RULE.enabled),
@@ -2982,11 +3148,26 @@ export function normalizeOptions(options = {}) {
   merged.deathHealHealthPercent = clampPercent(merged.deathHealHealthPercent, DEFAULTS.deathHealHealthPercent);
   merged.deathHealCooldownMs = normalizeNonNegativeNumber(merged.deathHealCooldownMs, DEFAULTS.deathHealCooldownMs);
   merged.healerEnabled = Boolean(merged.healerEnabled);
-  merged.healerRules = hasOwn("healerRules")
+  const hasExplicitHealerRules = hasOwn("healerRules");
+  const hasLegacyHealerField = HEALER_LEGACY_FIELDS.some((key) => hasOwn(key));
+  const shouldInferHealerEmergencyFromPrimary = hasExplicitHealerRules
+    || hasOwn("healerTiers")
+    || hasLegacyHealerField;
+  const shouldPromoteLegacyHealerRune = !hasExplicitHealerRules
+    || hasOwn("healerRuneName")
+    || hasOwn("healerRuneHotkey")
+    || hasOwn("healerRuneHealthPercent");
+  merged.healerRules = hasExplicitHealerRules
     ? normalizeHealerRules(merged.healerRules)
     : hasOwn("healerTiers")
       ? buildHealerRulesFromLegacyTiers(merged.healerTiers)
       : normalizeHealerRules([buildLegacyHealerRule(merged)]);
+  if (shouldPromoteLegacyHealerRune) {
+    merged.healerRules = mergeLegacyHealerRuneRules(
+      buildLegacyHealerRuneRules(merged),
+      merged.healerRules,
+    );
+  }
   merged.healerTiers = merged.healerRules.map((rule) => ({
     words: rule.words,
     healthPercent: rule.maxHealthPercent,
@@ -2998,10 +3179,12 @@ export function normalizeOptions(options = {}) {
   merged.healerHealthPercent = primaryHealerRule.maxHealthPercent;
   merged.healerEmergencyHealthPercent = hasOwn("healerEmergencyHealthPercent")
     ? clampPercent(merged.healerEmergencyHealthPercent, primaryHealerRule.maxHealthPercent)
-    : primaryHealerRule.maxHealthPercent;
-  merged.healerRuneName = normalizeHealingRuneRuleName(merged.healerRuneName);
-  merged.healerRuneHotkey = normalizeHotkey(merged.healerRuneHotkey);
-  merged.healerRuneHealthPercent = clampPercent(merged.healerRuneHealthPercent, DEFAULTS.healerRuneHealthPercent);
+    : shouldInferHealerEmergencyFromPrimary
+      ? primaryHealerRule.maxHealthPercent
+      : DEFAULTS.healerEmergencyHealthPercent;
+  merged.healerRuneName = "";
+  merged.healerRuneHotkey = "";
+  merged.healerRuneHealthPercent = 0;
   merged.healerMinMana = primaryHealerRule.minMana;
   merged.healerMinManaPercent = primaryHealerRule.minManaPercent;
   merged.potionHealerEnabled = Boolean(merged.potionHealerEnabled);
@@ -4367,9 +4550,6 @@ function buildStateExpression(options) {
     };
     const describeElementalFieldThing = (thing) => {
       const id = getThingId(thing);
-      const idType = id != null ? elementalFieldIdToType.get(id) : "";
-      if (idType) return { type: idType, id };
-
       const label = [
         thing?.name,
         thing?.tileName,
@@ -4385,6 +4565,8 @@ function buildStateExpression(options) {
       if (label.includes("fire") && label.includes("field")) return { type: "fire", id };
       if ((label.includes("energy") || label.includes("electric")) && label.includes("field")) return { type: "energy", id };
       if ((label.includes("poison") || label.includes("venom")) && label.includes("field")) return { type: "poison", id };
+      const idType = id != null ? elementalFieldIdToType.get(id) : "";
+      if (idType) return { type: idType, id };
       return null;
     };
     const getTileAt = (pos) => {
@@ -12748,6 +12930,13 @@ export class MinibiaTargetBot {
       active: true,
     };
     this.runtimeTiming = {};
+    this.currentTickDecisionRecords = [];
+    this.lastDecisionTrace = {
+      current: null,
+      blocker: null,
+      records: [],
+      updatedAt: 0,
+    };
     this.listeners = new Set();
   }
 
@@ -12772,6 +12961,197 @@ export class MinibiaTargetBot {
 
   getRuntimeTiming() {
     return serializeRuntimeTimingStore(this.runtimeTiming);
+  }
+
+  getRuntimeSnapshotConfidenceGate(snapshot = this.lastSnapshot, families = [], options = {}) {
+    return getSnapshotConfidenceGate(snapshot, families, {
+      defaultStatus: "confident",
+      ...options,
+    });
+  }
+
+  getRequiredSnapshotFamiliesForOwner(owner = "") {
+    return MODULE_REQUIRED_SNAPSHOT_FAMILIES[normalizeDecisionOwner(owner)] || [];
+  }
+
+  getDecisionGateForOwner(owner = "", snapshot = this.lastSnapshot, requiredSnapshotFamilies = null) {
+    const families = requiredSnapshotFamilies == null
+      ? this.getRequiredSnapshotFamiliesForOwner(owner)
+      : requiredSnapshotFamilies;
+    if (!families || !families.length) {
+      return { ok: true };
+    }
+
+    return this.getRuntimeSnapshotConfidenceGate(snapshot, families);
+  }
+
+  formatSnapshotGateReason(gate = null) {
+    if (!gate || gate.ok) {
+      return "";
+    }
+    return `snapshot ${gate.family || "state"} ${gate.status || "unknown"}`;
+  }
+
+  beginDecisionTrace(snapshot = this.lastSnapshot) {
+    this.currentTickDecisionRecords = [];
+  }
+
+  recordDecision(record = {}) {
+    const owner = normalizeDecisionOwner(record.owner || record.moduleKey || record.action?.moduleKey || "runtime");
+    const result = summarizeDecisionResult(record.result);
+    const action = summarizeDecisionAction(record.action);
+    const acted = record.acted === true || result?.ok === true;
+    const state = normalizeDecisionState(record.state, { acted });
+    const now = this.getNow();
+    const normalized = {
+      owner,
+      action,
+      state,
+      acted: state === "acted" || acted,
+      reason: normalizeDecisionText(record.reason || result?.reason || (state === "acted" ? "acted" : "no action")),
+      cooldownMs: Number.isFinite(Number(record.cooldownMs)) ? Math.max(0, Math.trunc(Number(record.cooldownMs))) : null,
+      requiredSnapshotFamilies: normalizeDecisionFamilies(record.requiredSnapshotFamilies || this.getRequiredSnapshotFamiliesForOwner(owner)),
+      result,
+      suppressedOwners: normalizeDecisionFamilies(record.suppressedOwners),
+      at: Number.isFinite(Number(record.at)) ? Math.trunc(Number(record.at)) : now,
+    };
+
+    this.currentTickDecisionRecords.push(normalized);
+    return normalized;
+  }
+
+  recordSnapshotBlockedDecision(owner = "", gate = null, {
+    action = null,
+    requiredSnapshotFamilies = null,
+  } = {}) {
+    if (!gate || gate.ok) {
+      return null;
+    }
+
+    return this.recordDecision({
+      owner,
+      action,
+      state: "blocked",
+      reason: this.formatSnapshotGateReason(gate),
+      requiredSnapshotFamilies,
+    });
+  }
+
+  recordAttemptDecision(owner = "", attempt = {}, snapshot = this.lastSnapshot, {
+    requiredSnapshotFamilies = null,
+    skippedReason = "",
+  } = {}) {
+    const action = attempt?.action || null;
+    const result = attempt?.result || null;
+    const gate = this.getDecisionGateForOwner(owner, snapshot, requiredSnapshotFamilies);
+    if (!action && !result && gate && !gate.ok) {
+      return this.recordSnapshotBlockedDecision(owner, gate, {
+        requiredSnapshotFamilies,
+      });
+    }
+
+    return this.recordDecision({
+      owner,
+      action,
+      result,
+      state: result?.ok ? "acted" : "skipped",
+      reason: skippedReason || (action ? (result?.reason || "action failed") : "no action"),
+      requiredSnapshotFamilies,
+    });
+  }
+
+  finishDecisionTrace(snapshot = this.lastSnapshot) {
+    if (!this.currentTickDecisionRecords.length) {
+      this.recordDecision({
+        owner: "runtime",
+        state: snapshot?.ready === false ? "blocked" : "idle",
+        reason: snapshot?.ready === false ? (snapshot.reason || "snapshot not ready") : "no action",
+      });
+    }
+
+    const records = this.currentTickDecisionRecords.slice(-DECISION_TRACE_LIMIT);
+    const current = [...records].reverse().find((record) => record.acted)
+      || [...records].reverse().find((record) => record.reason && record.reason !== "no action")
+      || null;
+    const blocker = records.find((record) => record.state === "blocked" || record.state === "failed")
+      || [...records].reverse().find((record) => !record.acted && record.owner !== "runtime" && record.reason !== "no action")
+      || null;
+
+    this.lastDecisionTrace = {
+      current,
+      blocker,
+      records,
+      updatedAt: this.getNow(),
+      currentReason: formatDecisionReason(current),
+      blockerReason: formatDecisionReason(blocker),
+    };
+
+    if (snapshot && typeof snapshot === "object") {
+      snapshot.decisionTrace = this.lastDecisionTrace;
+      snapshot.routeState = this.getRouteStateTelemetry(snapshot);
+    }
+
+    return this.lastDecisionTrace;
+  }
+
+  getDecisionTrace() {
+    return {
+      current: this.lastDecisionTrace.current ? { ...this.lastDecisionTrace.current } : null,
+      blocker: this.lastDecisionTrace.blocker ? { ...this.lastDecisionTrace.blocker } : null,
+      records: Array.isArray(this.lastDecisionTrace.records)
+        ? this.lastDecisionTrace.records.map((record) => ({ ...record }))
+        : [],
+      updatedAt: Math.max(0, Math.trunc(Number(this.lastDecisionTrace.updatedAt) || 0)),
+      currentReason: normalizeDecisionText(this.lastDecisionTrace.currentReason),
+      blockerReason: normalizeDecisionText(this.lastDecisionTrace.blockerReason),
+    };
+  }
+
+  getRouteStateTelemetry(snapshot = this.lastSnapshot) {
+    const reconnectStatus = this.getReconnectStatus?.() || null;
+    const routeResetStatus = this.getRouteResetStatus?.() || { active: false, phase: null, targetIndex: null };
+    const currentDecision = this.lastDecisionTrace?.current || null;
+    const blocker = this.lastDecisionTrace?.blocker || null;
+    let state = "idle";
+
+    if (snapshot?.reason === "dead" || snapshot?.connection?.playerIsDead === true || snapshot?.connection?.deathModalVisible === true) {
+      state = "dead";
+    } else if (snapshot?.ready === false || reconnectStatus?.active === true) {
+      state = "disconnected";
+    } else if (this.isCavebotPaused()) {
+      state = "paused";
+    } else if (routeResetStatus.active) {
+      state = "recovery";
+    } else if (this.routeComplete && this.options.autowalkLoop !== true) {
+      state = "idle";
+    } else if (currentDecision?.owner === "looting") {
+      state = "loot";
+    } else if (currentDecision?.owner === "refill" || currentDecision?.owner === "banking") {
+      state = "refill";
+    } else if (currentDecision?.owner === "distanceKeeper" && currentDecision?.reason === "escape") {
+      state = "escape";
+    } else if (snapshot?.currentTarget || (Array.isArray(snapshot?.visibleCreatures) && snapshot.visibleCreatures.length)) {
+      state = "combat-hold";
+    } else if (this.options.autowalkEnabled || routeResetStatus.active) {
+      state = "routing";
+    }
+
+    return {
+      state,
+      owner: normalizeDecisionOwner(currentDecision?.owner || (state === "routing" ? "route" : "")) || null,
+      waypointIndex: Math.max(0, Math.trunc(Number(this.routeIndex) || 0)),
+      lastAcceptedWaypoint: Number.isInteger(this.lastConfirmedWaypointIndex)
+        ? this.lastConfirmedWaypointIndex
+        : null,
+      acceptanceReason: normalizeDecisionText(currentDecision?.reason),
+      retryCount: Math.max(0, Math.trunc(Number(this.lastWalkFailureCount) || 0)),
+      blockedReason: normalizeDecisionText(blocker?.reason || this.routeStallState?.stuckReason),
+      skipReason: blocker && blocker.owner === "route" ? normalizeDecisionText(blocker.reason) : "",
+      lastFailureReason: normalizeDecisionText(this.lastWalkFailureKey || this.routeStallState?.stuckReason),
+      routeResetActive: routeResetStatus.active === true,
+      routeResetPhase: routeResetStatus.phase || null,
+      routeResetTargetIndex: routeResetStatus.targetIndex ?? null,
+    };
   }
 
   setPageResolver(resolver = null) {
@@ -13207,8 +13587,37 @@ export class MinibiaTargetBot {
     });
   }
 
+  hasReachableCombatFocus(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready) {
+      return false;
+    }
+
+    const playerPosition = snapshot.playerPosition || null;
+    const currentTarget = snapshot.currentTarget || null;
+    const currentTargetId = Number(currentTarget?.id);
+    const isUsableCombatEntry = (entry = null) => Boolean(
+      entry
+      && !this.isEscapeEntry(entry)
+      && !this.isEntryBlockedBySharedSpawn(entry, snapshot)
+      && this.isEntryWithinCombatWindow(entry, playerPosition)
+      && this.isEntryReachableForCombat(entry)
+    );
+
+    if (isUsableCombatEntry(currentTarget)) {
+      return true;
+    }
+
+    if (Number.isFinite(currentTargetId) && isUsableCombatEntry(this.findTrackedTargetById(snapshot, currentTargetId))) {
+      return true;
+    }
+
+    return this.getAttackCombatCandidates(snapshot).length > 0
+      || this.getReachAttackCandidates(snapshot).length > 0;
+  }
+
   shouldKeepNativeChaseStandingForRouteSafety(snapshot = this.lastSnapshot) {
     return this.isAutowalkRouteActiveForSafety(snapshot)
+      && !this.hasReachableCombatFocus(snapshot)
       && (
         this.routeHasSafetySensitiveWaypoints()
         || this.routeHasAvoidTileRules()
@@ -13258,7 +13667,10 @@ export class MinibiaTargetBot {
       return { ok: true, skipped: true, reason: "restore cooldown" };
     }
 
-    await this.attach();
+    if (!this.hasUsableTransport()) {
+      return { ok: false, skipped: true, reason: "transport unavailable" };
+    }
+
     this.lastChaseRestoreAttemptAt = now;
     const result = await this.cdp.evaluate(buildSetChaseModeExpression(nativeChaseMode));
     if (result?.ok) {
@@ -17840,6 +18252,36 @@ export class MinibiaTargetBot {
     return false;
   }
 
+  getRecentBlockedWalkDestinationsOnFloor(z, now = this.getNow()) {
+    const floor = Number(z);
+    if (!Number.isFinite(floor)) {
+      return [];
+    }
+
+    this.pruneRecentBlockedWalkDestinations(now);
+    const targetFloor = Math.trunc(floor);
+    const positions = [];
+    for (const key of this.recentBlockedWalkDestinations.keys()) {
+      const parts = String(key || "").split(",");
+      const x = Number(parts[0]);
+      const y = Number(parts[1]);
+      const entryZ = Number(parts[2]);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(entryZ)) {
+        continue;
+      }
+      if (Math.trunc(entryZ) !== targetFloor) {
+        continue;
+      }
+      positions.push({
+        x: Math.trunc(x),
+        y: Math.trunc(y),
+        z: targetFloor,
+      });
+    }
+
+    return positions;
+  }
+
   getAcceptedWalkMovementStallMs(snapshot = this.lastSnapshot, now = this.getNow()) {
     if (this.hasRecentBlockedWalkMessage(snapshot, now)) {
       return Math.max(
@@ -17874,6 +18316,29 @@ export class MinibiaTargetBot {
       minDelayMs: this.getAcceptedWalkMovementStallMs(snapshot, now),
       allowMovementSignals: true,
     });
+  }
+
+  shouldThrottleRouteWalkCommand(snapshot, walkKey, now = this.getNow()) {
+    if (!walkKey || this.lastWalkKey !== walkKey) {
+      return false;
+    }
+
+    const elapsedMs = now - (Number(this.lastWalkAt) || 0);
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) {
+      return true;
+    }
+
+    const playerKey = this.getPositionKey(snapshot?.playerPosition);
+    const progressedSinceLastAttempt = Boolean(
+      playerKey
+      && this.lastWalkOriginKey
+      && playerKey !== this.lastWalkOriginKey
+    );
+    if (progressedSinceLastAttempt && !this.lastWalkProgressPending) {
+      return false;
+    }
+
+    return elapsedMs < Math.max(1, Number(this.options.walkRepathMs) || 0);
   }
 
   getStaleAcceptedWalkRecoveryAction(snapshot, waypoint, now = this.getNow()) {
@@ -20666,6 +21131,7 @@ export class MinibiaTargetBot {
     snapshot.page = this.page;
     snapshot.running = this.running;
     snapshot.options = this.options;
+    snapshot.confidence = normalizeSnapshotConfidence(snapshot, { now });
 
     if (snapshot?.ready) {
       this.reconcileWalkProgress(snapshot);
@@ -20754,6 +21220,7 @@ export class MinibiaTargetBot {
         rewardReady: false,
       };
     }
+    snapshot.confidence = normalizeSnapshotConfidence(snapshot, { now });
 
     this.recordCorpseReturnDeath(snapshot, previousSnapshot);
     this.rememberRecentTargetProfileChaseMode(snapshot, { now });
@@ -20823,8 +21290,40 @@ export class MinibiaTargetBot {
     return this.options.cavebotPaused === true;
   }
 
+  mergeCurrentReachTargetCandidate(closeCandidates = [], reachCandidates = [], snapshot = null) {
+    if (!Array.isArray(closeCandidates) || !closeCandidates.length) {
+      return closeCandidates;
+    }
+
+    const currentTargetId = Number(snapshot?.currentTarget?.id);
+    if (!Number.isFinite(currentTargetId)) {
+      return closeCandidates;
+    }
+
+    if (closeCandidates.some((candidate) => Number(candidate?.id) === currentTargetId)) {
+      return closeCandidates;
+    }
+
+    const currentReachCandidate = (Array.isArray(reachCandidates) ? reachCandidates : [])
+      .find((candidate) => Number(candidate?.id) === currentTargetId) || null;
+    if (!currentReachCandidate) {
+      return closeCandidates;
+    }
+
+    return this.sortTargetCandidates(
+      [...closeCandidates, currentReachCandidate],
+      snapshot?.playerPosition || null,
+      snapshot,
+    );
+  }
+
   chooseTarget(snapshot) {
     if (!snapshot?.ready) return null;
+    const confidenceGate = this.getDecisionGateForOwner("targeter", snapshot);
+    if (!confidenceGate.ok) {
+      this.recordSnapshotBlockedDecision("targeter", confidenceGate);
+      return null;
+    }
     if (this.isCavebotPaused() && !this.isRouteResetActive()) return null;
     if (this.options.stopAggroHold) return null;
     if (this.isFollowTrainFollower(snapshot) && !this.canUseFollowTrainCombatActions(snapshot)) return null;
@@ -20835,11 +21334,12 @@ export class MinibiaTargetBot {
     const closeCandidates = followTrainCombat
       ? this.getFollowTrainAttackCombatCandidates(snapshot)
       : this.getAttackCombatCandidates(snapshot);
+    const reachCandidates = followTrainCombat
+      ? this.getFollowTrainReachAttackCandidates(snapshot)
+      : this.getReachAttackCandidates(snapshot);
     const candidates = closeCandidates.length > 0
-      ? closeCandidates
-      : (followTrainCombat
-        ? this.getFollowTrainReachAttackCandidates(snapshot)
-        : this.getReachAttackCandidates(snapshot));
+      ? this.mergeCurrentReachTargetCandidate(closeCandidates, reachCandidates, snapshot)
+      : reachCandidates;
     if (this.shouldDeferTargetForRoute(snapshot, candidates)) return null;
     const signature = candidates.map((candidate) => candidate.id).join(",");
     const currentTargetStillVisible = currentTarget
@@ -21514,7 +22014,6 @@ export class MinibiaTargetBot {
     const reachTargets = this.getReachCombatCandidates(snapshot);
     const trackedTargets = this.getTrackedTargets(snapshot);
     const currentTargetId = Number(snapshot.currentTarget?.id);
-    const routeSafeCombatHold = this.shouldKeepNativeChaseStandingForRouteSafety(snapshot);
     const lastTargetIds = new Set(
       String(this.lastTargetSignature || "")
         .split(",")
@@ -21531,31 +22030,23 @@ export class MinibiaTargetBot {
         const trackedCurrentTarget = this.findTrackedTargetById(snapshot, currentTargetId);
         if (trackedCurrentTarget
           && lastTargetIds.has(currentTargetId)
-          && (
-            routeSafeCombatHold
-              ? this.isEntryEligibleForCombat(trackedCurrentTarget, playerPosition)
-              : this.isEntryWithinCombatWindow(trackedCurrentTarget, playerPosition)
-          )
+          && this.isEntryWithinCombatWindow(trackedCurrentTarget, playerPosition)
           && this.isEntryReachableForCombat(trackedCurrentTarget)) {
           return true;
         }
 
         if (this.isEntryEligibleForCombat(snapshot.currentTarget, playerPosition)
-          || (!routeSafeCombatHold && (
+          || (
             this.isEntryWithinCombatWindow(snapshot.currentTarget, playerPosition)
             && this.isEntryReachableForCombat(snapshot.currentTarget)
-          ))) {
+          )) {
           return true;
         }
       }
     }
 
-    if (visibleTargets.length > 0 || (!routeSafeCombatHold && reachTargets.length > 0)) {
+    if (visibleTargets.length > 0 || reachTargets.length > 0) {
       return true;
-    }
-
-    if (routeSafeCombatHold) {
-      return false;
     }
 
     if (!lastTargetIds.size) {
@@ -22607,10 +23098,21 @@ export class MinibiaTargetBot {
     );
   }
 
+  getCombatFloorTransitionNoGoAt(snapshot, position) {
+    if (!snapshot?.ready || !position || !this.shouldHoldRouteForCombat(snapshot)) {
+      return null;
+    }
+
+    return this.getFloorTransitionHazardAt(snapshot, position);
+  }
+
   shouldAvoidPosition(snapshot, position) {
     if (!position) return false;
 
-    return this.isNoGoZonePosition(snapshot, position);
+    return Boolean(
+      this.isNoGoZonePosition(snapshot, position)
+      || this.getCombatFloorTransitionNoGoAt(snapshot, position),
+    );
   }
 
   isRoutePositionOccupied(snapshot, position, playerPosition = snapshot?.playerPosition || null) {
@@ -22898,7 +23400,10 @@ export class MinibiaTargetBot {
     }
 
     const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
-    const constrainToSafeStep = this.shouldConstrainRouteDestinationToSafeStep(snapshot);
+    const constrainToSafeStep = this.shouldConstrainRouteDestinationToSafeStep(snapshot, {
+      destination,
+      waypoint,
+    });
     if (!reachableTileMap.size) {
       if (!constrainToSafeStep) {
         return destination;
@@ -23014,7 +23519,10 @@ export class MinibiaTargetBot {
         && reachableTileMap.size
         && reachableTileMap.has(destinationKey),
       );
-      const constrainToSafeStep = this.shouldConstrainRouteDestinationToSafeStep(snapshot);
+      const constrainToSafeStep = this.shouldConstrainRouteDestinationToSafeStep(snapshot, {
+        destination,
+        waypoint,
+      });
       const viewportDestination = this.findViewportRouteStepDestination(snapshot, destination, {
         waypoint,
         allowUnsafeExactDestination: allowUnsafeExactDestination
@@ -24558,6 +25066,12 @@ export class MinibiaTargetBot {
       return candidates[0];
     }
 
+    const reachCandidates = this.getReachAttackCandidates(snapshot);
+
+    if (reachCandidates.length) {
+      return reachCandidates[0];
+    }
+
     return visibleThreats[0] || null;
   }
 
@@ -24755,6 +25269,9 @@ export class MinibiaTargetBot {
     }
 
     if (isHealFriendRuleValue(words)) {
+      if (!this.getRuntimeSnapshotConfidenceGate(snapshot, ["party"]).ok) {
+        return null;
+      }
       const targetName = sanitizeHealerTargetName(supportTarget?.name);
       const targetHealthPercent = Number(supportTarget?.healthPercent);
       if (!targetName || !Number.isFinite(targetHealthPercent)) {
@@ -25097,13 +25614,21 @@ export class MinibiaTargetBot {
   }
 
   async attemptDeathHeal(snapshot, activeVocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("deathHeal", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("deathHeal", gate);
+      return { action: null, result: null };
+    }
+
     const plan = await this.chooseDeathHealPlan(snapshot, activeVocationProfile);
     if (!plan) {
+      this.recordAttemptDecision("deathHeal", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
     if (plan.hotkeyAction) {
       const hotkeyResult = await this.useHotkey(plan.hotkeyAction);
+      this.recordAttemptDecision("deathHeal", { action: plan.hotkeyAction, result: hotkeyResult }, snapshot);
       if (hotkeyResult?.ok) {
         return { action: plan.hotkeyAction, result: hotkeyResult };
       }
@@ -25111,12 +25636,14 @@ export class MinibiaTargetBot {
 
     if (plan.hotbarAction) {
       const hotbarResult = await this.useHotbarSlot(plan.hotbarAction);
+      this.recordAttemptDecision("deathHeal", { action: plan.hotbarAction, result: hotbarResult }, snapshot);
       if (hotbarResult?.ok) {
         return { action: plan.hotbarAction, result: hotbarResult };
       }
     }
 
     const castResult = await this.castWords(plan.castAction);
+    this.recordAttemptDecision("deathHeal", { action: plan.castAction, result: castResult }, snapshot);
     return {
       action: plan.hotkeyAction || plan.hotbarAction || plan.castAction,
       result: castResult,
@@ -25125,6 +25652,9 @@ export class MinibiaTargetBot {
 
   chooseSustainAction(snapshot, vocationProfile = null) {
     if (!snapshot?.ready || !this.options.sustainEnabled || !vocationProfile) {
+      return null;
+    }
+    if (!this.getDecisionGateForOwner("sustain", snapshot).ok) {
       return null;
     }
 
@@ -25153,8 +25683,8 @@ export class MinibiaTargetBot {
         return null;
       }
 
-      const healerRuneActions = this.chooseHealerRuneActions(snapshot);
-      if (healerRuneActions.length > 0) {
+      const healerTierActions = this.choosePreSustainHealActions(snapshot, vocationProfile);
+      if (healerTierActions.length > 0) {
         return null;
       }
     }
@@ -25163,8 +25693,15 @@ export class MinibiaTargetBot {
   }
 
   async attemptSustain(snapshot, vocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("sustain", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("sustain", gate);
+      return { action: null, result: null };
+    }
+
     const action = this.chooseSustainAction(snapshot, vocationProfile);
     if (!action) {
+      this.recordAttemptDecision("sustain", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
@@ -25172,6 +25709,7 @@ export class MinibiaTargetBot {
     if (result?.ok) {
       this.markModuleAction("sustain", action.ruleIndex, this.getNow());
     }
+    this.recordAttemptDecision("sustain", { action, result }, snapshot);
     return {
       action,
       result,
@@ -25183,7 +25721,14 @@ export class MinibiaTargetBot {
     const manaPercent = snapshot.playerStats?.manaPercent ?? 0;
     const mana = snapshot.playerStats?.mana ?? 0;
     const orderedRules = this.getResolvedHealerRules(vocationProfile);
-    const coverageWindows = buildHealerCoverageWindows(orderedRules);
+    if (orderedRules.some((rule) => isHealFriendRuleValue(rule?.words))) {
+      const partyGate = this.getRuntimeSnapshotConfidenceGate(snapshot, ["party"]);
+      if (!partyGate.ok) {
+        this.recordSnapshotBlockedDecision("healer", partyGate, {
+          requiredSnapshotFamilies: ["party"],
+        });
+      }
+    }
     const supportTarget = this.getHealerSupportTarget(snapshot);
     const actionCache = new Map();
     const getAction = (rule, ruleIndex) => {
@@ -25196,6 +25741,30 @@ export class MinibiaTargetBot {
       actionCache.set(ruleIndex, action);
       return action;
     };
+    const coverageWindows = (() => {
+      const windows = new Array(orderedRules.length).fill(null);
+      let coveredThrough = -1;
+      for (let index = 0; index < orderedRules.length; index += 1) {
+        const rule = orderedRules[index];
+        if (!rule) continue;
+
+        const configuredMin = clampPercent(rule.minHealthPercent, 0);
+        const configuredMax = clampPercent(rule.maxHealthPercent, 0);
+        const safeFloor = Math.max(0, Math.min(100, coveredThrough + 1));
+        const effectiveMin = Math.max(0, Math.min(configuredMax, Math.min(configuredMin, safeFloor)));
+        windows[index] = {
+          min: effectiveMin,
+          max: configuredMax,
+          expanded: effectiveMin < configuredMin,
+        };
+
+        if (rule.enabled !== false && getAction(rule, index)) {
+          coveredThrough = Math.max(coveredThrough, configuredMax);
+        }
+      }
+
+      return windows;
+    })();
     const matchesRule = (rule, ruleIndex) => {
       const context = this.getHealerRuleRuntimeContext(rule, snapshot, supportTarget);
       if (!context) {
@@ -25301,46 +25870,15 @@ export class MinibiaTargetBot {
   }
 
   chooseHealerRuneActions(snapshot) {
-    if (!snapshot?.ready || (!this.options.healerEnabled && !this.options.trainerEnabled)) {
-      return [];
-    }
-
-    const healthPercent = Number(snapshot?.playerStats?.healthPercent ?? 100);
-    const threshold = this.getHealerRuneHealthPercent();
-    if (!Number.isFinite(healthPercent) || healthPercent <= 0 || threshold <= 0 || healthPercent > threshold) {
-      return [];
-    }
-
-    if (this.getNow() - this.getLastModuleActionAt("healerRune") < DEFAULT_HEALER_RULE.cooldownMs) {
-      return [];
-    }
-
-    if (this.options.healerRuneHotkey) {
-      return [{
-        type: "useHotkey",
-        moduleKey: "healerRune",
-        hotkey: this.options.healerRuneHotkey,
-        target: "self",
-        name: this.getConfiguredHealerRuneNames()[0] || "Healing Rune",
-        category: "rune",
-        label: "Auto rune",
-      }];
-    }
-
-    for (const runeName of this.getConfiguredHealerRuneNames()) {
-      const action = buildHealingRuneConsumableAction(snapshot, runeName, {
-        preferHotbar: this.options.preferHotbarConsumables,
-        moduleKey: "healerRune",
-      });
-      if (action) {
-        return [action];
-      }
-    }
-
-    return [];
+    return this
+      .chooseSpellHealActions(snapshot)
+      .filter((action) => String(action?.category || "").trim().toLowerCase() === "rune");
   }
 
   chooseConditionHealActions(snapshot, vocationProfile = null) {
+    if (!this.getDecisionGateForOwner("conditionHealer", snapshot).ok) {
+      return [];
+    }
     const selfHealthPercent = Number(snapshot?.playerStats?.healthPercent ?? 100);
     const manaPercent = Number(snapshot?.playerStats?.manaPercent ?? 0);
     const mana = Number(snapshot?.playerStats?.mana ?? 0);
@@ -25398,7 +25936,6 @@ export class MinibiaTargetBot {
 
   chooseHealActions(snapshot, vocationProfile = null) {
     const spellActions = this.chooseSpellHealActions(snapshot, vocationProfile);
-    const healerRuneActions = this.chooseHealerRuneActions(snapshot);
     const selfActions = [];
     const supportActions = [];
 
@@ -25411,8 +25948,7 @@ export class MinibiaTargetBot {
     }
 
     return [
-      ...(healerRuneActions.length ? healerRuneActions : selfActions),
-      ...(healerRuneActions.length ? selfActions : healerRuneActions),
+      ...selfActions,
       ...this.choosePotionHealActions(snapshot),
       ...this.chooseConditionHealActions(snapshot, vocationProfile),
       ...supportActions,
@@ -25421,6 +25957,29 @@ export class MinibiaTargetBot {
 
   chooseHeal(snapshot, vocationProfile = null) {
     return this.chooseHealActions(snapshot, vocationProfile)[0] || null;
+  }
+
+  isDirectSelfHealAction(action = {}) {
+    const moduleKey = String(action?.moduleKey || "").trim();
+    const type = String(action?.type || "").trim();
+    if (!["healer", "potionHealer"].includes(moduleKey)) {
+      return false;
+    }
+    if (type === "heal-friend" || type === "condition-heal") {
+      return false;
+    }
+    if (type === "heal") {
+      return true;
+    }
+
+    const target = String(action?.target || "self").trim().toLowerCase();
+    return !target || target === "self";
+  }
+
+  choosePreSustainHealActions(snapshot, vocationProfile = null) {
+    return this
+      .chooseHealActions(snapshot, vocationProfile)
+      .filter((action) => this.isDirectSelfHealAction(action));
   }
 
   getHealerEmergencyHealthPercent() {
@@ -25577,6 +26136,11 @@ export class MinibiaTargetBot {
 
   chooseSpellCaster(snapshot, vocationProfile = null) {
     if (!snapshot?.ready || this.isCavebotPaused()) return null;
+    const confidenceGate = this.getDecisionGateForOwner("spellCaster", snapshot);
+    if (!confidenceGate.ok) {
+      this.recordSnapshotBlockedDecision("spellCaster", confidenceGate);
+      return null;
+    }
     if (this.isFollowTrainFollower(snapshot) && !this.canUseFollowTrainCombatActions(snapshot)) return null;
     const manaPercent = snapshot.playerStats?.manaPercent ?? 0;
     const target = this.getFocusTarget(snapshot);
@@ -25693,6 +26257,7 @@ export class MinibiaTargetBot {
   async attemptAutoEat(snapshot = this.lastSnapshot) {
     const action = this.chooseAutoEat(snapshot);
     if (!action) {
+      this.recordAttemptDecision("autoEat", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
@@ -25700,6 +26265,7 @@ export class MinibiaTargetBot {
     if (result?.ok) {
       this.markModuleAction("autoEat", action.ruleIndex, this.getNow());
     }
+    this.recordAttemptDecision("autoEat", { action, result }, snapshot);
     return {
       action,
       result,
@@ -25763,11 +26329,13 @@ export class MinibiaTargetBot {
       }
 
       const result = await executePlannedAction(this, action);
+      this.recordAttemptDecision(action?.moduleKey || "equipmentReplace", { action, result }, snapshot);
       if (result?.ok) {
         return { action, result };
       }
     }
 
+    this.recordAttemptDecision("equipmentReplace", { action: null, result: null }, snapshot);
     return { action: null, result: null };
   }
 
@@ -25890,6 +26458,9 @@ export class MinibiaTargetBot {
     if (!snapshot?.ready || !this.options.refillEnabled || !vocationProfile) {
       return null;
     }
+    if (!this.getDecisionGateForOwner("refill", snapshot).ok) {
+      return null;
+    }
 
     if (this.isFollowTrainFollower(snapshot)) {
       return null;
@@ -25918,12 +26489,20 @@ export class MinibiaTargetBot {
   }
 
   async attemptRefill(snapshot, vocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("refill", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("refill", gate);
+      return { action: null, result: null };
+    }
+
     const action = this.chooseRefillAction(snapshot, vocationProfile);
     if (!action) {
+      this.recordAttemptDecision("refill", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
     const result = await executePlannedAction(this, action);
+    this.recordAttemptDecision("refill", { action, result }, snapshot);
     return {
       action,
       result,
@@ -25971,8 +26550,15 @@ export class MinibiaTargetBot {
   }
 
   async attemptAmmoReload(snapshot, vocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("ammo", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("ammo", gate);
+      return { action: null, result: null };
+    }
+
     const action = this.chooseAmmoReload(snapshot, vocationProfile);
     if (!action) {
+      this.recordAttemptDecision("ammo", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
@@ -25980,6 +26566,7 @@ export class MinibiaTargetBot {
     if (result?.ok) {
       this.markModuleAction("ammo", action.ruleIndex, this.getNow());
     }
+    this.recordAttemptDecision("ammo", { action, result }, snapshot);
     return {
       action,
       result,
@@ -26024,8 +26611,15 @@ export class MinibiaTargetBot {
   }
 
   async attemptAmmoRestock(snapshot, vocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("ammo", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("ammo", gate);
+      return { action: null, result: null };
+    }
+
     const action = this.chooseAmmoRestock(snapshot, vocationProfile);
     if (!action) {
+      this.recordAttemptDecision("ammo", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
@@ -26033,6 +26627,7 @@ export class MinibiaTargetBot {
     if (result?.ok) {
       this.markModuleAction("ammo", action.ruleIndex, this.getNow());
     }
+    this.recordAttemptDecision("ammo", { action, result }, snapshot);
     return {
       action,
       result,
@@ -26052,6 +26647,9 @@ export class MinibiaTargetBot {
 
   chooseLootAction(snapshot, vocationProfile = null) {
     if (!snapshot?.ready || !this.options.lootingEnabled || this.isCavebotPaused()) {
+      return null;
+    }
+    if (!this.getDecisionGateForOwner("looting", snapshot).ok) {
       return null;
     }
 
@@ -26108,12 +26706,20 @@ export class MinibiaTargetBot {
   }
 
   async attemptLoot(snapshot, vocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("looting", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("looting", gate);
+      return { action: null, result: null };
+    }
+
     const action = this.chooseLootAction(snapshot, vocationProfile);
     if (!action) {
+      this.recordAttemptDecision("looting", { action: null, result: null }, snapshot);
       return { action: null, result: null };
     }
 
     const result = await executePlannedAction(this, action);
+    this.recordAttemptDecision("looting", { action, result }, snapshot);
     return {
       action,
       result,
@@ -26123,6 +26729,10 @@ export class MinibiaTargetBot {
   prepareBankingConversation(snapshot, waypoint = this.getCurrentWaypoint()) {
     if (!snapshot?.ready || !this.options.bankingEnabled) {
       return { status: "disabled" };
+    }
+    const gate = this.getDecisionGateForOwner("banking", snapshot);
+    if (!gate.ok) {
+      return { status: "snapshot-blocked", gate };
     }
 
     const rules = Array.isArray(this.options.bankingRules) ? this.options.bankingRules : [];
@@ -26206,6 +26816,16 @@ export class MinibiaTargetBot {
           kind: "bank",
           skipped: true,
           status: preparation.status,
+        };
+      }
+
+      if (preparation.status === "snapshot-blocked") {
+        return {
+          ok: true,
+          kind: "bank",
+          waiting: true,
+          reason: this.formatSnapshotGateReason(preparation.gate),
+          gate: preparation.gate,
         };
       }
 
@@ -26874,13 +27494,174 @@ export class MinibiaTargetBot {
     return candidates[0]?.position || null;
   }
 
-  shouldConstrainRouteDestinationToSafeStep(snapshot = this.lastSnapshot) {
+  isPositionRelevantToRouteSafetySegment(snapshot = this.lastSnapshot, position = null, {
+    destination = null,
+    waypoint = destination,
+    vicinity = ROUTE_SAFETY_SEGMENT_VICINITY,
+  } = {}) {
+    const playerPosition = snapshot?.playerPosition || null;
+    if (!playerPosition || !position || !destination) {
+      return false;
+    }
+
+    const playerZ = Number(playerPosition.z);
+    const positionZ = Number(position.z);
+    const destinationZ = Number(destination.z);
+    if (!Number.isFinite(playerZ) || !Number.isFinite(positionZ) || !Number.isFinite(destinationZ)) {
+      return false;
+    }
+    if (Math.trunc(positionZ) !== Math.trunc(playerZ) || Math.trunc(destinationZ) !== Math.trunc(playerZ)) {
+      return false;
+    }
+
+    const margin = Math.max(0, Math.trunc(Number(vicinity) || 0));
+    const playerDistance = this.getPositionDistance(playerPosition, position);
+    const destinationDistance = this.getPositionDistance(position, destination);
+    if (!Number.isFinite(playerDistance) || !Number.isFinite(destinationDistance)) {
+      return false;
+    }
+
+    if (playerDistance <= margin || destinationDistance <= margin) {
+      return true;
+    }
+
+    if (waypoint && Number(waypoint.z) === Number(playerPosition.z)) {
+      const waypointDistance = this.getPositionDistance(position, waypoint);
+      if (Number.isFinite(waypointDistance) && waypointDistance <= margin) {
+        return true;
+      }
+    }
+
+    const routeDistance = this.getPositionDistance(playerPosition, destination);
+    if (!Number.isFinite(routeDistance) || routeDistance <= 0) {
+      return false;
+    }
+
+    return playerDistance + destinationDistance <= routeDistance + margin;
+  }
+
+  getNoGoWaypointBounds(waypoint = null) {
+    if (!waypoint || !this.isNoGoWaypointType(waypoint)) {
+      return null;
+    }
+
+    const x = Number(waypoint.x);
+    const y = Number(waypoint.y);
+    const z = Number(waypoint.z);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+      return null;
+    }
+
+    const radius = Number.isFinite(Number(waypoint.radius)) && Number(waypoint.radius) > 0
+      ? Math.trunc(Number(waypoint.radius))
+      : 0;
+    return {
+      left: Math.trunc(x) - radius,
+      top: Math.trunc(y) - radius,
+      right: Math.trunc(x) + radius,
+      bottom: Math.trunc(y) + radius,
+      z: Math.trunc(z),
+    };
+  }
+
+  routeSafetyBoundsIntersectSegment(snapshot = this.lastSnapshot, bounds = null, {
+    destination = null,
+    waypoint = destination,
+    vicinity = ROUTE_SAFETY_SEGMENT_VICINITY,
+  } = {}) {
+    const playerPosition = snapshot?.playerPosition || null;
+    if (!playerPosition || !bounds || !destination) {
+      return false;
+    }
+
+    const playerZ = Number(playerPosition.z);
+    const boundsZ = Number(bounds.z);
+    if (!Number.isFinite(playerZ) || !Number.isFinite(boundsZ) || Math.trunc(boundsZ) !== Math.trunc(playerZ)) {
+      return false;
+    }
+
+    const left = Math.trunc(Number(bounds.left));
+    const right = Math.trunc(Number(bounds.right));
+    const top = Math.trunc(Number(bounds.top));
+    const bottom = Math.trunc(Number(bounds.bottom));
+    if (![left, right, top, bottom].every((value) => Number.isFinite(value))) {
+      return false;
+    }
+
+    const minX = Math.min(left, right);
+    const maxX = Math.max(left, right);
+    const minY = Math.min(top, bottom);
+    const maxY = Math.max(top, bottom);
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+    if (width <= 0 || height <= 0 || width * height > 4096) {
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+      const checkPoints = [
+        playerPosition,
+        destination,
+        waypoint,
+      ].filter(Boolean).map((position) => ({
+        x: clamp(Math.trunc(Number(position.x)), minX, maxX),
+        y: clamp(Math.trunc(Number(position.y)), minY, maxY),
+        z: Math.trunc(boundsZ),
+      }));
+      return checkPoints.some((position) => this.isPositionRelevantToRouteSafetySegment(snapshot, position, {
+        destination,
+        waypoint,
+        vicinity,
+      }));
+    }
+
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        if (this.isPositionRelevantToRouteSafetySegment(snapshot, { x, y, z: Math.trunc(boundsZ) }, {
+          destination,
+          waypoint,
+          vicinity,
+        })) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  shouldConstrainRouteDestinationToSafeStep(snapshot = this.lastSnapshot, {
+    destination = null,
+    waypoint = destination,
+  } = {}) {
     const playerZ = Number(snapshot?.playerPosition?.z);
     if (!Number.isFinite(playerZ)) {
       return false;
     }
 
-    if (this.hasRecentBlockedWalkDestinationOnFloor(playerZ)) {
+    if (!destination) {
+      return this.hasRecentBlockedWalkDestinationOnFloor(playerZ)
+        || (
+          Array.isArray(this.options.waypoints)
+          && this.options.waypoints.some((routeWaypoint) => (
+            this.isNoGoWaypointType(routeWaypoint)
+            && Math.trunc(Number(routeWaypoint?.z)) === Math.trunc(playerZ)
+          ))
+        )
+        || this.getActiveTileRules(snapshot, { policy: "avoid" }).some((rule) => (
+          Math.trunc(Number(rule?.z)) === Math.trunc(playerZ)
+        ))
+        || (Array.isArray(snapshot?.hazardTiles) ? snapshot.hazardTiles : []).some((entry) => {
+          if (Math.trunc(Number(entry?.position?.z)) !== Math.trunc(playerZ)) {
+            return false;
+          }
+          const categories = this.getHazardCategories(entry);
+          return categories.includes("holes")
+            || categories.includes("stairsLadders")
+            || this.getActiveAvoidFieldCategories(entry).length > 0;
+        });
+    }
+
+    if (this.getRecentBlockedWalkDestinationsOnFloor(playerZ).some((position) => (
+      this.isPositionRelevantToRouteSafetySegment(snapshot, position, { destination, waypoint })
+    ))) {
       return true;
     }
 
@@ -26891,11 +27672,24 @@ export class MinibiaTargetBot {
     );
 
     if (Array.isArray(this.options.waypoints)
-      && this.options.waypoints.some((waypoint) => this.isNoGoWaypointType(waypoint) && isSameFloor(waypoint))) {
+      && this.options.waypoints.some((routeWaypoint) => (
+        this.isNoGoWaypointType(routeWaypoint)
+        && isSameFloor(routeWaypoint)
+        && this.routeSafetyBoundsIntersectSegment(snapshot, this.getNoGoWaypointBounds(routeWaypoint), {
+          destination,
+          waypoint,
+        })
+      ))) {
       return true;
     }
 
-    if (this.getActiveTileRules(snapshot, { policy: "avoid" }).some((rule) => isSameFloor(rule))) {
+    if (this.getActiveTileRules(snapshot, { policy: "avoid" }).some((rule) => (
+      isSameFloor(rule)
+      && this.routeSafetyBoundsIntersectSegment(snapshot, this.getTileRuleBounds(rule), {
+        destination,
+        waypoint,
+      })
+    ))) {
       return true;
     }
 
@@ -26906,9 +27700,14 @@ export class MinibiaTargetBot {
       }
 
       const categories = this.getHazardCategories(entry);
-      return categories.includes("holes")
+      return (
+        categories.includes("holes")
         || categories.includes("stairsLadders")
-        || this.getActiveAvoidFieldCategories(entry).length > 0;
+        || this.getActiveAvoidFieldCategories(entry).length > 0
+      ) && this.isPositionRelevantToRouteSafetySegment(snapshot, entry.position, {
+        destination,
+        waypoint,
+      });
     });
   }
 
@@ -26943,8 +27742,27 @@ export class MinibiaTargetBot {
         positions.push(position);
       }
     }
-
     return positions;
+  }
+
+  getDistanceKeeperThreats(snapshot, focusTarget = null) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const seen = new Set();
+    const threats = [];
+    const appendThreat = (entry = null) => {
+      const key = Number.isFinite(Number(entry?.id))
+        ? `id:${Number(entry.id)}`
+        : this.getPositionKey(entry?.position);
+      if (!key || seen.has(key)) return;
+      if (!this.isEntryWithinCombatWindow(entry, playerPosition)) return;
+      if (!this.isEntryReachableForCombat(entry)) return;
+      seen.add(key);
+      threats.push(entry);
+    };
+
+    this.getVisibleThreats(snapshot).forEach(appendThreat);
+    appendThreat(focusTarget);
+    return threats;
   }
 
   getNextNoGoEscapeRouteTarget() {
@@ -26970,7 +27788,7 @@ export class MinibiaTargetBot {
     }
 
     const playerPosition = snapshot.playerPosition || null;
-    if (!playerPosition || !this.isNoGoZonePosition(snapshot, playerPosition)) {
+    if (!playerPosition || !this.shouldAvoidPosition(snapshot, playerPosition)) {
       return null;
     }
 
@@ -27193,6 +28011,17 @@ export class MinibiaTargetBot {
     const nextDiagonalAdjacent = this.isAdjacentDiagonalToPosition(position, focusTarget?.position);
     const currentDiagonalAdjacent = this.isAdjacentDiagonalToPosition(currentPosition, focusTarget?.position);
     const hardChasingIntoMelee = isMeleeRangeRule && currentDistance > 1;
+    const currentAxisDistance = currentPosition && focusTarget?.position
+      ? Math.abs(Number(currentPosition.x) - Number(focusTarget.position.x))
+        + Math.abs(Number(currentPosition.y) - Number(focusTarget.position.y))
+      : Number.POSITIVE_INFINITY;
+    const nextAxisDistance = position && focusTarget?.position
+      ? Math.abs(Number(position.x) - Number(focusTarget.position.x))
+        + Math.abs(Number(position.y) - Number(focusTarget.position.y))
+      : Number.POSITIVE_INFINITY;
+    const axisProgress = Number.isFinite(currentAxisDistance) && Number.isFinite(nextAxisDistance)
+      ? currentAxisDistance - nextAxisDistance
+      : 0;
 
     if (hardChasingIntoMelee) {
       currentRelevantRisk = 0;
@@ -27262,6 +28091,9 @@ export class MinibiaTargetBot {
       if (currentDistance > 1 && isApproaching) {
         score += 720 + Math.max(0, currentDistance - nextDistance) * 180;
       }
+      if (currentDistance > 1 && axisProgress > 0) {
+        score += axisProgress * 260;
+      }
       if (movePenalty > 0 && !isApproaching && nextDistance >= currentDistance) {
         score -= 180;
       }
@@ -27308,6 +28140,11 @@ export class MinibiaTargetBot {
 
   chooseDistanceKeeper(snapshot) {
     if (!snapshot?.ready) return null;
+    const confidenceGate = this.getDecisionGateForOwner("distanceKeeper", snapshot);
+    if (!confidenceGate.ok) {
+      this.recordSnapshotBlockedDecision("distanceKeeper", confidenceGate);
+      return null;
+    }
     if (this.isCavebotPaused()) return null;
     if (snapshot.isMoving || snapshot.pathfinderAutoWalking) return null;
 
@@ -27315,7 +28152,7 @@ export class MinibiaTargetBot {
     const escapeThreats = this.getVisibleEscapeThreats(snapshot);
     const focusTarget = escapeThreats[0] || this.getFocusTarget(snapshot);
     const focusProfile = this.getTargetProfile(focusTarget?.name);
-    const threats = this.getVisibleThreats(snapshot);
+    const threats = this.getDistanceKeeperThreats(snapshot, focusTarget);
     const currentDistance = this.getEntryDistance(focusTarget, playerPosition);
     const profileRule = this.buildProfileDistanceKeeperRule(snapshot, focusTarget);
     const autoRangedRule = (!this.options.distanceKeeperEnabled && !profileRule)
@@ -28169,6 +29006,11 @@ export class MinibiaTargetBot {
 
   chooseRouteAction(snapshot) {
     if (!snapshot?.ready) return null;
+    const confidenceGate = this.getDecisionGateForOwner("route", snapshot);
+    if (!confidenceGate.ok) {
+      this.recordSnapshotBlockedDecision("route", confidenceGate);
+      return null;
+    }
     if (!this.isRouteResetActive() && !this.options.autowalkEnabled) return null;
     if (!this.isRouteResetActive() && this.isCavebotPaused()) return null;
     const followTrainAssignment = this.getFollowTrainAssignment(snapshot);
@@ -28205,6 +29047,7 @@ export class MinibiaTargetBot {
       return this.chooseCorpseReturnAction(snapshot);
     }
 
+    let advancedWaypointThisPass = false;
     for (let steps = 0; steps < this.options.waypoints.length; steps += 1) {
       const waypoint = this.getCurrentWaypoint();
       if (!waypoint) return null;
@@ -28214,10 +29057,12 @@ export class MinibiaTargetBot {
       if (!isResetTarget && this.shouldSkipWaypoint(waypoint)) {
         this.log(`Autowalk skipped waypoint ${this.routeIndex + 1} (${formatWaypointTypeLabel(waypoint.type)})`);
         this.advanceWaypoint("skipped");
+        advancedWaypointThisPass = true;
         continue;
       }
 
       if (this.skipUnsafeWaypoint(snapshot, waypoint)) {
+        advancedWaypointThisPass = true;
         continue;
       }
 
@@ -28228,6 +29073,7 @@ export class MinibiaTargetBot {
       if (this.hasWaypointFloorTransition(snapshot.playerPosition, waypoint)) {
         this.markWaypointConfirmed(this.routeIndex);
         this.advanceWaypoint("floor change");
+        advancedWaypointThisPass = true;
         continue;
       }
 
@@ -28275,6 +29121,7 @@ export class MinibiaTargetBot {
 
         if (routeResetActive && this.routeResetState.phase === "returning" && !followsRouteResetStep) {
           this.advanceRouteResetWaypoint("return");
+          advancedWaypointThisPass = true;
           continue;
         }
 
@@ -28297,10 +29144,12 @@ export class MinibiaTargetBot {
             }
 
             this.advanceWaypoint("action fallback");
+            advancedWaypointThisPass = true;
             continue;
           }
 
           this.jumpWaypoint(targetIndex, actionType === "restart" ? "restart" : "jump");
+          advancedWaypointThisPass = true;
           continue;
         }
 
@@ -28344,6 +29193,7 @@ export class MinibiaTargetBot {
         }
 
         this.advanceWaypoint("reached");
+        advancedWaypointThisPass = true;
         continue;
       }
 
@@ -28362,7 +29212,8 @@ export class MinibiaTargetBot {
         return staleWalkAction;
       }
 
-      if (snapshot.pathfinderAutoWalking || snapshot.isMoving) {
+      const movementInProgress = Boolean(snapshot.pathfinderAutoWalking || snapshot.isMoving);
+      if (movementInProgress && !advancedWaypointThisPass) {
         return null;
       }
 
@@ -28374,6 +29225,7 @@ export class MinibiaTargetBot {
         this.log(`Autowalk bypassed occupied waypoint ${this.routeIndex + 1}${suffix}`);
         this.markWaypointConfirmed(this.routeIndex);
         this.advanceWaypoint("occupied bypass");
+        advancedWaypointThisPass = true;
         continue;
       }
 
@@ -28394,7 +29246,7 @@ export class MinibiaTargetBot {
         return tileRuleAction;
       }
 
-      if ((snapshot.pathfinderAutoWalking || snapshot.isMoving)
+      if (movementInProgress
         && snapshot.pathfinderFinalDestination
         && this.isWaypointReached(snapshot.pathfinderFinalDestination, waypoint)) {
         return null;
@@ -28418,7 +29270,7 @@ export class MinibiaTargetBot {
         }
       }
 
-      if (this.lastWalkKey === walkKey && now - this.lastWalkAt < this.options.walkRepathMs) {
+      if (this.shouldThrottleRouteWalkCommand(snapshot, walkKey, now)) {
         return null;
       }
 
@@ -29385,12 +30237,22 @@ export class MinibiaTargetBot {
   }
 
   async attemptHeal(snapshot, vocationProfile = null) {
+    const gate = this.getDecisionGateForOwner("healer", snapshot);
+    if (!gate.ok) {
+      this.recordSnapshotBlockedDecision("healer", gate);
+      return { action: null, result: null };
+    }
+
     const usesDefaultChooseHeal = this.chooseHeal === MinibiaTargetBot.prototype.chooseHeal;
     const healActions = usesDefaultChooseHeal
       ? this.chooseHealActions(snapshot, vocationProfile)
       : [this.chooseHeal(snapshot, vocationProfile)].filter(Boolean);
     let lastAction = null;
     let lastResult = null;
+
+    if (!healActions.length) {
+      this.recordAttemptDecision("healer", { action: null, result: null }, snapshot);
+    }
 
     for (const healAction of healActions) {
       lastAction = healAction;
@@ -29402,6 +30264,8 @@ export class MinibiaTargetBot {
       } else {
         lastResult = await executePlannedAction(this, healAction);
       }
+
+      this.recordAttemptDecision(healAction?.moduleKey || "healer", { action: healAction, result: lastResult }, snapshot);
 
       if (lastResult?.ok) {
         return { action: healAction, result: lastResult };
@@ -29645,6 +30509,88 @@ export class MinibiaTargetBot {
     return result;
   }
 
+  getKeyboardStepEvent(destination, origin = this.lastSnapshot?.playerPosition) {
+    if (!destination || !origin || Number(destination.z) !== Number(origin.z)) {
+      return null;
+    }
+
+    const dx = Math.trunc(Number(destination.x) - Number(origin.x));
+    const dy = Math.trunc(Number(destination.y) - Number(origin.y));
+    if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) + Math.abs(dy) !== 1) {
+      return null;
+    }
+
+    if (dx === 1) return { ...MOVEMENT_KEY_EVENTS.east, direction: "east" };
+    if (dx === -1) return { ...MOVEMENT_KEY_EVENTS.west, direction: "west" };
+    if (dy === 1) return { ...MOVEMENT_KEY_EVENTS.south, direction: "south" };
+    if (dy === -1) return { ...MOVEMENT_KEY_EVENTS.north, direction: "north" };
+    return null;
+  }
+
+  async executeKeyboardStep(destination, origin = this.lastSnapshot?.playerPosition) {
+    if (!destination) {
+      return { ok: false, reason: "missing destination" };
+    }
+
+    const keyEvent = this.getKeyboardStepEvent(destination, origin);
+    if (!keyEvent) {
+      return { ok: false, reason: "keyboard step unavailable" };
+    }
+
+    await this.attach();
+    if (!this.hasUsableTransport() || typeof this.cdp?.send !== "function") {
+      return { ok: false, reason: "transport unavailable" };
+    }
+
+    try {
+      try {
+        await this.cdp.send("Page.bringToFront", {});
+      } catch {}
+
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "rawKeyDown",
+        key: keyEvent.key,
+        code: keyEvent.code,
+        windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+        modifiers: 0,
+      });
+      await sleep(35);
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: keyEvent.key,
+        code: keyEvent.code,
+        windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+        modifiers: 0,
+      });
+
+      return {
+        ok: true,
+        transport: "keyboard-step",
+        key: keyEvent.key,
+        direction: keyEvent.direction,
+        destination,
+      };
+    } catch (error) {
+      try {
+        await this.cdp.send("Input.dispatchKeyEvent", {
+          type: "keyUp",
+          key: keyEvent.key,
+          code: keyEvent.code,
+          windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+          nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+          modifiers: 0,
+        });
+      } catch {}
+      return {
+        ok: false,
+        reason: "keyboard step failed",
+        message: error?.message || String(error || ""),
+      };
+    }
+  }
+
   async reposition(action = {}) {
     const destination = action.destination;
     const moduleKey = action.moduleKey || null;
@@ -29655,7 +30601,15 @@ export class MinibiaTargetBot {
     }
 
     const walkKey = `${destination.x},${destination.y},${destination.z}`;
+    const originKey = this.getPositionKey(this.lastSnapshot?.playerPosition);
     const now = Date.now();
+    const retryInputMs = Math.max(220, Number(this.options.intervalMs) || 0);
+    const repeatedUnmovedAttempt = Boolean(
+      originKey
+      && this.lastWalkOriginKey === originKey
+      && this.lastWalkKey === walkKey
+      && now - this.lastWalkAt >= retryInputMs
+    );
     const verb = action.reason === "dodge"
       ? "sidestep"
       : action.reason === "approach"
@@ -29663,32 +30617,110 @@ export class MinibiaTargetBot {
         : action.reason === "escape"
           ? "run"
           : "backstep";
+    const acceptMove = async (result, transport, fallbackReason = "") => {
+      await this.restorePreferredChaseMode({ force: true }).catch(() => null);
+      this.markModuleAction(moduleKey, ruleIndex, now);
+      this.lastWalkAt = now;
+      this.lastWalkKey = walkKey;
+      this.lastWalkDestinationKey = walkKey;
+      this.lastWalkOriginKey = originKey || null;
+      this.log(`${verb[0].toUpperCase()}${verb.slice(1)} to ${walkKey}`);
+      this.emit("move", {
+        dryRun: false,
+        moduleKey,
+        destination,
+        reason: action.reason || "move",
+        transport,
+        fallbackReason,
+      });
+      return { ...result, destination };
+    };
 
     if (this.options.dryRun) {
       this.markModuleAction(moduleKey, ruleIndex, now);
       this.lastWalkAt = now;
       this.lastWalkKey = walkKey;
       this.lastWalkDestinationKey = walkKey;
+      this.lastWalkOriginKey = originKey || null;
       this.log(`Would ${verb} to ${walkKey}`);
       this.emit("move", { dryRun: true, moduleKey, destination, reason: action.reason || "move" });
       return { ok: true, dryRun: true, destination };
     }
 
-    const result = await this.executeNativeWalk(destination);
+    let keyboardResult = null;
+    if (repeatedUnmovedAttempt) {
+      try {
+        keyboardResult = await this.executeKeyboardStep(destination);
+      } catch (error) {
+        keyboardResult = {
+          ok: false,
+          reason: "keyboard step failed",
+          message: error?.message || String(error || ""),
+        };
+      }
 
-    if (result?.ok) {
-      await this.restorePreferredChaseMode({ force: true }).catch(() => null);
-      this.markModuleAction(moduleKey, ruleIndex, now);
-      this.lastWalkAt = now;
-      this.lastWalkKey = walkKey;
-      this.lastWalkDestinationKey = walkKey;
-      this.log(`${verb[0].toUpperCase()}${verb.slice(1)} to ${walkKey}`);
-      this.emit("move", { dryRun: false, moduleKey, destination, reason: action.reason || "move" });
-      return result;
+      if (keyboardResult?.ok) {
+        return acceptMove(keyboardResult, keyboardResult.transport || "keyboard-step", "same step did not move");
+      }
     }
 
-    this.log(`Movement failed (${action.reason || "move"}): ${result?.reason || "unknown error"}`);
-    return result;
+    let clickResult = null;
+    try {
+      clickResult = await this.clickViewportWalk(destination);
+    } catch (error) {
+      clickResult = {
+        ok: false,
+        reason: "viewport click failed",
+        message: error?.message || String(error || ""),
+      };
+    }
+
+    if (clickResult?.ok) {
+      return acceptMove(clickResult, clickResult.transport || "viewport-click");
+    }
+
+    if (!keyboardResult) {
+      try {
+        keyboardResult = await this.executeKeyboardStep(destination);
+      } catch (error) {
+        keyboardResult = {
+          ok: false,
+          reason: "keyboard step failed",
+          message: error?.message || String(error || ""),
+        };
+      }
+
+      if (keyboardResult?.ok) {
+        return acceptMove(keyboardResult, keyboardResult.transport || "keyboard-step", clickResult?.reason || "");
+      }
+    }
+
+    let nativeResult = null;
+    try {
+      nativeResult = await this.executeNativeWalk(destination);
+    } catch (error) {
+      nativeResult = {
+        ok: false,
+        reason: "native pathfinder unavailable",
+        message: error?.message || String(error || ""),
+      };
+    }
+
+    if (nativeResult?.ok) {
+      return acceptMove(nativeResult, nativeResult.transport || "native-pathfinder", clickResult?.reason || "");
+    }
+
+    const failureReason = nativeResult?.reason
+      || keyboardResult?.reason
+      || clickResult?.reason
+      || "unknown error";
+    this.log(`Movement failed (${action.reason || "move"}): ${failureReason}`);
+    return {
+      ...clickResult,
+      keyboardResult,
+      nativeResult,
+      reason: failureReason,
+    };
   }
 
   recordAntiIdleStatus(status = {}) {
@@ -30415,6 +31447,45 @@ export class MinibiaTargetBot {
     };
   }
 
+  getRawElementalFieldAt(snapshot, position) {
+    const positionKey = this.getPositionKey(position);
+    if (!positionKey) {
+      return null;
+    }
+
+    const hazard = (Array.isArray(snapshot?.hazardTiles) ? snapshot.hazardTiles : [])
+      .find((entry) => this.getPositionKey(entry?.position) === positionKey) || null;
+    if (hazard && this.getHazardCategories(hazard).some((category) => (
+      category === "fire" || category === "energy" || category === "poison"
+    ))) {
+      return hazard;
+    }
+
+    return (Array.isArray(snapshot?.elementalFields) ? snapshot.elementalFields : [])
+      .find((entry) => this.getPositionKey(entry?.position) === positionKey) || null;
+  }
+
+  shouldTryKeyboardStepBeforeViewportWalk(destination, origin = this.lastSnapshot?.playerPosition, now = this.getNow()) {
+    if (!this.getKeyboardStepEvent(destination, origin)) {
+      return false;
+    }
+
+    const walkKey = this.getPositionKey(destination);
+    const originKey = this.getPositionKey(origin);
+    const retryInputMs = Math.max(220, Number(this.options.intervalMs) || 0);
+    if (
+      originKey
+      && walkKey
+      && this.lastWalkOriginKey === originKey
+      && this.lastWalkDestinationKey === walkKey
+      && now - this.lastWalkAt >= retryInputMs
+    ) {
+      return true;
+    }
+
+    return Boolean(this.getRawElementalFieldAt(this.lastSnapshot, origin));
+  }
+
   async walk(waypoint, {
     destination = waypoint,
     progressKey = null,
@@ -30431,6 +31502,34 @@ export class MinibiaTargetBot {
       : walkReason === "occupied-detour"
         ? " (occupied-tile detour)"
         : "";
+    const acceptWalk = async (result, transport, fallbackReason = "") => {
+      await this.restorePreferredChaseMode({ force: true }).catch(() => null);
+      this.setLastWalkAttempt(walkKey, origin, {
+        destination,
+        now,
+        pendingProgress: true,
+        preserveFailures: this.preserveWalkFailureState(walkKey, origin),
+      });
+      this.blockedWaypointRetryKey = null;
+      this.blockedWaypointRetryUntil = 0;
+      this.routeComplete = false;
+      const transportLabel = transport === "keyboard-step"
+        ? "keyboard step"
+        : transport === "native-pathfinder"
+          ? "client path"
+          : "viewport click";
+      this.log(`Autowalk ${transportLabel} to ${destinationKey}${walkReasonSuffix}${fallbackReason ? ` after ${fallbackReason}` : ""}`);
+      this.emit("walk", {
+        dryRun: false,
+        waypoint,
+        destination,
+        routeIndex: this.routeIndex,
+        reason: walkReason,
+        transport,
+        fallbackReason,
+      });
+      return { ...result, destination };
+    };
 
     if (this.options.dryRun) {
       this.setLastWalkAttempt(walkKey, origin, {
@@ -30451,28 +31550,26 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
+    let keyboardResult = null;
+    if (this.shouldTryKeyboardStepBeforeViewportWalk(destination, origin, now)) {
+      try {
+        keyboardResult = await this.executeKeyboardStep(destination, origin);
+      } catch (error) {
+        keyboardResult = {
+          ok: false,
+          reason: "keyboard step failed",
+          message: error?.message || String(error || ""),
+        };
+      }
+
+      if (keyboardResult?.ok) {
+        return acceptWalk(keyboardResult, keyboardResult.transport || "keyboard-step");
+      }
+    }
+
     const clickResult = await this.clickViewportWalk(destination);
     if (clickResult?.ok) {
-      await this.restorePreferredChaseMode({ force: true }).catch(() => null);
-      this.setLastWalkAttempt(walkKey, origin, {
-        destination,
-        now,
-        pendingProgress: true,
-        preserveFailures: this.preserveWalkFailureState(walkKey, origin),
-      });
-      this.blockedWaypointRetryKey = null;
-      this.blockedWaypointRetryUntil = 0;
-      this.routeComplete = false;
-      this.log(`Autowalk viewport click to ${destinationKey}${walkReasonSuffix}`);
-      this.emit("walk", {
-        dryRun: false,
-        waypoint,
-        destination,
-        routeIndex: this.routeIndex,
-        reason: walkReason,
-        transport: "viewport-click",
-      });
-      return { ...clickResult, destination };
+      return acceptWalk(clickResult, clickResult.transport || "viewport-click");
     }
 
     let nativeResult = null;
@@ -30487,29 +31584,7 @@ export class MinibiaTargetBot {
     }
 
     if (nativeResult?.ok) {
-      await this.restorePreferredChaseMode({ force: true }).catch(() => null);
-      this.setLastWalkAttempt(walkKey, origin, {
-        destination,
-        now,
-        pendingProgress: true,
-        preserveFailures: this.preserveWalkFailureState(walkKey, origin),
-      });
-      this.blockedWaypointRetryKey = null;
-      this.blockedWaypointRetryUntil = 0;
-      this.routeComplete = false;
-      this.log(
-        `Autowalk client path to ${destinationKey}${walkReasonSuffix}${clickResult?.reason ? ` after ${clickResult.reason}` : ""}`,
-      );
-      this.emit("walk", {
-        dryRun: false,
-        waypoint,
-        destination,
-        routeIndex: this.routeIndex,
-        reason: walkReason,
-        transport: nativeResult.transport || "native-pathfinder",
-        fallbackReason: clickResult?.reason || "",
-      });
-      return { ...nativeResult, destination };
+      return acceptWalk(nativeResult, nativeResult.transport || "native-pathfinder", clickResult?.reason || "");
     }
 
     this.setLastWalkAttempt(walkKey, origin, {
@@ -30518,7 +31593,7 @@ export class MinibiaTargetBot {
       pendingProgress: false,
       preserveFailures: true,
     });
-    const failureReason = nativeResult?.reason || clickResult?.reason || "unknown error";
+    const failureReason = nativeResult?.reason || keyboardResult?.reason || clickResult?.reason || "unknown error";
     this.log(`Autowalk failed: ${failureReason}`);
     this.noteWalkFailure(walkKey, { origin });
     this.handleRepeatedWalkFailure(walkKey, now);
@@ -31530,10 +32605,18 @@ export class MinibiaTargetBot {
     const tickStartedAt = getMonotonicNowMs();
     let snapshot = null;
     let failed = false;
+    this.currentTickDecisionRecords = [];
 
     try {
       snapshot = await this.refresh();
+      this.beginDecisionTrace(snapshot);
       const reconnectResult = await this.handleReconnect(snapshot);
+      this.recordDecision({
+        owner: "reconnect",
+        state: reconnectResult?.handled ? "acted" : "skipped",
+        reason: reconnectResult?.phase || (reconnectResult?.handled ? "handled" : "connected"),
+        result: reconnectResult,
+      });
       if (reconnectResult?.handled) {
         return snapshot;
       }
@@ -31546,8 +32629,8 @@ export class MinibiaTargetBot {
         return snapshot;
       }
 
-      const healerRunePriorityActive = this.chooseHealerRuneActions(snapshot).length > 0;
-      if (healerRunePriorityActive) {
+      const healerTierPriorityActive = this.choosePreSustainHealActions(snapshot, vocationProfile).length > 0;
+      if (healerTierPriorityActive) {
         const healAttempt = await this.attemptHeal(snapshot, vocationProfile);
         if (healAttempt.result?.ok) {
           return snapshot;
@@ -31560,7 +32643,7 @@ export class MinibiaTargetBot {
         return snapshot;
       }
 
-      if (!sustainAttempt.result?.ok && !healerRunePriorityActive) {
+      if (!sustainAttempt.result?.ok && !healerTierPriorityActive) {
         const healAttempt = await this.attemptHeal(snapshot, vocationProfile);
         if (healAttempt.result?.ok && healingPriorityActive) {
           return snapshot;
@@ -31627,7 +32710,13 @@ export class MinibiaTargetBot {
 
           const escapeAction = this.chooseDistanceKeeper(snapshot);
           if (escapeAction) {
-            await this.reposition(escapeAction);
+            const escapeResult = await this.reposition(escapeAction);
+            this.recordDecision({
+              owner: "distanceKeeper",
+              action: escapeAction,
+              result: escapeResult,
+              state: escapeResult?.ok ? "acted" : "skipped",
+            });
           }
           return snapshot;
         }
@@ -31639,6 +32728,13 @@ export class MinibiaTargetBot {
 
         const pendingRouteAction = this.chooseRouteAction(snapshot);
         if (pendingRouteAction && !(healingPriorityActive && pendingRouteAction.kind === "cast")) {
+          this.recordDecision({
+            owner: "route",
+            action: pendingRouteAction,
+            state: "acted",
+            reason: pendingRouteAction.walkReason || pendingRouteAction.reason || pendingRouteAction.kind,
+            suppressedOwners: ["rookiller"],
+          });
           await this.executeRouteAction(pendingRouteAction);
           return snapshot;
         }
@@ -31669,7 +32765,13 @@ export class MinibiaTargetBot {
 
         const escapeAction = this.chooseDistanceKeeper(snapshot);
         if (escapeAction) {
-          await this.reposition(escapeAction);
+          const escapeResult = await this.reposition(escapeAction);
+          this.recordDecision({
+            owner: "distanceKeeper",
+            action: escapeAction,
+            result: escapeResult,
+            state: escapeResult?.ok ? "acted" : "skipped",
+          });
         }
         return snapshot;
       }
@@ -31773,6 +32875,12 @@ export class MinibiaTargetBot {
         }
 
         if (!(healingPriorityActive && pendingRouteAction.kind === "cast")) {
+          this.recordDecision({
+            owner: "route",
+            action: pendingRouteAction,
+            state: "acted",
+            reason: pendingRouteAction.walkReason || pendingRouteAction.reason || pendingRouteAction.kind,
+          });
           await this.executeRouteAction(pendingRouteAction);
           return snapshot;
         }
@@ -31802,6 +32910,16 @@ export class MinibiaTargetBot {
 
       if (chosen) {
         const targetResult = await this.target(chosen);
+        this.recordDecision({
+          owner: "targeter",
+          action: {
+            type: "target",
+            moduleKey: "targeter",
+            label: chosen?.chosen?.name || chosen?.name || "",
+          },
+          result: targetResult,
+          state: targetResult?.ok ? "acted" : "skipped",
+        });
         if (targetResult?.ok === false && targetResult?.blockedBySharedSpawn) {
           const blockedTargets = Array.isArray(targetResult.blockedTargets) && targetResult.blockedTargets.length
             ? targetResult.blockedTargets
@@ -31811,6 +32929,13 @@ export class MinibiaTargetBot {
 
           const resumeRouteAction = this.chooseRouteAction(snapshot);
           if (resumeRouteAction && !(healingPriorityActive && resumeRouteAction.kind === "cast")) {
+            this.recordDecision({
+              owner: "route",
+              action: resumeRouteAction,
+              state: "acted",
+              reason: resumeRouteAction.walkReason || resumeRouteAction.reason || resumeRouteAction.kind,
+              suppressedOwners: ["targeter"],
+            });
             await this.executeRouteAction(resumeRouteAction);
             return snapshot;
           }
@@ -31820,6 +32945,12 @@ export class MinibiaTargetBot {
       const distanceAction = this.chooseDistanceKeeper(snapshot);
       if (distanceAction) {
         const distanceResult = await this.reposition(distanceAction);
+        this.recordDecision({
+          owner: "distanceKeeper",
+          action: distanceAction,
+          result: distanceResult,
+          state: distanceResult?.ok ? "acted" : "skipped",
+        });
         if (distanceResult?.ok) {
           return snapshot;
         }
@@ -31829,6 +32960,12 @@ export class MinibiaTargetBot {
         const spellAction = this.chooseSpellCaster(snapshot, vocationProfile);
         if (spellAction) {
           const spellResult = await this.castWords(spellAction);
+          this.recordDecision({
+            owner: "spellCaster",
+            action: spellAction,
+            result: spellResult,
+            state: spellResult?.ok ? "acted" : "skipped",
+          });
           if (spellResult?.ok) {
             return snapshot;
           }
@@ -31849,6 +32986,12 @@ export class MinibiaTargetBot {
 
       const routeAction = this.chooseRouteAction(snapshot);
       if (routeAction && !(healingPriorityActive && routeAction.kind === "cast")) {
+        this.recordDecision({
+          owner: "route",
+          action: routeAction,
+          state: "acted",
+          reason: routeAction.walkReason || routeAction.reason || routeAction.kind,
+        });
         await this.executeRouteAction(routeAction);
         return snapshot;
       }
@@ -31875,6 +33018,7 @@ export class MinibiaTargetBot {
       this.log(error.message);
       return null;
     } finally {
+      this.finishDecisionTrace(snapshot);
       this.recordRuntimeTiming("tick", getMonotonicNowMs() - tickStartedAt, {
         failed,
         ready: Boolean(snapshot?.ready),

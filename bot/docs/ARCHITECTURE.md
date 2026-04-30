@@ -96,6 +96,7 @@ in [`docs/MODULES.md`](./MODULES.md).
 - global config load and save
 - per-character config load and save
 - route profile load, list, save, rename, and delete
+- route validation reports for saved profiles and active route configs
 - live claim files used to prevent double control across Minibot desks
 - route-spacing leases used to keep multiple characters on the same route from collapsing into each other
 
@@ -142,9 +143,17 @@ The managed launcher builds a detached launch spec with DevTools, managed-profil
 7. loot opened corpse containers before route movement
 8. process pending route actions, including bank, helper recovery, and interaction waypoints
 9. choose or clear combat targets, distance-keeper repositioning, offensive spell casting, shared-spawn policy, and follow-chain motion
-10. record tick timing and serialize live state, logs, and summaries back to the renderer
+10. finalize the decision trace and route state telemetry
+11. record tick timing and serialize live state, logs, and summaries back to the renderer
 
 That ordering matters. The tests intentionally lock in sustain-before-healer and looting-before-route behavior.
+
+The tick trace is a normalized runtime record, not a second state model. It
+captures the current owner/action, blocker, required snapshot families,
+acted/skipped state, result reason, and suppressed owners. Route state telemetry
+derives from the same runtime and reports `idle`, `routing`, `combat-hold`,
+`loot`, `refill`, `recovery`, `paused`, `escape`, `dead`, or `disconnected`
+plus waypoint and failure context.
 
 ## Session Model
 
@@ -155,6 +164,8 @@ Each session owns:
 - a normalized config snapshot
 - a `MinibiaTargetBot` instance
 - live logs and the last known raw snapshot
+- snapshot confidence, decision trace, and route state telemetry derived from
+  the last tick
 - lightweight runtime timing samples for the tick hot path
 - route-profile metadata for the renderer
 
@@ -218,6 +229,12 @@ Current supported waypoint types:
 - `shovel-hole`
 
 `avoid` and `danger-zone` waypoints are hard no-go coordinates: normal forward traversal skips them, and route or combat movement must not choose those SQMs as destinations. Helper waypoints are part of the saved schema, but normal forward traversal skips them unless blocked-route recovery or helper replay is active. Repeated route coordinates are treated as ambiguous crossings during recovery until local adjacency, recent confirmed route touches, or bridge evidence identifies the intended branch.
+
+Route validation is a pure report generated from the active config or raw route
+JSON. It checks malformed route control, duplicate labels, floor jumps, missing
+NPC/tool context, unknown catalog names, helper gaps, and unknown waypoint
+fields without rewriting the saved route. High-risk errors block route start
+until the operator repeats the start action for the same validation signature.
 
 Current supported waypoint actions:
 

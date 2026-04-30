@@ -64,6 +64,7 @@ test("package manifest is valid for packaging", () => {
   assert.equal(typeof packageJson.scripts.dist, "string");
   assert.deepEqual(Object.keys(packageJson.scripts).sort(), [
     "bundle:minibia",
+    "check:structure",
     "clean",
     "cli",
     "desktop",
