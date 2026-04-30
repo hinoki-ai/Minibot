@@ -72,7 +72,7 @@ test("getAmmoStatus separates equipped quiver ammo from total carried reserve", 
   assert.equal(status.depleted, false);
 });
 
-test("getAmmoStatus leaves quiver value-slot coins alone while ammo is disabled", () => {
+test("getAmmoStatus clears live ammo counts while ammo is disabled", () => {
   const status = getAmmoStatus({
     ready: true,
     equipment: {
@@ -89,9 +89,10 @@ test("getAmmoStatus leaves quiver value-slot coins alone while ammo is disabled"
   });
 
   assert.equal(status.enabled, false);
-  assert.equal(status.equippedCount, 50);
-  assert.equal(status.carriedCount, 50);
-  assert.equal(status.name, "Platinum Coin");
+  assert.equal(status.equippedCount, 0);
+  assert.equal(status.carriedCount, 0);
+  assert.equal(status.needsReload, false);
+  assert.equal(status.name, "");
 });
 
 test("buildAmmoReloadAction merges matching container ammo into the quiver slot", () => {

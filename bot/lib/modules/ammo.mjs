@@ -290,12 +290,6 @@ export function applyAmmoPolicyToVocationProfile(vocationProfile = {}, options =
 export function getAmmoStatus(snapshotLike = {}, ammoPolicy = {}) {
   const snapshot = toSnapshot(snapshotLike);
   const ammo = snapshot?.inventory?.ammo || null;
-  const rejectCoins = shouldRejectAmmoCoins(ammoPolicy);
-  const equippedAmmo = isAmmoLikeItem(ammo?.item ?? ammo, { rejectCoins })
-    ? ammo
-    : null;
-  const count = normalizeInteger(equippedAmmo?.count);
-  const carriedCount = getCarriedAmmoCount(snapshot, { rejectCoins });
   const minimumCount = normalizeInteger(ammoPolicy?.minimumCount);
   const warningCount = Math.max(minimumCount, normalizeInteger(ammoPolicy?.warningCount));
   const enabled = ammoPolicy?.enabled === true;
@@ -303,6 +297,37 @@ export function getAmmoStatus(snapshotLike = {}, ammoPolicy = {}) {
     0,
     normalizeInteger(ammoPolicy?.reloadAtOrBelow) || DEFAULT_AMMO_RELOAD_AT_OR_BELOW,
   );
+  const slotIndex = normalizeOptionalInteger(ammo?.slotIndex);
+  const slotLabel = normalizeText(ammo?.slotLabel);
+
+  if (!enabled) {
+    return {
+      enabled: false,
+      reloadEnabled: false,
+      restockEnabled: false,
+      count: 0,
+      equippedCount: 0,
+      carriedCount: 0,
+      minimumCount,
+      warningCount,
+      reloadAtOrBelow,
+      missing: false,
+      low: false,
+      depleted: false,
+      needsReload: false,
+      itemId: null,
+      name: "",
+      slotIndex,
+      slotLabel,
+    };
+  }
+
+  const rejectCoins = shouldRejectAmmoCoins(ammoPolicy);
+  const equippedAmmo = isAmmoLikeItem(ammo?.item ?? ammo, { rejectCoins })
+    ? ammo
+    : null;
+  const count = normalizeInteger(equippedAmmo?.count);
+  const carriedCount = getCarriedAmmoCount(snapshot, { rejectCoins });
   const reloadEnabled = enabled && ammoPolicy?.reloadEnabled !== false;
   const restockEnabled = enabled && ammoPolicy?.restockEnabled !== false;
 
@@ -322,8 +347,8 @@ export function getAmmoStatus(snapshotLike = {}, ammoPolicy = {}) {
     needsReload: reloadEnabled && count <= reloadAtOrBelow,
     itemId: equippedAmmo?.item?.id ?? equippedAmmo?.itemId ?? null,
     name: equippedAmmo?.item?.name ?? equippedAmmo?.name ?? "",
-    slotIndex: normalizeOptionalInteger(ammo?.slotIndex),
-    slotLabel: normalizeText(ammo?.slotLabel),
+    slotIndex,
+    slotLabel,
   };
 }
 

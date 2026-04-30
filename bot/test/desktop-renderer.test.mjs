@@ -2177,6 +2177,10 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "off");
   assert.equal(document.getElementById("compact-toggle-anti-idle").closest(".compact-split-card")?.dataset.state, "off");
+  assert.equal(document.getElementById("quick-toggle-ammo").closest(".quick-module-card")?.dataset.state, "on");
+  assert.equal(document.querySelector("#quick-toggle-ammo strong")?.textContent?.trim(), "On");
+  assert.equal(document.getElementById("compact-toggle-ammo").closest(".compact-split-card")?.dataset.state, "on");
+  assert.equal(document.querySelector("#compact-toggle-ammo strong")?.textContent?.trim(), "On");
   assert.equal(document.getElementById("quick-toggle-alarms").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "On");
   assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "on");
@@ -2273,6 +2277,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     ["quick-toggle-trainer", "trainerEnabled"],
     ["quick-toggle-mana-trainer", "manaTrainerEnabled"],
     ["quick-toggle-auto-eat", "autoEatEnabled"],
+    ["quick-toggle-ammo", "ammoEnabled"],
     ["quick-toggle-ring-amulet-auto-replace", "ringAutoReplaceEnabled"],
     ["quick-toggle-rune-maker", "runeMakerEnabled"],
     ["quick-toggle-spell-caster", "spellCasterEnabled"],
@@ -2300,6 +2305,10 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("compact-toggle-anti-idle").closest(".compact-split-card")?.dataset.state, "on");
+  assert.equal(document.getElementById("quick-toggle-ammo").closest(".quick-module-card")?.dataset.state, "off");
+  assert.equal(document.querySelector("#quick-toggle-ammo strong")?.textContent?.trim(), "Off");
+  assert.equal(document.getElementById("compact-toggle-ammo").closest(".compact-split-card")?.dataset.state, "off");
+  assert.equal(document.querySelector("#compact-toggle-ammo strong")?.textContent?.trim(), "Off");
   assert.equal(document.getElementById("quick-toggle-alarms").closest(".quick-module-card")?.dataset.state, "off");
   assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "Off");
   assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "off");
@@ -5205,6 +5214,74 @@ test("session tab player alarm audio uses each session alarm settings", async ()
   assert.deepEqual([...new Set(startedAfterSessionAlarmEnabled.map((entry) => entry.wave))], ["sine"]);
 });
 
+test("session alarm power suppresses hostile audio while keeping the tab warning visible", async () => {
+  const beepLog = [];
+
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        alarmsEnabled: false,
+      },
+      sessions: [
+        {
+          id: "page-1",
+          profileKey: "knight-alpha",
+          pageId: "page-1",
+          title: "Minibia",
+          url: "https://minibia.com/play",
+          characterName: "Knight Alpha",
+          displayName: "Knight Alpha",
+          label: "Knight Alpha",
+          playerPosition: { x: 100, y: 200, z: 7 },
+          playerStats: {
+            health: 870,
+            maxHealth: 1000,
+            mana: 320,
+            maxMana: 500,
+            healthPercent: 87,
+            manaPercent: 64,
+          },
+          visiblePlayerNames: ["God Minibia"],
+          alarmOptions: {
+            alarmsEnabled: false,
+            alarmsStaffEnabled: true,
+            alarmsStaffRadiusSqm: 9,
+            alarmsStaffFloorRange: 1,
+          },
+          running: false,
+          connected: true,
+          ready: true,
+          present: true,
+          claimed: false,
+          claimedBySelf: true,
+          available: true,
+          routeIndex: 1,
+          routeComplete: false,
+          overlayFocusIndex: 1,
+          routeName: "dararotworms",
+          page: {
+            id: "page-1",
+            title: "Minibia",
+            url: "https://minibia.com/play",
+          },
+        },
+      ],
+    }),
+    beforeEval(window) {
+      installFakeAudioContext(window, beepLog);
+    },
+  });
+  const { document } = desk;
+
+  await waitFor(430);
+  await flush(4);
+
+  const tab = document.querySelector('[data-session-select="page-1"]').closest(".bot-tab");
+  assert.equal(tab.classList.contains("hostile-alert"), true);
+  assert.equal(tab.classList.contains("staff-alert"), true);
+  assert.equal(beepLog.filter((entry) => entry.type === "start").length, 0);
+});
+
 test("session tabs run a continuous GM/GOD alarm when a healthy session sees God Minibia", async () => {
   const beepLog = [];
 
@@ -7089,7 +7166,8 @@ test("ammo modal leaves quiver value-slot coins alone while ammo is disabled", a
   await flush();
 
   assert.match(document.querySelector(".autoeat-overview-title")?.textContent || "", /Ammo paused/);
-  assert.match(document.querySelector(".autoeat-source-grid")?.textContent || "", /Platinum Coin/);
+  assert.match(document.querySelector(".autoeat-overview-detail")?.textContent || "", /Runtime ammo state is clear/i);
+  assert.doesNotMatch(document.querySelector(".autoeat-source-grid")?.textContent || "", /Platinum Coin/);
 });
 
 test("ring amulet modal saves both replacement names, repeat margins, and safety gates", async () => {

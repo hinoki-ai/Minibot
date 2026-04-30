@@ -2415,6 +2415,27 @@ select[data-feedback="error"] {
   padding: 0 2px;
 }
 
+.quick-module-card[data-state="off"],
+.route-toggle-card[data-state="off"],
+.compact-split-card[data-state="off"] {
+  border-color: rgba(150, 103, 58, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
+    linear-gradient(180deg, rgba(70, 45, 24, 0.44), rgba(24, 16, 10, 0.92)),
+    #17100a;
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 1px rgba(150, 103, 58, 0.1);
+}
+
+.quick-module-card[data-state="off"] .quick-module-open strong,
+.quick-module-card[data-state="off"] .quick-module-open small,
+.route-toggle-card[data-state="off"] .route-toggle-open strong,
+.route-toggle-card[data-state="off"] .route-toggle-open small,
+.compact-split-card[data-state="off"] .compact-card-open strong {
+  color: #e3c29a;
+}
+
 .route-add-button {
   border-color: rgba(93, 176, 167, 0.74);
   background:

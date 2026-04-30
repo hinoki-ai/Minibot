@@ -5973,6 +5973,7 @@ function getSessionAlertFlags(session) {
     : (playersTargetingSelf.length || skulledPlayers.length || hasStaff)
       ? "staff"
       : null;
+  const audioEnabled = alarmSettings.enabled === true;
   const alertKind = dead
     ? "death"
     : hasHostilePlayers
@@ -5980,15 +5981,17 @@ function getSessionAlertFlags(session) {
       : (protectorActive || stale || lowHealth || hasPlayers)
         ? "emergency"
         : null;
-  const audioAlertKind = dead
-    ? "death"
-    : hostileAudioKind
-      ? hostileAudioKind
-      : playerAlarmState.audibleKind
-        ? playerAlarmState.audibleKind
-        : (protectorActive || stale || lowHealth)
-          ? "emergency"
-          : null;
+  const audioAlertKind = !audioEnabled
+    ? null
+    : dead
+      ? "death"
+      : hostileAudioKind
+        ? hostileAudioKind
+        : playerAlarmState.audibleKind
+          ? playerAlarmState.audibleKind
+          : (protectorActive || stale || lowHealth)
+            ? "emergency"
+            : null;
 
   return {
     stale,
@@ -7979,8 +7982,11 @@ function formatModuleCurrentLine(moduleKey, rules = [], modulesState = null) {
       }
       case "ammo": {
         const summary = buildAmmoSummary(sourceState);
-        if (!summary.enabled) {
+        if (sourceState?.ammoEnabled === false) {
           return "Ammo handling is off";
+        }
+        if (!summary.enabled) {
+          return "Ammo power is on / no ammo policy configured for this character";
         }
         return `${summary.preferredValue} / ${summary.slotLabel} ${summary.equippedCount} equipped / ${summary.carriedCount} carried / reload <= ${summary.reloadAtOrBelow} / restock ${summary.restockEnabled ? summary.warningCount : "off"}${sourceState?.refillEnabled && summary.restockEnabled ? " / ammo owns restock" : ""}`;
       }
@@ -9732,8 +9738,9 @@ function getAmmoEffectiveConfig(modulesState = ensureModulesDraft(), sourceState
     minimumCount,
     Math.trunc(Number(modulesState?.ammoWarningCount) || 0),
   ) || Math.max(minimumCount, defaults.warningCount);
-  const enabled = modulesState?.ammoEnabled !== false
-    && (defaults.enabled || preferred.length > 0 || minimumCount > 0 || warningCount > 0);
+  const powerEnabled = modulesState?.ammoEnabled !== false;
+  const configured = defaults.enabled || preferred.length > 0 || minimumCount > 0 || warningCount > 0;
+  const enabled = powerEnabled && configured;
 
   return {
     vocation,
@@ -9741,6 +9748,8 @@ function getAmmoEffectiveConfig(modulesState = ensureModulesDraft(), sourceState
     preferred,
     minimumCount,
     warningCount,
+    powerEnabled,
+    configured,
     enabled,
     reloadEnabled: enabled && modulesState?.ammoReloadEnabled !== false,
     restockEnabled: enabled && modulesState?.ammoRestockEnabled !== false,
@@ -9756,14 +9765,16 @@ function getAmmoEffectiveConfig(modulesState = ensureModulesDraft(), sourceState
 
 function buildAmmoSummary(modulesState = ensureModulesDraft(), sourceState = state) {
   const config = getAmmoEffectiveConfig(modulesState, sourceState);
-  const liveChoices = buildAmmoLiveChoices(sourceState?.snapshot, {
-    rejectCoins: config.enabled,
-  });
+  const liveChoices = config.enabled
+    ? buildAmmoLiveChoices(sourceState?.snapshot, {
+        rejectCoins: true,
+      })
+    : [];
   const slotLabel = getAmmoSlotLabel(sourceState?.snapshot);
   const equippedAmmo = sourceState?.snapshot?.inventory?.ammo || null;
   const equippedAmmoItem = equippedAmmo?.item || equippedAmmo;
-  const equippedCount = isDetectedAmmoItem(equippedAmmoItem, equippedAmmo?.slotLabel || slotLabel, {
-    rejectCoins: config.enabled,
+  const equippedCount = config.enabled && isDetectedAmmoItem(equippedAmmoItem, equippedAmmo?.slotLabel || slotLabel, {
+    rejectCoins: true,
   })
     ? Math.max(0, Math.trunc(Number(equippedAmmo?.count ?? equippedAmmoItem?.count) || 0))
     : 0;
@@ -9814,35 +9825,55 @@ function buildAmmoSummary(modulesState = ensureModulesDraft(), sourceState = sta
     equippedCount,
     carriedCount,
     slotLabel,
-    headline: !config.enabled
+    headline: !config.powerEnabled
       ? "Ammo paused"
+      : !config.enabled
+        ? "Ammo not configured"
       : equippedCount > 0
         ? `${String(equippedAmmo?.name || "Ammo").trim()} in ${slotLabel}`
         : (carriedCount > 0 ? "Ammo waiting in bags" : "Quiver dry"),
-    detail: !config.enabled
-      ? (defaultPreferred.length
-        ? `Defaults ready for ${formatVocationLabel(config.vocation || "paladin")}. Enable the module or edit the queue below.`
-        : "Set ammo names or thresholds to arm this module.")
+    detail: !config.powerEnabled
+      ? "Runtime ammo state is clear while the module is off."
+      : !config.enabled
+        ? "Set preferred ammo, thresholds, or a paladin vocation to arm runtime ammo handling."
       : (equippedCount > 0
         ? `${slotLabel} has ${equippedCount}. Total carried: ${carriedCount}.`
         : `No ammo equipped. Total carried: ${carriedCount}.`),
-    modeValue: config.reloadEnabled ? "Reloading" : "Watch only",
-    modeDetail: config.reloadEnabled
-      ? `${slotLabel} reloads at ${config.reloadAtOrBelow} or lower`
-      : "Quiver moves are disabled",
-    reserveValue: String(config.warningCount || 0),
-    reserveDetail: config.restockEnabled
-      ? `Shop target / floor ${config.minimumCount}`
-      : `Shop restock off / floor ${config.minimumCount}`,
-    sourceValue: liveValue,
-    sourceDetail: equippedCount > 0
-      ? `${equippedCount} equipped in ${slotLabel}`
-      : "Bag-only ammo reserve",
-    cadenceValue: formatDurationMs(config.reloadCooldownMs),
-    cadenceDetail: [
-      config.requireNoTargets ? "no target" : "target allowed",
-      config.requireStationary ? "idle only" : "movement allowed",
-    ].join(" / "),
+    modeValue: !config.powerEnabled
+      ? "Off"
+      : !config.enabled
+        ? "Setup"
+      : (config.reloadEnabled ? "Reloading" : "Watch only"),
+    modeDetail: !config.powerEnabled
+      ? "No quiver moves"
+      : !config.enabled
+        ? "Policy needed"
+      : (config.reloadEnabled
+        ? `${slotLabel} reloads at ${config.reloadAtOrBelow} or lower`
+        : "Quiver moves are disabled"),
+    reserveValue: config.enabled ? String(config.warningCount || 0) : (config.powerEnabled ? "Setup" : "Off"),
+    reserveDetail: !config.powerEnabled
+      ? "Reserve checks paused"
+      : !config.enabled
+        ? "No reserve threshold"
+      : (config.restockEnabled
+        ? `Shop target / floor ${config.minimumCount}`
+        : `Shop restock off / floor ${config.minimumCount}`),
+    sourceValue: config.enabled ? liveValue : (config.powerEnabled ? "No policy" : "Cleared"),
+    sourceDetail: !config.powerEnabled
+      ? "Live ammo counts ignored"
+      : !config.enabled
+        ? "Live ammo waits for a policy"
+      : (equippedCount > 0
+        ? `${equippedCount} equipped in ${slotLabel}`
+        : "Bag-only ammo reserve"),
+    cadenceValue: config.enabled ? formatDurationMs(config.reloadCooldownMs) : (config.powerEnabled ? "Setup" : "Off"),
+    cadenceDetail: config.enabled
+      ? [
+          config.requireNoTargets ? "no target" : "target allowed",
+          config.requireStationary ? "idle only" : "movement allowed",
+        ].join(" / ")
+      : (config.powerEnabled ? "Cooldown waits for policy" : "Cooldown inactive"),
   };
 }
 
@@ -10101,14 +10132,16 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
         ...baseState,
         rawEnabled,
         effectiveEnabled: summary.enabled,
-        state: summary.enabled ? "on" : "off",
-        label: summary.enabled ? "On" : "Off",
-        shortLabel: summary.enabled ? "On" : "Off",
-        detail: summary.enabled
+        state: rawEnabled ? "on" : "off",
+        label: rawEnabled ? "On" : "Off",
+        shortLabel: rawEnabled ? "On" : "Off",
+        detail: !rawEnabled
+          ? "Ammo handling is off"
+          : summary.enabled
           ? (options?.refillEnabled && summary.restockEnabled
             ? "Ammo owns ammo restock while refill handles the rest of the shop loop"
             : "Ammo reload and reserve monitoring are armed")
-          : "Ammo handling is off",
+          : "Ammo power is on, but no ammo policy is configured for this character",
       };
     }
     case "antiIdle":
@@ -10316,12 +10349,13 @@ function formatEffectiveModuleStatusLine(effectiveState = null, rules = [], {
 
 function setEffectiveModuleTileState(key, effectiveState = null) {
   const nextState = effectiveState || getModuleEffectiveState(key);
+  const stateKey = String(nextState?.state || (nextState?.effectiveEnabled ? "on" : "off")).trim().toLowerCase() || "off";
   [quickButtons[key], compactQuickButtons[key]].forEach((button) => {
     setDetailedTileState(button, {
-      active: Boolean(nextState?.effectiveEnabled),
+      active: stateKey === "on" || Boolean(nextState?.effectiveEnabled),
       pressed: Boolean(nextState?.rawEnabled),
       label: String(nextState?.shortLabel || nextState?.label || (nextState?.effectiveEnabled ? "On" : "Off")),
-      state: String(nextState?.state || (nextState?.effectiveEnabled ? "on" : "off")),
+      state: stateKey,
       title: nextState?.detail || "",
     });
   });
@@ -11373,7 +11407,7 @@ function getModulesRenderKey(modulesState) {
     .map((field) => `${field.key}:${String(modulesState?.[field.key] ?? "")}`)
     .join("|");
   const enabledValue = moduleKey === "ammo"
-    ? buildAmmoSummary(modulesState).enabled
+    ? modulesState?.ammoEnabled !== false
     : Boolean(modulesState?.[schema.enabledKey]);
   const customValues = moduleKey === "partyFollow"
     ? `:${normalizeTextListSummary(modulesState?.partyFollowMembers).join(",")}:${String(modulesState?.partyFollowCombatMode || "")}:${JSON.stringify(pruneFollowTrainMemberRoles(modulesState?.partyFollowMemberRoles, modulesState?.partyFollowMembers, modulesState?.partyFollowCombatMode))}:${JSON.stringify(pruneFollowTrainMemberChaseModes(modulesState?.partyFollowMemberChaseModes, modulesState?.partyFollowMembers))}:${getFollowTrainSourceSignature()}:${getFollowTrainRuntimeSignature()}`
@@ -11488,7 +11522,7 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
   const enabled = moduleKey === "ringAutoReplace"
     ? getEquipmentReplaceCombinedEnabled(modulesState)
     : moduleKey === "ammo"
-      ? buildAmmoSummary(modulesState).enabled
+      ? modulesState?.ammoEnabled !== false
       : moduleKey === "reconnect"
         ? getReconnectModeState(modulesState).enabled
         : Boolean(modulesState?.[schema.enabledKey]);
@@ -15474,19 +15508,24 @@ function renderSummarySheets() {
         : `${autoEatFoodName} ready`,
   );
   const ammoSummary = buildAmmoSummary(options, state);
+  const ammoPowerOn = options?.ammoEnabled !== false;
   setTextContent(
     summaryFields.ammo,
-    ammoSummary.enabled
+    !ammoPowerOn
+      ? "Off"
+      : ammoSummary.enabled
       ? (ammoSummary.equippedCount > 0
         ? `${ammoSummary.equippedCount} / ${ammoSummary.carriedCount}`
         : (ammoSummary.carriedCount > 0 ? `${ammoSummary.carriedCount} carried` : "Dry"))
-      : "Off",
+      : "On",
   );
   setTextContent(
     summaryFields.ammoDetail,
-    ammoSummary.enabled
+    !ammoPowerOn
+      ? ammoSummary.detail
+      : ammoSummary.enabled
       ? `${ammoSummary.equippedName || ammoSummary.preferredValue} / ${ammoSummary.slotLabel} / reload <= ${ammoSummary.reloadAtOrBelow}${ammoSummary.restockEnabled ? ` / restock ${ammoSummary.warningCount}` : " / shop off"}${getAmmoRestockHandoffText(options, state) ? ` / ${getAmmoRestockHandoffText(options, state)}` : ""}`
-      : ammoSummary.detail,
+      : "No ammo policy configured for this character",
   );
   const ringAutoReplaceName = String(options.ringAutoReplaceItemName || "any ring").trim() || "any ring";
   const amuletAutoReplaceName = String(options.amuletAutoReplaceItemName || "any amulet").trim() || "any amulet";
