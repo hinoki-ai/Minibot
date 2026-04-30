@@ -648,6 +648,67 @@ test("chooseRouteAction returns route automation waypoint kinds when reached", (
   }
 });
 
+test("chooseRouteAction branches from a hunt waypoint into the refill loop when supplies are low", () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    refillEnabled: true,
+    refillLoopEnabled: true,
+    refillLoopStartWaypoint: "Refill Start",
+    waypoints: [
+      { x: 100, y: 200, z: 7, type: "walk", label: "Hunt Loop" },
+      { x: 120, y: 200, z: 7, type: "shop", label: "Refill Start", npcName: "Uzgod" },
+      { x: 101, y: 200, z: 7, type: "walk", label: "Resume Hunt", refillRole: "return" },
+    ],
+  });
+  const vocationProfile = {
+    sustain: {
+      supplyThresholds: {
+        potions: 1,
+      },
+      potionPolicy: {
+        preferredHealthPotionNames: ["Health Potion"],
+      },
+    },
+  };
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 7 },
+    playerStats: {
+      health: 300,
+      maxHealth: 300,
+      healthPercent: 100,
+      mana: 120,
+      maxMana: 120,
+      manaPercent: 100,
+    },
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [
+          { id: 2666, name: "Meat", count: 1 },
+          { id: 3003, name: "Rope", count: 1 },
+          { id: 3457, name: "Shovel", count: 1 },
+        ],
+      },
+    ],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  const action = bot.chooseRouteAction(snapshot, vocationProfile);
+
+  assert.equal(bot.routeIndex, 1);
+  assert.equal(bot.activeRefillLoop?.phase, "outbound");
+  assert.equal(bot.activeRefillLoop?.originIndex, 0);
+  assert.equal(bot.activeRefillLoop?.returnIndex, 2);
+  assert.equal(action?.kind, "walk");
+  assert.equal(action?.waypoint?.label, "Refill Start");
+});
+
 test("executeShopWaypoint runs the refill plan while trade is open and advances when complete", async () => {
   const bot = createBot({
     autowalkEnabled: true,
@@ -743,6 +804,181 @@ test("executeShopWaypoint runs the refill plan while trade is open and advances 
   assert.equal(doneResult?.ok, true);
   assert.equal(doneResult?.completed, true);
   assert.equal(bot.routeIndex, 1);
+});
+
+test("executeShopWaypoint pauses instead of retrying forever when trade dialogue never opens", async () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    refillEnabled: true,
+    refillShopDialogueMaxAttempts: 2,
+    waypoints: [
+      { x: 100, y: 200, z: 7, type: "shop", npcName: "Uzgod" },
+      { x: 101, y: 200, z: 7, type: "walk" },
+    ],
+  });
+  const spoken = [];
+  const vocationProfile = {
+    sustain: {
+      supplyThresholds: {
+        potions: 1,
+      },
+      potionPolicy: {
+        preferredHealthPotionNames: ["Health Potion"],
+      },
+    },
+  };
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 7 },
+    playerStats: {
+      health: 300,
+      maxHealth: 300,
+      healthPercent: 100,
+      mana: 120,
+      maxMana: 120,
+      manaPercent: 100,
+    },
+    dialogue: {
+      open: true,
+      npcName: "Uzgod",
+      signature: "same-dialogue",
+      options: [],
+      recentMessages: [],
+    },
+    trade: {
+      open: false,
+      buyItems: [],
+      sellItems: [],
+    },
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [
+          { id: 2666, name: "Meat", count: 1 },
+          { id: 3003, name: "Rope", count: 1 },
+          { id: 3457, name: "Shovel", count: 1 },
+        ],
+      },
+    ],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  bot.lastSnapshot = snapshot;
+  bot.getActiveVocationProfile = async () => vocationProfile;
+  bot.buildNpcProgressionSnapshot = async () => snapshot;
+  bot.sayNpcKeyword = async (action) => {
+    spoken.push(action.keyword);
+    return { ok: true };
+  };
+
+  const routeAction = {
+    kind: "shop",
+    waypoint: bot.getCurrentWaypoint(),
+  };
+  const firstResult = await bot.executeRouteAction(routeAction);
+  const secondResult = await bot.executeRouteAction(routeAction);
+  const pausedResult = await bot.executeRouteAction(routeAction);
+
+  assert.equal(firstResult?.waiting, true);
+  assert.equal(secondResult?.waiting, true);
+  assert.equal(spoken.length, 2);
+  assert.equal(pausedResult?.ok, false);
+  assert.equal(pausedResult?.paused, true);
+  assert.equal(pausedResult?.reason, "shop trade did not open after NPC keyword");
+  assert.equal(bot.options.cavebotPaused, true);
+  assert.equal(bot.lastRoutePauseReason, "shop trade did not open after NPC keyword");
+});
+
+test("executeBankWaypoint pauses an active refill loop when the banker is unavailable", async () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    refillEnabled: true,
+    bankingEnabled: true,
+    bankingRules: [
+      {
+        enabled: true,
+        bankerNames: ["Sandra"],
+        operation: "deposit-all",
+      },
+    ],
+    waypoints: [
+      { x: 100, y: 200, z: 7, type: "bank" },
+      { x: 101, y: 200, z: 7, type: "walk", refillRole: "return" },
+    ],
+  });
+  bot.activeRefillLoop = {
+    phase: "service",
+    originIndex: 0,
+    startIndex: 0,
+    returnIndex: 1,
+    reason: "low supplies",
+  };
+  bot.lastSnapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 7 },
+    visibleNpcs: [],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  const result = await bot.executeRouteAction({
+    kind: "bank",
+    waypoint: bot.getCurrentWaypoint(),
+  });
+
+  assert.equal(result?.ok, false);
+  assert.equal(result?.paused, true);
+  assert.equal(result?.kind, "bank");
+  assert.equal(result?.reason, "banker unavailable");
+  assert.equal(bot.options.cavebotPaused, true);
+  assert.equal(bot.lastRoutePauseReason, "banker unavailable");
+});
+
+test("executeNpcActionWaypoint pauses active refill-loop service failures", async () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    refillEnabled: true,
+    waypoints: [
+      { x: 100, y: 200, z: 7, type: "npc-action", progressionAction: "buy-promotion" },
+      { x: 101, y: 200, z: 7, type: "walk", refillRole: "return" },
+    ],
+  });
+  bot.activeRefillLoop = {
+    phase: "service",
+    originIndex: 0,
+    startIndex: 0,
+    returnIndex: 1,
+    reason: "low supplies",
+  };
+  bot.lastSnapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 7 },
+  };
+  bot.buyPromotion = async () => ({
+    ok: false,
+    reason: "promotion dialogue failed",
+  });
+
+  const result = await bot.executeRouteAction({
+    kind: "npc-action",
+    waypoint: bot.getCurrentWaypoint(),
+  });
+
+  assert.equal(result?.ok, false);
+  assert.equal(result?.paused, true);
+  assert.equal(result?.kind, "npc-action");
+  assert.equal(result?.progressionAction, "buy-promotion");
+  assert.equal(result?.reason, "promotion dialogue failed");
+  assert.equal(bot.options.cavebotPaused, true);
+  assert.equal(bot.lastRoutePauseReason, "promotion dialogue failed");
 });
 
 test("executeRouteAction advances completed NPC and daily task route automation", async () => {

@@ -67,7 +67,7 @@ These are the feature modules visible in the desktop app or route workspace.
 
 | Canonical name | Source | State keys | Current feature contract |
 | --- | --- | --- | --- |
-| `route` / `autowalk` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/config-store.mjs`](../lib/config-store.mjs), [`lib/route-validation.mjs`](../lib/route-validation.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `autowalkEnabled`, `autowalkLoop`, `routeRecording`, `showWaypointOverlay`, `waypoints`, `tileRules`, `waypointRadius`, `walkRepathMs`, `cavebotPaused`, `stopAggroHold`, `cavebotName` | Waypoint route execution, route recording, route library persistence, validation reporting, waypoint overlay, route reset, route resync, ambiguous-crossing recovery, helper recovery, corpse return, route spacing leases, route-local snapshots, route action execution, and route-owned bank/shop/NPC/daily-task waypoint dispatch. Route spacing uses live peer positions near the route spine before falling back to stored spacing indices. |
+| `route` / `autowalk` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/config-store.mjs`](../lib/config-store.mjs), [`lib/route-validation.mjs`](../lib/route-validation.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `autowalkEnabled`, `autowalkLoop`, `routeRecording`, `showWaypointOverlay`, `waypoints`, `tileRules`, `waypointRadius`, `walkRepathMs`, `cavebotPaused`, `stopAggroHold`, `cavebotName` | Waypoint route execution, route recording, route library persistence, validation reporting, waypoint overlay, route reset, route resync, ambiguous-crossing recovery, floor-transition relatch/recovery, label-based route loops, helper recovery, corpse return, route spacing leases, route-local snapshots, route action execution, and route-owned bank/shop/NPC/daily-task waypoint dispatch. Route spacing uses live peer positions near the route spine before falling back to stored spacing indices. Plain same-floor walk/node/safe-zone runs may glide to a farther reachable waypoint, while automation, reset/recovery, wait-tile, blocked, floor-changing, or spacing-sensitive segments keep single-step destinations. |
 | `avoidFields` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `avoidElementalFields`, `avoidFieldCategories` | Avoids configured field categories while choosing route and combat movement. Categories are `fire`, `energy`, `poison`, `holes`, `stairsLadders`, `teleports`, `traps`, and `invisibleWalls`. Route safety may keep native chase standing only while there is no reachable combat target. |
 | `targeting` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`lib/hunt-presets.mjs`](../lib/hunt-presets.mjs) | `monsterNames`, `targetProfiles`, `sharedSpawnMode`, `creatureLedger`, `rangeX`, `rangeY`, `combatRangeX`, `combatRangeY`, `floorTolerance`, `retargetMs` | Hunt queue, per-monster target profiles, shared-spawn policy, creature registry, visible monster/player/NPC ledgers, official hunt presets, target selection, target clearing, and fallback combat range rules. Reachable combat targets in the combat window suspend route movement and allow the configured or profile chase stance to be restored. |
 | `sustain` | [`lib/modules/sustain.mjs`](../lib/modules/sustain.mjs), [`lib/vocation-pack.mjs`](../lib/vocation-pack.mjs) | `sustainEnabled`, `sustainCooldownMs`, `preferHotbarConsumables`, `vocation` | Vocation-aware emergency spell, health potion, mana potion, food, ammo, and supply status planning from vendored vocation packs. Health-potion fallback yields to live healer tiers and potion-healer rules. |
@@ -87,7 +87,7 @@ These are the feature modules visible in the desktop app or route workspace.
 | `distanceKeeper` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), route hunt workspace | `distanceKeeperEnabled`, `distanceKeeperRules`, target-profile distance fields | Kiting and dodge movement. Rules gate by target distance window, monster count, cooldown, beam/wave dodge flags, and target requirement. Behaviors are `retreat`, `kite`, `hold`, and `escape`. Target profiles can also contribute distance behavior. |
 | `autoLight` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `autoLightEnabled`, `autoLightRules` plus legacy `autoLightWords`, `autoLightHotkey`, `autoLightMinManaPercent` | Ordered light spell rules. Rules gate by spell words, MP min, cooldown, no-light requirement, no-target requirement, and stationary requirement. |
 | `autoConvert` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/modules/economy.mjs`](../lib/modules/economy.mjs) | `autoConvertEnabled`, `autoConvertRules`, legacy `convertCooldownMs` | Coin conversion and value-slot repair. Handles urgent overflow and remembered value-slot repair before normal conversion. Rules gate by cooldown, no-target requirement, and stationary requirement. |
-| `refill` | [`lib/modules/refill.mjs`](../lib/modules/refill.mjs), [`lib/modules/shopper.mjs`](../lib/modules/shopper.mjs), [`lib/modules/loot-economics.mjs`](../lib/modules/loot-economics.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `refillEnabled`, `refillSellRequests`, `refillAutoSellEnabled`, `refillAutoSellMinFreeSlots`, `refillAutoSellProtectedNames`, `refillNpcNames`, `refillShopKeyword`, vocation sustain thresholds | Builds buy/sell requests from vocation supply thresholds, capacity-aware autosell planning, configured sell requests, and visible shop state. Buys potion, rune, food, ammo, rope, and shovel deficits; executes visible trade actions; and can run from `shop` route waypoints that open trade before advancing. |
+| `refill` | [`lib/modules/refill.mjs`](../lib/modules/refill.mjs), [`lib/modules/shopper.mjs`](../lib/modules/shopper.mjs), [`lib/modules/loot-economics.mjs`](../lib/modules/loot-economics.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `refillEnabled`, `refillSellRequests`, `refillAutoSellEnabled`, `refillAutoSellMinFreeSlots`, `refillAutoSellProtectedNames`, `refillNpcNames`, `refillShopKeyword`, hidden loop keys `refillLoopEnabled`, `refillLoopStartWaypoint`, `refillLoopReturnWaypoint`, `refillShopDialogueMaxAttempts`, vocation sustain thresholds | Builds buy/sell requests from vocation supply thresholds, capacity-aware autosell planning, configured sell requests, and visible shop state. Buys potion, rune, food, ammo, rope, and shovel deficits; executes visible trade actions; can run from `shop` route waypoints; and can branch from a hunt waypoint into a refill service leg when the hidden refill loop is enabled. Shop dialogue retries are bounded, and active refill-loop bank or NPC service failures pause the cavebot with the failed service reason instead of retrying forever. |
 | `looting` | [`lib/modules/looter.mjs`](../lib/modules/looter.mjs), [`lib/modules/container-routing.mjs`](../lib/modules/container-routing.mjs), [`lib/modules/loot-economics.mjs`](../lib/modules/loot-economics.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `lootingEnabled`, `lootWhitelist`, `lootBlacklist`, `lootPreferredContainers`, `corpseReturnEnabled` | Opens map corpses, identifies corpse containers, filters contents by keep/skip matchers, infers item categories, resolves vendored item names, routes kept items into preferred open containers or merge stacks, and can summarize item value from visible trade or vendored NPC buy prices. |
 | `banking` | [`lib/modules/banker.mjs`](../lib/modules/banker.mjs), [`lib/modules/npc-dialogue.mjs`](../lib/modules/npc-dialogue.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `bankingEnabled`, `bankingRules` | Ordered bank rules with banker matching, operation selection, nearby NPC checks, no-target/stationary gates, cooldowns, keyword dialogue, confirmation handling, recent-message success/failure parsing, and bank waypoint execution. |
 | `reconnect` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `reconnectEnabled`, `reconnectRetryDelayMs`, `reconnectMaxAttempts`, `trainerReconnectEnabled` | Disconnect-only reconnect guard. Uses the real Minibia reconnect UI or exposed reconnect hook, handles retry ladders, server-save delay handling, exhaustion telemetry, and death-modal blocking. Trainer can keep reconnect armed independently. |
@@ -126,19 +126,59 @@ Supported waypoint types:
 
 `avoid` and `danger-zone` waypoints are hard no-go markers. They are skipped as route steps and are excluded from route, distance-keeper, and emergency no-go escape destinations.
 Accepted route walks that produce a recent blocked-movement server message or keep reporting movement without position progress are interrupted and counted as blocked walk failures. Rejected walk destinations are also avoided briefly so retry, helper recovery, or waypoint skipping can resume instead of bouncing back into the same blocked step.
+Floor-changing waypoints should be followed by a same-floor landing waypoint
+within two route steps. Runtime stairhop handling is `z`-gated: if the
+character is already on the target floor of the first forward bridge, route
+resync relatches to that landing segment; otherwise floor recovery walks to an
+appropriate transition on the current floor and returns to the current
+waypoint's intended `z`. Wrong-direction floor changes are not accepted as
+progress, and extra-floor overshoots do not advance the transition waypoint.
 
-Supported waypoint actions are `restart` and `goto`.
+Supported waypoint actions are `restart` and `goto`. `restart` loops to
+waypoint 1. `goto` accepts either a numeric `targetIndex` or a label selector
+saved as `targetLabel`; legacy `gotoLabel` and `labelTarget` aliases are
+accepted on load. Label-based route loops are preferred for cavehunt retake
+paths because inserted or reordered waypoints do not break the loop target.
+
+### Cavehunt Stairhop Research Notes
+
+External cavebot documentation converges on four route-design rules that
+Minibot now mirrors:
+
+- Use typed waypoint intent for floor-changing tiles instead of plain movement.
+  ZeroBot documents separate rope, ladder, hole, use, teleport, hur-up, and
+  hur-down waypoint types instead of relying only on ordinary coordinates.
+- Keep a landing anchor immediately after a floor change. ZeroBot specifically
+  recommends well-defined stand/node anchors on different floors and says
+  accidental falls or climbs rely on the selected waypoint `z`; Minibot's route
+  validation now warns when an explicit floor-changing waypoint has no nearby
+  target-floor landing anchor.
+- Loop by labels when retaking a hunt path. ZeroBot `Goto` jumps to a named
+  label, and OTClientBot `gotolabel` exposes the same control pattern. Minibot
+  therefore accepts label-only `goto` actions and keeps label targets in route
+  signatures so a saved cavehunt loop is validated and re-evaluated when the
+  label changes.
+- Confirm transitions against `z`, not only against horizontal coordinates.
+  OTClientBot's runtime API exposes position `{x, y, z}` and map-item use at
+  positions, matching Minibot's target-floor confirmation.
+
+Research references:
+
+- [ZeroBot waypoint types](https://docs.zerobot.net/cavebot/interface/waypoint_types/)
+- [ZeroBot CaveBot getting started recommendations](https://docs.zerobot.net/cavebot/getting_started/)
+- [OTClientBot runtime position and map item API](https://otclientbot.com/docs)
 
 Route automation waypoint fields are preserved in route JSON when present:
 `npcName`, `keyword`, `shopKeyword`, `city`, `destination`, `residence`,
 `blessing`, `promotionName`, `taskTarget`, `taskKeyword`, `rewardKeyword`,
-`mode`, `progressionAction`, `steps`, and `advanceOnBlocked`.
+`mode`, `progressionAction`, `refillRole`, `steps`, and `advanceOnBlocked`.
 
 Route validation reports are generated by [`lib/route-validation.mjs`](../lib/route-validation.mjs).
 They flag empty enabled routes, unsupported control fields, broken `goto`
 targets, duplicate labels, floor jumps, missing NPC context, unknown catalog
-names, required tool waypoints, and helper gaps. The report is read-only; save
-compatibility remains separate from validation warnings.
+names, required tool waypoints, floor-transition landing gaps, and helper gaps.
+The report is read-only; save compatibility remains separate from validation
+warnings.
 
 Supported tile-rule values:
 

@@ -178,6 +178,13 @@ Do not document backlog-only route fields as current runtime schema.
 - Route recovery must not relatch to a repeated crossing coordinate unless
   recent route continuity, local adjacency, or bridge touches disambiguate the
   intended index.
+- When a stale route index is on the wrong floor after a floor change, route
+  recovery first tries to relatch to a plausible same-floor waypoint using the
+  normal route disambiguation gates, then falls back to a stair, ladder, or tool
+  waypoint that moves back toward the intended floor.
+- Floor-change waypoints only count as reached after landing on their expected
+  destination floor; overshooting farther in the same z direction must not
+  advance the route.
 - Multi-character route spacing should prefer a peer's live route position when
   it is near the waypoint spine, falling back to stored spacing indices only
   when live position is unavailable or implausible.

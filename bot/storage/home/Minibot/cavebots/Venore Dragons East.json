@@ -106,6 +106,11 @@
   "refillAutoSellProtectedNames": [],
   "refillNpcNames": [],
   "refillShopKeyword": "trade",
+  "refillLoopEnabled": false,
+  "refillLoopStartWaypoint": "",
+  "refillLoopReturnWaypoint": "",
+  "refillShopDialogueMaxAttempts": 3,
+  "refillPauseOnFailure": true,
   "lootingEnabled": false,
   "lootWhitelist": [],
   "lootBlacklist": [],
@@ -312,13 +317,13 @@
       "requireStationary": true
     }
   ],
+  "targetingEnabled": true,
   "monsterNames": [
     "alpha dragon lord",
     "alpha dragon",
     "dragon lord",
     "dragon"
   ],
-  "targetingEnabled": true,
   "waypoints": [
     {
       "x": 32822,

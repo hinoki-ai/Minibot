@@ -204,6 +204,8 @@ Routes are waypoint-centric.
 
 - `waypoints` define route progression, reset anchors, and interactions
 - `tileRules` define local movement or safety behavior without replacing the waypoint spine
+- route control may branch by numeric index or label target; label targets are
+  part of the route-change signature so loop edits reset route continuity
 
 Current supported waypoint types:
 
@@ -230,16 +232,28 @@ Current supported waypoint types:
 
 `avoid` and `danger-zone` waypoints are hard no-go coordinates: normal forward traversal skips them, and route or combat movement must not choose those SQMs as destinations. Helper waypoints are part of the saved schema, but normal forward traversal skips them unless blocked-route recovery or helper replay is active. Repeated route coordinates are treated as ambiguous crossings during recovery until local adjacency, recent confirmed route touches, or bridge evidence identifies the intended branch.
 
+Floor-transition waypoints are treated as bridge anchors. A transition advances
+only when the player reaches the expected target `z`; missed stair advances can
+relatch only through forward route evidence that reaches the player's current
+`z`, and wrong-direction or extra-floor changes fall back to floor recovery.
+Route validation warns when a floor-changing waypoint has no nearby landing
+waypoint on the expected target floor.
+
 Route validation is a pure report generated from the active config or raw route
 JSON. It checks malformed route control, duplicate labels, floor jumps, missing
-NPC/tool context, unknown catalog names, helper gaps, and unknown waypoint
-fields without rewriting the saved route. High-risk errors block route start
-until the operator repeats the start action for the same validation signature.
+NPC/tool context, unknown catalog names, floor-transition landing gaps, helper
+gaps, and unknown waypoint fields without rewriting the saved route. High-risk
+errors block route start until the operator repeats the start action for the
+same validation signature.
 
 Current supported waypoint actions:
 
 - `restart`
 - `goto`
+
+`goto` accepts `targetIndex` or `targetLabel`. Legacy `gotoLabel` and
+`labelTarget` aliases normalize into the same route-control target for load
+compatibility.
 
 Current supported tile-rule values in code:
 

@@ -51,6 +51,7 @@ const WAYPOINT_BASE_FIELDS = Object.freeze(new Set([
   "rewardKeyword",
   "mode",
   "progressionAction",
+  "refillRole",
   "steps",
   "advanceOnBlocked",
 ]));
@@ -225,6 +226,71 @@ function getChebyshevDistance(left = null, right = null) {
   );
 }
 
+function getFloorTransitionTargetZ(waypoints = [], index = 0, type = "") {
+  const waypoint = waypoints[index] || null;
+  const sourceZ = Number(waypoint?.z);
+  if (!Number.isFinite(sourceZ)) {
+    return null;
+  }
+
+  if (type === "stairs-up" || type === "exani-tera" || type === "rope") {
+    return Math.trunc(sourceZ) - 1;
+  }
+  if (type === "stairs-down" || type === "shovel-hole") {
+    return Math.trunc(sourceZ) + 1;
+  }
+  if (type !== "ladder" && type !== "use-item") {
+    return null;
+  }
+
+  const next = waypoints[index + 1] || null;
+  const nextZ = Number(next?.z);
+  if (Number.isFinite(nextZ) && Math.trunc(nextZ) !== Math.trunc(sourceZ)) {
+    return Math.trunc(nextZ);
+  }
+
+  const previous = waypoints[index - 1] || null;
+  const previousZ = Number(previous?.z);
+  if (Number.isFinite(previousZ) && Math.trunc(previousZ) !== Math.trunc(sourceZ)) {
+    return Math.trunc(previousZ);
+  }
+
+  return null;
+}
+
+function hasForwardFloorLandingWaypoint(waypoints = [], index = 0, targetZ = null, {
+  lookahead = 2,
+  allowLoop = true,
+} = {}) {
+  if (!waypoints.length || targetZ == null || !Number.isFinite(Number(targetZ))) {
+    return false;
+  }
+
+  const wantedZ = Math.trunc(Number(targetZ));
+  const total = waypoints.length;
+  let current = index;
+  for (let offset = 1; offset <= Math.max(1, Math.trunc(Number(lookahead) || 1)); offset += 1) {
+    if (current < total - 1) {
+      current += 1;
+    } else if (allowLoop) {
+      current = 0;
+    } else {
+      return false;
+    }
+
+    if (current === index) {
+      return false;
+    }
+
+    const waypointZ = Number(waypoints[current]?.z);
+    if (Number.isFinite(waypointZ) && Math.trunc(waypointZ) === wantedZ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function formatWaypointReference(index = null) {
   return Number.isInteger(index) && index >= 0 ? `waypoint ${index + 1}` : "route";
 }
@@ -258,6 +324,7 @@ function buildRouteValidationSignature({
       type: waypoint.type,
       action: waypoint.action || "",
       targetIndex: waypoint.targetIndex ?? null,
+      targetLabel: waypoint.targetLabel || "",
     })),
     tileRules: (Array.isArray(normalized.tileRules) ? normalized.tileRules : []).map((rule) => ({
       x: rule.x,
@@ -407,7 +474,13 @@ export function validateRouteConfig(config = {}, {
 
       const action = normalizeWaypointAction(rawAction);
       const targetIndex = normalizeWaypointTargetIndex(rawWaypoint?.targetIndex ?? waypoint.targetIndex);
-      if (action === "goto" && (targetIndex == null || targetIndex < 0 || targetIndex >= normalizedWaypoints.length || targetIndex === index)) {
+      const targetLabel = normalizeText(rawWaypoint?.targetLabel || rawWaypoint?.gotoLabel || rawWaypoint?.labelTarget || waypoint.targetLabel);
+      const targetLabelValid = Boolean(targetLabel && allLabelKeys.has(normalizeKey(targetLabel)));
+      if (
+        action === "goto"
+        && !targetLabelValid
+        && (targetIndex == null || targetIndex < 0 || targetIndex >= normalizedWaypoints.length || targetIndex === index)
+      ) {
         addIssue("error", "broken-goto", `${formatWaypointReference(index)} has a goto action without a valid target waypoint.`, {
           waypointIndex: index,
           field: "targetIndex",
@@ -415,7 +488,6 @@ export function validateRouteConfig(config = {}, {
         });
       }
 
-      const targetLabel = normalizeText(rawWaypoint?.targetLabel || rawWaypoint?.gotoLabel || rawWaypoint?.labelTarget);
       if (targetLabel && !allLabelKeys.has(normalizeKey(targetLabel))) {
         addIssue("error", "broken-goto-label", `${formatWaypointReference(index)} targets missing label "${targetLabel}".`, {
           waypointIndex: index,
@@ -449,6 +521,22 @@ export function validateRouteConfig(config = {}, {
         value: requiredTool,
         requiresAcknowledgement: false,
       });
+    }
+
+    if (FLOOR_TRANSITION_WAYPOINT_TYPES.has(type)) {
+      const targetZ = getFloorTransitionTargetZ(normalizedWaypoints, index, type);
+      if (targetZ != null
+        && Number.isFinite(Number(targetZ))
+        && !hasForwardFloorLandingWaypoint(normalizedWaypoints, index, targetZ, {
+          allowLoop: normalized.autowalkLoop !== false,
+        })) {
+        addIssue("warning", "floor-transition-landing-gap", `${formatWaypointReference(index)} changes floor but has no same-floor landing waypoint within the next 2 route steps.`, {
+          waypointIndex: index,
+          field: "z",
+          value: targetZ,
+          requiresAcknowledgement: false,
+        });
+      }
     }
 
     const previous = normalizedWaypoints[index - 1] || null;

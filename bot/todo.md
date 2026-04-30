@@ -5,15 +5,13 @@ handoff, roadmap, audit, or next-agent markdown.
 
 Last verification baseline:
 
-- date: 2026-04-29, America/Santiago
-- full run: `npm test` -> `752` passed, `0` failed
-- static renderer checks:
-  - `desktop/index.html` has `413` IDs and `0` duplicate IDs
-  - all `data-proxy-click`, `data-focus-target`, and
-    `data-focus-route-builder` selectors resolved
-  - `MODULE_RULE_SCHEMAS` and `MODULE_RULE_UI` module keys matched
-- audit context: full feature-module and frontend ownership audit against the
-  current dirty worktree; unrelated local changes were not reverted
+- date: 2026-04-30, America/Santiago
+- full run: `npm test` -> `770` passed, `0` failed
+- route validation: `node scripts/validate-routes.mjs` -> `36` route files,
+  `0` errors, `586` warnings
+- structure check: `npm run check:structure` -> OK
+- audit context: cavehunt stairhop/loop pass against the current dirty
+  worktree; unrelated local changes were not reverted
 
 Recommended execution depth:
 
@@ -102,6 +100,29 @@ Completed in the 2026-04-30 P0 completion pass:
   `node scripts/validate-routes.mjs` -> `35` route files, `0` errors,
   `584` warnings.
 
+Completed in the 2026-04-30 cavehunt stairhop/loop pass:
+
+- Runtime route recovery now treats floor-changing waypoints as conservative
+  bridges: missed stair advances can relatch only when forward route evidence
+  reaches the player's current `z`, and wrong-direction floor changes remain in
+  recovery instead of being counted as progress.
+- Route control now persists, validates, and executes label-only `goto` loops
+  through `targetLabel`, with `gotoLabel` and `labelTarget` retained as load
+  aliases for older route JSON.
+- Cavebot research findings were folded into the canonical module and
+  architecture docs: typed floor-change waypoints, immediate landing anchors,
+  and label-based retake loops are the documented route-design rules.
+- Targeted stability gates for this pass:
+  `node --test --test-concurrency=1 test/bot-core.test.mjs` -> `436` passed,
+  `0` failed;
+  `node --test --test-concurrency=1 test/route-validation.test.mjs` -> `4`
+  passed, `0` failed;
+  `node --test --test-concurrency=1 test/runtime-modules.test.mjs` -> `36`
+  passed, `0` failed;
+  `node scripts/validate-routes.mjs` -> `36` route files, `0` errors,
+  `586` warnings;
+  `npm test` -> `770` passed, `0` failed.
+
 ## P0
 
 No open P0 items remain in this queue after the 2026-04-30 completion pass.
@@ -113,6 +134,10 @@ if it blocks safe operation.
 1. Build refill, banking, shopping, and travel into one resumable loop.
    - Current modules can plan refill requests, visible trade actions, banking
      conversations, and NPC actions. Missing work is orchestration.
+   - Started: runtime can now branch from a hunt waypoint into a hidden
+     refill-loop service leg, preserve return context with `refillRole`, and
+     pause with a reason when shop dialogue/trade retries or active loop
+     bank/NPC service actions fail.
    - Add a supply plan with desired counts, minimum hunt counts, reserve gold,
      buy caps, protected items, sell lists, NPC names, shop keywords, city,
      travel destinations, depot branch, and return waypoint.
@@ -186,6 +211,12 @@ if it blocks safe operation.
      hints, corpse pauses, safe-zone points, and route annotations.
    - The recorder should prefer useful route intent over raw noisy position
      spam, and it should attach warnings for inferred or uncertain actions.
+   - Enhanced: runtime route recovery now relatches to the first forward
+     floor-transition landing when a stair hop already changed `z`, and route
+     validation warns when explicit floor-transition waypoints lack a nearby
+     target-floor landing anchor. Transition waypoints now require the expected
+     destination floor, so wrong-direction or extra-floor hops do not advance
+     route state.
    - Acceptance: recorded routes need fewer manual edits for
      rope/shovel/ladder/travel/refill loops and pass route validation with
      actionable warnings.

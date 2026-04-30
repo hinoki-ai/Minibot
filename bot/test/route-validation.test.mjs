@@ -35,6 +35,41 @@ test("validateRouteConfig reports malformed route control without rewriting the 
   assert.deepEqual(source, before);
 });
 
+test("validateRouteConfig accepts label-only goto route loops", () => {
+  const source = {
+    cavebotName: "label-loop",
+    autowalkEnabled: true,
+    waypoints: [
+      { x: 100, y: 100, z: 7, label: "Hunt Start", type: "walk" },
+      { x: 101, y: 100, z: 7, label: "Loop Back", type: "action", action: "goto", targetLabel: "Hunt Start" },
+    ],
+  };
+
+  const report = validateRouteConfig(source, { rawConfig: source });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.issues.some((issue) => issue.code === "broken-goto"), false);
+  assert.equal(report.issues.some((issue) => issue.code === "broken-goto-label"), false);
+});
+
+test("validateRouteConfig warns when a floor-change waypoint lacks a landing anchor", () => {
+  const source = {
+    cavebotName: "bad-stairs",
+    autowalkEnabled: true,
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "walk", label: "Start" },
+      { x: 101, y: 100, z: 8, type: "stairs-up", label: "Up" },
+      { x: 102, y: 100, z: 8, type: "walk", label: "Still Downstairs" },
+      { x: 103, y: 100, z: 8, type: "walk", label: "No Landing" },
+    ],
+  };
+
+  const report = validateRouteConfig(source, { rawConfig: source });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.issues.some((issue) => issue.code === "floor-transition-landing-gap"), true);
+});
+
 test("validate-routes command checks route files deterministically", async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "minibot-route-validation-"));
   try {

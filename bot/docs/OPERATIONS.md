@@ -188,7 +188,30 @@ Current route waypoint types include:
 
 `avoid` and `danger-zone` waypoints are no-go markers. The bot skips them in route order and avoids their SQMs for route movement and combat repositioning. `helper` waypoints are saved route entries used for blocked-route recovery and helper replay. Normal forward traversal skips them.
 
-`shop` waypoints use the Refill module: the route opens NPC dialogue, says the configured shop keyword, executes visible buy/sell/autosell work, then advances when no refill requests remain. `npc-action` waypoints can run progression actions such as travel, residence, blessings, or promotion through `progressionAction` or an ordered `steps` array. `daily-task` waypoints run task accept or reward dialogue and advance when the task step reports completion.
+Floor-changing route steps should be explicit. Use `stairs-up`, `stairs-down`,
+`rope`, `shovel-hole`, `ladder`, `use-item`, or `exani-tera` on the transition
+SQM and keep a normal landing waypoint on the target floor within the next two
+route steps. Runtime treats the first forward floor bridge as route progress:
+if the character has already stair-hopped onto that bridge's target `z`, it
+relatches to the landing segment before trying to walk back to the old floor.
+If the first bridge ahead does not match the live `z`, floor recovery still uses
+the nearest valid transition on the current floor to return to the intended
+route floor. A transition waypoint completes only on the expected destination
+floor, so a wrong-direction hop or extra-floor overshoot does not advance the
+route.
+
+This matches the public cavebot patterns checked during the 2026-04-30 pass:
+ZeroBot documents that cavebot waypoints depend on their `z` position after
+accidental falls/climbs and recommends well-defined Stand/Node anchors before
+different-floor actions ([Getting Started](https://docs.zerobot.net/cavebot/getting_started/)).
+Its waypoint reference separates walk/stand/node, rope, ladder, use, label, and
+goto behavior ([Waypoint Types](https://docs.zerobot.net/cavebot/interface/waypoint_types/)).
+OTClientBot's runtime API documents map-item use at `{x, y, z}` positions and
+the live `Position.z` field, matching the runtime rule that floor transitions
+must be confirmed by the destination floor rather than only by horizontal
+movement ([OTClientBot docs](https://otclientbot.com/docs)).
+
+`shop` waypoints use the Refill module: the route opens NPC dialogue, says the configured shop keyword, executes visible buy/sell/autosell work, then advances when no refill requests remain. Hidden refill-loop settings can branch from a hunt waypoint to a refill service waypoint when supplies are low; `refillRole: "start"` and `refillRole: "return"` can mark the service leg in route JSON. If shop dialogue/trade retries are exhausted, or an active refill-loop bank or NPC service action fails, the cavebot pauses with the failure reason instead of retrying forever. `npc-action` waypoints can run progression actions such as travel, residence, blessings, or promotion through `progressionAction` or an ordered `steps` array. `daily-task` waypoints run task accept or reward dialogue and advance when the task step reports completion.
 
 Named cavebot files are saved separately from character config. Saving the route updates the active cavebot JSON under `~/Minibot/cavebots`, and the per-character config keeps only the selected cavebot reference plus character-local state.
 
@@ -239,7 +262,7 @@ Important behavior notes:
 - trainer keeps emergency heal, escape, mana-trainer, anti-idle, and follow-chain context aligned for training sessions
 - when follow chain owns movement, trainer can stay configured for inherited reconnect, food cadence, and anti-idle behavior from their owning modules while the trainer movement loop itself remains blocked
 - looting uses keep lists, skip lists, and preferred container routing
-- refill can combine vocation restock thresholds, configured sell requests, and capacity-aware autosell planning while a trade window is open
+- refill can combine vocation restock thresholds, configured sell requests, and capacity-aware autosell planning while a trade window is open; hidden loop settings can branch to a service leg and pause failed service actions with the owner reason
 - auto eat uses the selected food source from hotbar, equipment, or open containers before anti-idle pulses
 - ring and amulet replacement can target explicit names or generic slot matches and will fall back to vendored item metadata when runtime labels are numeric or opaque
 - reconnect uses disconnect-only retry windows and the real Minibia reconnect surface; death still blocks it
