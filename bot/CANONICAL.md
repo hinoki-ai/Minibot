@@ -67,6 +67,7 @@ Current waypoint types:
 - `helper`
 - `safe-zone`
 - `avoid`
+- `danger-zone`
 - `exit-zone`
 - `stairs-up`
 - `stairs-down`
@@ -81,6 +82,10 @@ Current waypoint types:
 - `shovel-hole`
 
 Current waypoint actions are `restart` and `goto`.
+
+`avoid` and `danger-zone` waypoints are hard no-go markers. They are skipped
+as route spine entries and their coordinates are forbidden for route movement
+and combat repositioning.
 
 Current tile-rule values:
 

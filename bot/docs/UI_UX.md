@@ -232,6 +232,7 @@ Current ownership split:
 - `target profile`: per-monster combat preference and spacing rules
 - `route`: named saved route profile
 - `waypoint`: route spine entry that advances progress
+- `danger zone`: hard no-go waypoint marker for SQMs the bot must not stand on
 - `tile rule`: local spatial rule layered on top of the waypoint spine
 - `route reset`: return to waypoint `1` and hold for takeover
 - `stop aggro`: clear target lock and hold the character out of combat

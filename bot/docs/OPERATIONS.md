@@ -172,6 +172,7 @@ Current route waypoint types include:
 - `helper`
 - `safe-zone`
 - `avoid`
+- `danger-zone`
 - `exit-zone`
 - `stairs-up`
 - `stairs-down`
@@ -185,7 +186,7 @@ Current route waypoint types include:
 - `rope`
 - `shovel-hole`
 
-`helper` waypoints are saved route entries used for blocked-route recovery and helper replay. Normal forward traversal skips them.
+`avoid` and `danger-zone` waypoints are no-go markers. The bot skips them in route order and avoids their SQMs for route movement and combat repositioning. `helper` waypoints are saved route entries used for blocked-route recovery and helper replay. Normal forward traversal skips them.
 
 `shop` waypoints use the Refill module: the route opens NPC dialogue, says the configured shop keyword, executes visible buy/sell/autosell work, then advances when no refill requests remain. `npc-action` waypoints can run progression actions such as travel, residence, blessings, or promotion through `progressionAction` or an ordered `steps` array. `daily-task` waypoints run task accept or reward dialogue and advance when the task step reports completion.
 

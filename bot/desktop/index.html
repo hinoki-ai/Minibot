@@ -279,8 +279,7 @@
 
           <section class="console-column center-column">
             <fieldset id="route-overview-card"
-              class="panel-card desk-panel route-card route-overview-card interactive-summary-card" role="button"
-              tabindex="0" aria-haspopup="dialog" aria-controls="modal-route-library-picker"
+              class="panel-card desk-panel route-card route-overview-card"
               aria-describedby="route-overview-note">
               <legend>Route</legend>
 
@@ -910,7 +909,8 @@
                     <button type="button" class="btn compact" data-add-waypoint-type="walk">Walk</button>
                     <button type="button" class="btn compact" data-add-waypoint-type="action">Action</button>
                     <button type="button" class="btn compact" data-add-waypoint-type="helper">Helper</button>
-                    <button type="button" class="btn compact" data-add-waypoint-type="avoid">Avoid</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="avoid">No-Go</button>
+                    <button type="button" class="btn compact" data-add-waypoint-type="danger-zone">Danger Zone</button>
                     <button type="button" class="btn compact" data-add-waypoint-type="use-item">Use Item</button>
                     <button type="button" class="btn compact" data-add-waypoint-type="bank">Bank</button>
                     <button type="button" class="btn compact" data-add-waypoint-type="shop">Shop</button>
@@ -1175,7 +1175,8 @@
                           <option value="stand">Stand</option>
                           <option value="helper">Helper</option>
                           <option value="safe-zone">Safe Zone</option>
-                          <option value="avoid">Avoid</option>
+                          <option value="avoid">No-Go Zone</option>
+                          <option value="danger-zone">Danger Zone</option>
                           <option value="exit-zone">Exit Zone</option>
                           <option value="stairs-up">Go Up Stairs</option>
                           <option value="stairs-down">Go Down Stairs</option>
@@ -1233,7 +1234,7 @@
                       </label>
                       <label>Policy
                         <select id="tile-rule-policy">
-                          <option value="avoid">Avoid</option>
+                          <option value="avoid">No-Go Zone</option>
                           <option value="wait">Wait</option>
                         </select>
                       </label>

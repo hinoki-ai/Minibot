@@ -695,9 +695,9 @@
   "reconnectMaxAttempts": 0,
   "avoidElementalFields": true,
   "avoidFieldCategories": {
-    "fire": true,
-    "energy": true,
-    "poison": true,
+    "fire": false,
+    "energy": false,
+    "poison": false,
     "holes": true,
     "stairsLadders": true,
     "teleports": true,

@@ -203,6 +203,7 @@ Current supported waypoint types:
 - `helper`
 - `safe-zone`
 - `avoid`
+- `danger-zone`
 - `exit-zone`
 - `stairs-up`
 - `stairs-down`
@@ -216,7 +217,7 @@ Current supported waypoint types:
 - `rope`
 - `shovel-hole`
 
-Helper waypoints are part of the saved schema, but normal forward traversal skips them unless blocked-route recovery or helper replay is active. Repeated route coordinates are treated as ambiguous crossings during recovery until local adjacency, recent confirmed route touches, or bridge evidence identifies the intended branch.
+`avoid` and `danger-zone` waypoints are hard no-go coordinates: normal forward traversal skips them, and route or combat movement must not choose those SQMs as destinations. Helper waypoints are part of the saved schema, but normal forward traversal skips them unless blocked-route recovery or helper replay is active. Repeated route coordinates are treated as ambiguous crossings during recovery until local adjacency, recent confirmed route touches, or bridge evidence identifies the intended branch.
 
 Current supported waypoint actions:
 

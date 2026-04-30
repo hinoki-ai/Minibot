@@ -1659,7 +1659,7 @@ test("dashboard shows inherited trainer services and follow-chain movement block
   assert.equal(document.querySelector("#quick-toggle-autowalk strong")?.textContent?.trim(), "On");
 });
 
-test("route overview card opens the saved-route quick pick", async () => {
+test("route overview card background does not open the saved-route quick pick", async () => {
   const desk = await createDesk({
     beforeEval(window) {
       Object.defineProperty(window.HTMLSelectElement.prototype, "showPicker", {
@@ -1675,17 +1675,19 @@ test("route overview card opens the saved-route quick pick", async () => {
   const routeOverviewCard = document.getElementById("route-overview-card");
   const routeLibraryQuickSelect = document.getElementById("route-library-quick-select");
   const routeOverviewNote = document.getElementById("route-overview-note");
-  assert.equal(routeOverviewCard.getAttribute("role"), "button");
-  assert.match(routeOverviewCard.title, /saved route file/i);
+  assert.equal(routeOverviewCard.getAttribute("role"), null);
+  assert.equal(routeOverviewCard.hasAttribute("tabindex"), false);
+  assert.match(routeOverviewCard.title, /route overview panel/i);
+  assert.doesNotMatch(routeOverviewCard.title, /open saved routes/i);
   assert.equal(routeOverviewNote.hidden, true);
   assert.equal(routeOverviewNote.textContent, "");
 
   routeOverviewCard.click();
   await flush();
 
-  assert.equal(document.getElementById("modal-route-library-picker").classList.contains("open"), true);
-  assert.equal(document.activeElement, routeLibraryQuickSelect);
-  assert.equal(routeLibraryQuickSelect.dataset.showPickerCalls, "1");
+  assert.equal(document.getElementById("modal-route-library-picker").classList.contains("open"), false);
+  assert.notEqual(document.activeElement, routeLibraryQuickSelect);
+  assert.equal(routeLibraryQuickSelect.dataset.showPickerCalls, undefined);
 });
 
 test("route overview exposes live route metrics instead of placeholder slots", async () => {

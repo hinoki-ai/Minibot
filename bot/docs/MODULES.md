@@ -102,6 +102,7 @@ Supported waypoint types:
 - `helper`
 - `safe-zone`
 - `avoid`
+- `danger-zone`
 - `exit-zone`
 - `stairs-up`
 - `stairs-down`
@@ -114,6 +115,9 @@ Supported waypoint types:
 - `exani-tera`
 - `rope`
 - `shovel-hole`
+
+`avoid` and `danger-zone` waypoints are hard no-go markers. They are skipped as route steps and are excluded from route, distance-keeper, and emergency no-go escape destinations.
+Accepted route walks that produce a recent blocked-movement server message or keep reporting movement without position progress are interrupted and counted as blocked walk failures. Rejected walk destinations are also avoided briefly so retry, helper recovery, or waypoint skipping can resume instead of bouncing back into the same blocked step.
 
 Supported waypoint actions are `restart` and `goto`.
 

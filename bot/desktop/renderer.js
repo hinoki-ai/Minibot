@@ -1958,8 +1958,9 @@ const WAYPOINT_TYPE_LABELS = {
   stand: "Stand",
   helper: "Helper",
   "safe-zone": "Safe Zone",
-  avoid: "Avoid",
-  "no-go-zone": "Avoid",
+  avoid: "No-Go Zone",
+  "danger-zone": "Danger Zone",
+  "no-go-zone": "Danger Zone",
   "exit-zone": "Exit Zone",
   "stairs-up": "Go Up Stairs",
   "stairs-down": "Go Down Stairs",
@@ -1981,8 +1982,9 @@ const WAYPOINT_TYPE_HELP = {
   stand: "Stand: classic stop tile for stairs, doors, and teleports. Minibot keeps the marker type even when the movement target is the same SQM.",
   helper: "Helper: hidden recovery tile. Normal traversal skips it, but combat drift or blocked-route recovery can route through helper chains to rejoin the main loop.",
   "safe-zone": "Safe Zone: marks a defensive tile in the loop. Stored with the route and highlighted in the overlay.",
-  avoid: "Avoid: skip marker. The walker ignores this waypoint and advances to the next usable point.",
-  "no-go-zone": "Avoid: skip marker. The walker ignores this waypoint and advances to the next usable point.",
+  avoid: "No-Go Zone: hard forbidden SQM. Route movement and combat repositioning avoid this tile instead of treating it as a normal waypoint.",
+  "danger-zone": "Danger Zone: hard forbidden SQM. Use this for traps, bad stairs, and tiles the character must never stand on.",
+  "no-go-zone": "Danger Zone: hard forbidden SQM. Use this for traps, bad stairs, and tiles the character must never stand on.",
   "exit-zone": "Exit Zone: stops autowalk when the route reaches this waypoint.",
   "stairs-up": "Go Up Stairs: reaches the tile and waits for the floor change before advancing.",
   "stairs-down": "Go Down Stairs: reaches the tile and waits for the floor change before advancing.",
@@ -2003,7 +2005,7 @@ const WAYPOINT_ACTION_LABELS = {
 };
 
 const TILE_RULE_POLICY_LABELS = {
-  avoid: "Avoid",
+  avoid: "No-Go Zone",
   wait: "Wait",
 };
 
@@ -2018,7 +2020,7 @@ const TILE_RULE_SHAPE_LABELS = {
 };
 
 const TILE_RULE_POLICY_HELP = {
-  avoid: "Avoid blocks matching tiles from route movement. Use this for stairs, traps, or no-go SQMs that should stay out of path targets.",
+  avoid: "No-Go blocks matching tiles from route movement. Use this for stairs, traps, or SQMs that should stay out of path targets.",
   wait: "Wait holds the route once per approach or entry, then releases after the wait time and cooldown gates are satisfied.",
 };
 
@@ -2773,7 +2775,7 @@ function getWaypointCardTone(type = "walk") {
   ) {
     return "anchor";
   }
-  if (normalizedType === "avoid" || normalizedType === "no-go-zone" || normalizedType === "exit-zone") {
+  if (normalizedType === "avoid" || normalizedType === "danger-zone" || normalizedType === "no-go-zone" || normalizedType === "exit-zone") {
     return "danger";
   }
   return "";
@@ -12451,11 +12453,10 @@ function renderRouteOverview(routeProfile = state?.routeProfile, waypoints = get
           ? `${savedRouteCount} saved route file${savedRouteCount === 1 ? "" : "s"}`
           : "No saved route files",
         focusIndex == null ? "No waypoint selected" : `Selected ${formatWaypointHeading(waypoints[focusIndex], focusIndex)}`,
-        "Open saved routes quick pick",
+        "Use the Saved Files buttons to open the route picker",
       ];
       routeOverviewCard.dataset.titleDefault = titleParts.join(" / ");
       routeOverviewCard.title = routeOverviewCard.dataset.titleDefault;
-      routeOverviewCard.setAttribute("aria-label", titleParts.join(", "));
     }
 
     if (routeOverviewFields.note) {
@@ -12925,7 +12926,7 @@ const MAIN_WINDOW_TOOLTIP_OVERRIDES = {
   "compact-view": "Switch between the full desk and the portrait compact quick-actions desk.",
   "compact-open-rookiller": "Toggle rookiller. Stops at level 8 and 90%, returns to waypoint 1, then closes the live client.",
   "window-close": "Close the Minibot desktop window.",
-  "route-overview-card": "Route overview panel. Open saved route files, live preview, and route controls.",
+  "route-overview-card": "Route overview panel with live preview and route controls.",
   "route-toggle-waypoints-card": "Waypoints route card. Open the route builder and focus waypoint controls.",
   "route-add-waypoint-card": "Add Waypoint card. Insert a new route step from the live character position.",
   "route-reset-card": "Return Route card. Return the runner to a chosen waypoint and hold route position.",
@@ -18115,14 +18116,6 @@ routeToggleWaypointsCard?.addEventListener("keydown", (event) => {
   event.preventDefault();
   event.stopPropagation();
   openWaypointSettingsCard();
-});
-
-routeOverviewCard?.addEventListener("click", (event) => {
-  if (event.target?.closest?.("button, input, select, textarea, a, #route-toggle-waypoints-card")) {
-    return;
-  }
-  closeWaypointAddPanel();
-  openRouteLibraryQuickPick();
 });
 
 routeOverviewFields.preview?.addEventListener("click", async (event) => {
