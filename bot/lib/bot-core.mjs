@@ -35,6 +35,7 @@ import {
   buildRefillReport,
   chooseRefillAction as chooseRefillModuleAction,
   hasRefillNeed as hasRefillModuleNeed,
+  normalizeRefillSupplyPlan,
 } from "./modules/refill.mjs";
 import {
   getSnapshotConfidenceGate,
@@ -437,6 +438,7 @@ export const DEFAULTS = {
   ammoRequireNoTargets: false,
   ammoRequireStationary: false,
   refillEnabled: false,
+  refillPlan: null,
   refillSellRequests: [],
   refillAutoSellEnabled: false,
   refillAutoSellMinFreeSlots: 2,
@@ -3149,6 +3151,7 @@ export function normalizeOptions(options = {}) {
   merged.ammoRequireNoTargets = Boolean(merged.ammoRequireNoTargets);
   merged.ammoRequireStationary = Boolean(merged.ammoRequireStationary);
   merged.refillEnabled = Boolean(merged.refillEnabled);
+  merged.refillPlan = normalizeRefillSupplyPlan(merged.refillPlan);
   merged.refillSellRequests = normalizeRefillSellRequests(merged.refillSellRequests);
   merged.refillAutoSellEnabled = Boolean(merged.refillAutoSellEnabled);
   merged.refillAutoSellMinFreeSlots = normalizeNonNegativeNumber(
@@ -17304,6 +17307,26 @@ export class MinibiaTargetBot {
     return null;
   }
 
+  getRefillSupplyPlan() {
+    return normalizeRefillSupplyPlan(this.options?.refillPlan);
+  }
+
+  getRefillNpcNames() {
+    const plan = this.getRefillSupplyPlan();
+    return normalizeTextList([
+      ...(Array.isArray(this.options?.refillNpcNames) ? this.options.refillNpcNames : []),
+      ...plan.npcNames,
+    ]);
+  }
+
+  getRefillShopKeywords() {
+    const plan = this.getRefillSupplyPlan();
+    return normalizeTextList([
+      ...plan.shopKeywords,
+      this.options?.refillShopKeyword,
+    ]);
+  }
+
   isRefillServiceWaypoint(waypoint = null) {
     const type = this.getWaypointType(waypoint);
     return type === "bank" || type === "shop" || type === "npc-action";
@@ -17360,6 +17383,12 @@ export class MinibiaTargetBot {
       return configuredIndex;
     }
 
+    const plan = this.getRefillSupplyPlan();
+    const planBranchIndex = this.findWaypointIndexBySelector(plan.depotBranch);
+    if (Number.isInteger(planBranchIndex) && planBranchIndex >= 0) {
+      return planBranchIndex;
+    }
+
     const roleIndex = this.findNextWaypointIndexMatching((waypoint) => waypoint?.refillRole === "start");
     if (Number.isInteger(roleIndex) && roleIndex >= 0) {
       return roleIndex;
@@ -17372,6 +17401,12 @@ export class MinibiaTargetBot {
     const configuredIndex = this.findWaypointIndexBySelector(this.options?.refillLoopReturnWaypoint);
     if (Number.isInteger(configuredIndex) && configuredIndex >= 0) {
       return configuredIndex;
+    }
+
+    const plan = this.getRefillSupplyPlan();
+    const planReturnIndex = this.findWaypointIndexBySelector(plan.returnWaypoint);
+    if (Number.isInteger(planReturnIndex) && planReturnIndex >= 0) {
+      return planReturnIndex;
     }
 
     const roleIndex = this.findNextWaypointIndexMatching(
@@ -23925,6 +23960,9 @@ export class MinibiaTargetBot {
   }
 
   isRouteGlideWaypoint(waypoint, index = this.routeIndex) {
+    if (!this.shouldAllowRouteGlide()) {
+      return false;
+    }
     if (!waypoint || this.isRouteResetActive()) {
       return false;
     }
@@ -23940,8 +23978,12 @@ export class MinibiaTargetBot {
     ) && this.isRecordedRouteWaypointType(waypoint, index);
   }
 
+  shouldAllowRouteGlide() {
+    return !this.shouldFollowRouteWaypointsExactly();
+  }
+
   isRouteGlideDestinationAhead(destinationKey = "") {
-    if (!destinationKey || !this.options.waypoints.length) {
+    if (!this.shouldAllowRouteGlide() || !destinationKey || !this.options.waypoints.length) {
       return false;
     }
 
@@ -27283,13 +27325,18 @@ export class MinibiaTargetBot {
   }
 
   getRefillPlanningOptions(vocationProfile = null) {
+    const supplyPlan = this.getRefillSupplyPlan();
     return {
       moduleKey: "refill",
       includeAmmo: !this.shouldAmmoModuleHandleRestock(vocationProfile),
+      supplyPlan,
       sellRequests: this.getRefillSellRequests(),
       autoSell: this.options.refillAutoSellEnabled,
       autoSellMinFreeSlots: this.options.refillAutoSellMinFreeSlots,
-      autoSellProtectedNames: this.options.refillAutoSellProtectedNames,
+      autoSellProtectedNames: normalizeTextList([
+        ...(Array.isArray(this.options.refillAutoSellProtectedNames) ? this.options.refillAutoSellProtectedNames : []),
+        ...supplyPlan.protectedItems,
+      ]),
     };
   }
 
@@ -27904,11 +27951,12 @@ export class MinibiaTargetBot {
     }
 
     const progressionSnapshot = await this.buildNpcProgressionSnapshot();
-    const npcName = this.getWaypointNpcName(waypoint, this.options.refillNpcNames);
+    const npcName = this.getWaypointNpcName(waypoint, this.getRefillNpcNames());
+    const shopKeywords = this.getRefillShopKeywords();
     const keyword = String(
       waypoint?.shopKeyword
       || waypoint?.keyword
-      || this.options.refillShopKeyword
+      || shopKeywords[0]
       || DEFAULTS.refillShopKeyword,
     ).trim() || DEFAULTS.refillShopKeyword;
     const dialogueState = this.getShopWaypointDialogueState(waypoint, keyword);
@@ -29970,6 +30018,9 @@ export class MinibiaTargetBot {
   isRecentRouteGlideTarget(index, waypoint, now = this.getNow(), {
     reached = false,
   } = {}) {
+    if (!this.shouldAllowRouteGlide()) {
+      return false;
+    }
     if (!reached || !Number.isInteger(index) || this.lastWalkGlideTargetIndex !== index) {
       return false;
     }
@@ -29996,6 +30047,9 @@ export class MinibiaTargetBot {
   isRecentRouteGlideSegmentMatch(index, waypoint, now = this.getNow(), {
     reached = false,
   } = {}) {
+    if (!this.shouldAllowRouteGlide()) {
+      return false;
+    }
     if (!reached || !Number.isInteger(index) || !Number.isInteger(this.lastWalkGlideTargetIndex)) {
       return false;
     }

@@ -709,6 +709,91 @@ test("chooseRouteAction branches from a hunt waypoint into the refill loop when 
   assert.equal(action?.waypoint?.label, "Refill Start");
 });
 
+test("refillPlan minimum counts gate hunt branching and plan selectors choose return points", () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    refillEnabled: true,
+    refillLoopEnabled: true,
+    refillPlan: {
+      desiredCounts: { potions: 10 },
+      minimumHuntCounts: { potions: 3 },
+      depotBranch: "Depot Branch",
+      returnWaypoint: "Resume Hunt",
+    },
+    waypoints: [
+      { x: 100, y: 200, z: 7, type: "walk", label: "Hunt Loop" },
+      { x: 120, y: 200, z: 7, type: "shop", label: "Depot Branch", npcName: "Uzgod" },
+      { x: 101, y: 200, z: 7, type: "walk", label: "Resume Hunt" },
+    ],
+  });
+  const vocationProfile = {
+    sustain: {
+      potionPolicy: {
+        preferredHealthPotionNames: ["Health Potion"],
+      },
+    },
+  };
+  const baseSnapshot = {
+    ready: true,
+    playerPosition: { x: 99, y: 200, z: 7 },
+    playerStats: {
+      health: 300,
+      maxHealth: 300,
+      healthPercent: 100,
+      mana: 120,
+      maxMana: 120,
+      manaPercent: 100,
+    },
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+  const stockedSnapshot = {
+    ...baseSnapshot,
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [
+          { id: 266, name: "Health Potion", count: 5 },
+          { id: 3003, name: "Rope", count: 1 },
+          { id: 3457, name: "Shovel", count: 1 },
+        ],
+      },
+    ],
+  };
+  const lowSnapshot = {
+    ...baseSnapshot,
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [
+          { id: 266, name: "Health Potion", count: 2 },
+          { id: 3003, name: "Rope", count: 1 },
+          { id: 3457, name: "Shovel", count: 1 },
+        ],
+      },
+    ],
+  };
+
+  const normalRouteAction = bot.chooseRouteAction(stockedSnapshot, vocationProfile);
+  assert.equal(bot.activeRefillLoop, null);
+  assert.equal(bot.routeIndex, 0);
+  assert.equal(normalRouteAction?.kind, "walk");
+  assert.equal(normalRouteAction?.waypoint?.label, "Hunt Loop");
+
+  const action = bot.chooseRouteAction(lowSnapshot, vocationProfile);
+
+  assert.equal(bot.routeIndex, 1);
+  assert.equal(bot.activeRefillLoop?.startIndex, 1);
+  assert.equal(bot.activeRefillLoop?.returnIndex, 2);
+  assert.equal(action?.kind, "walk");
+  assert.equal(action?.waypoint?.label, "Depot Branch");
+});
+
 test("executeShopWaypoint runs the refill plan while trade is open and advances when complete", async () => {
   const bot = createBot({
     autowalkEnabled: true,
@@ -804,6 +889,102 @@ test("executeShopWaypoint runs the refill plan while trade is open and advances 
   assert.equal(doneResult?.ok, true);
   assert.equal(doneResult?.completed, true);
   assert.equal(bot.routeIndex, 1);
+});
+
+test("executeShopWaypoint uses refillPlan NPC names and shop keywords when the waypoint is generic", async () => {
+  const bot = createBot({
+    autowalkEnabled: true,
+    refillEnabled: true,
+    refillPlan: {
+      desiredCounts: { potions: 1 },
+      npcNames: ["Uzgod"],
+      shopKeywords: ["trade"],
+    },
+    waypoints: [
+      { x: 100, y: 200, z: 7, type: "shop" },
+      { x: 101, y: 200, z: 7, type: "walk" },
+    ],
+  });
+  const opened = [];
+  const spoken = [];
+  const vocationProfile = {
+    sustain: {
+      potionPolicy: {
+        preferredHealthPotionNames: ["Health Potion"],
+      },
+    },
+  };
+  const baseSnapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 7 },
+    playerStats: {
+      health: 300,
+      maxHealth: 300,
+      healthPercent: 100,
+      mana: 120,
+      maxMana: 120,
+      manaPercent: 100,
+    },
+    trade: {
+      open: false,
+      buyItems: [],
+      sellItems: [],
+    },
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [],
+      },
+    ],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  bot.getActiveVocationProfile = async () => vocationProfile;
+  bot.openNpcDialogue = async (action) => {
+    opened.push(action);
+    return { ok: true, waiting: true };
+  };
+  bot.sayNpcKeyword = async (action) => {
+    spoken.push(action);
+    return { ok: true, waiting: true };
+  };
+
+  bot.lastSnapshot = {
+    ...baseSnapshot,
+    dialogue: {
+      open: false,
+    },
+  };
+  bot.buildNpcProgressionSnapshot = async () => bot.lastSnapshot;
+  const openResult = await bot.executeRouteAction({
+    kind: "shop",
+    waypoint: bot.getCurrentWaypoint(),
+  });
+
+  bot.lastSnapshot = {
+    ...baseSnapshot,
+    dialogue: {
+      open: true,
+      npcName: "Uzgod",
+      signature: "open-dialogue",
+      options: [],
+      recentMessages: [],
+    },
+  };
+  const keywordResult = await bot.executeRouteAction({
+    kind: "shop",
+    waypoint: bot.getCurrentWaypoint(),
+  });
+
+  assert.equal(openResult?.waiting, true);
+  assert.equal(keywordResult?.waiting, true);
+  assert.equal(opened[0]?.npcName, "Uzgod");
+  assert.equal(spoken[0]?.keyword, "trade");
 });
 
 test("executeShopWaypoint pauses instead of retrying forever when trade dialogue never opens", async () => {

@@ -8,6 +8,7 @@ import {
   buildRefillRuntimePlan,
   chooseRefillAction,
   hasRefillNeed,
+  normalizeRefillSupplyPlan,
 } from "../lib/modules/refill.mjs";
 
 function createProfile(vocation = "paladin") {
@@ -142,6 +143,7 @@ test("buildRefillRequests keeps configured sell passes alongside buy restocks", 
           { id: 2666, name: "Meat", count: 3 },
           { id: 3003, name: "Rope", count: 1 },
           { id: 3457, name: "Shovel", count: 1 },
+          { id: 3031, name: "Gold Coin", count: 50 },
         ],
       },
     ],
@@ -155,6 +157,137 @@ test("buildRefillRequests keeps configured sell passes alongside buy restocks", 
   assert.equal(requests[0].name, "Strong Mana Potion");
   assert.equal(requests.at(-1).operation, "sell-all");
   assert.equal(requests.at(-1).name, "Gold Coin");
+});
+
+test("normalizeRefillSupplyPlan preserves service metadata and nested item counts", () => {
+  const plan = normalizeRefillSupplyPlan({
+    desiredCounts: { potions: 40 },
+    minimumHuntCounts: { potion: 8 },
+    buyCaps: { "Health Potion": 20 },
+    reserveGold: "500",
+    protectedItems: "dragon ham, rope",
+    sellItems: [{ operation: "sell-all", name: "Mace" }],
+    npcName: "Uzgod",
+    shopKeyword: "trade",
+    city: "Thais",
+    destination: "Venore",
+    depotBranch: "Refill Start",
+    returnWaypoint: "Resume Hunt",
+    items: [
+      { name: "Brown Mushroom", desiredCount: 30, minimumHuntCount: 5, buyCap: 10 },
+    ],
+  });
+
+  assert.equal(plan.desiredCounts.potions, 40);
+  assert.equal(plan.minimumHuntCounts.potions, 8);
+  assert.equal(plan.buyCaps.potions, 20);
+  assert.equal(plan.reserveGold, 500);
+  assert.deepEqual(plan.protectedItems, ["dragon ham", "rope"]);
+  assert.equal(plan.sellItems[0].name, "Mace");
+  assert.deepEqual(plan.npcNames, ["Uzgod"]);
+  assert.deepEqual(plan.shopKeywords, ["trade"]);
+  assert.equal(plan.city, "Thais");
+  assert.deepEqual(plan.travelDestinations, ["Venore"]);
+  assert.equal(plan.depotBranch, "Refill Start");
+  assert.equal(plan.returnWaypoint, "Resume Hunt");
+  assert.equal(plan.desiredCounts["Brown Mushroom"], 30);
+  assert.equal(plan.minimumHuntCounts["Brown Mushroom"], 5);
+  assert.equal(plan.buyCaps["Brown Mushroom"], 10);
+});
+
+test("refill supply plan uses hunt minimums for branching and desired counts for shopping", () => {
+  const profile = {
+    sustain: {
+      potionPolicy: {
+        preferredHealthPotionNames: ["Health Potion"],
+      },
+    },
+  };
+  const options = {
+    includeAmmo: false,
+    includeTools: false,
+    supplyPlan: {
+      desiredCounts: { potions: 10 },
+      minimumHuntCounts: { potions: 3 },
+      buyCaps: { potions: 4 },
+    },
+  };
+  const stockedSnapshot = {
+    ready: true,
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [
+          { id: 266, name: "Health Potion", count: 5 },
+        ],
+      },
+    ],
+  };
+  const lowSnapshot = {
+    ...stockedSnapshot,
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [
+          { id: 266, name: "Health Potion", count: 2 },
+        ],
+      },
+    ],
+  };
+
+  const requests = buildRefillRequests(stockedSnapshot, profile, options);
+
+  assert.equal(hasRefillNeed(stockedSnapshot, profile, options), false);
+  assert.equal(hasRefillNeed(lowSnapshot, profile, options), true);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].name, "Health Potion");
+  assert.equal(requests[0].amount, 4);
+  assert.equal(requests[0].desiredCount, 10);
+  assert.equal(requests[0].minimumHuntCount, 3);
+});
+
+test("buildRefillRuntimePlan caps buys against the configured gold reserve", () => {
+  const profile = {
+    sustain: {
+      potionPolicy: {
+        preferredHealthPotionNames: ["Health Potion"],
+      },
+    },
+  };
+  const snapshot = {
+    ready: true,
+    currency: {
+      totalGoldValue: 250,
+    },
+    trade: {
+      open: true,
+      buyItems: [
+        { itemId: 266, name: "Health Potion", price: 45 },
+      ],
+    },
+    containers: [
+      {
+        runtimeId: 10,
+        name: "Backpack",
+        slots: [],
+      },
+    ],
+  };
+  const plan = buildRefillRuntimePlan(snapshot, profile, {
+    includeAmmo: false,
+    includeTools: false,
+    supplyPlan: {
+      reserveGold: 100,
+      desiredCounts: { potions: 10 },
+    },
+  });
+
+  assert.equal(plan.length, 1);
+  assert.equal(plan[0].name, "Health Potion");
+  assert.equal(plan[0].amount, 3);
+  assert.equal(plan[0].reserveLimited, true);
 });
 
 test("hasRefillNeed detects low-supply deficits before the hunt starts", () => {

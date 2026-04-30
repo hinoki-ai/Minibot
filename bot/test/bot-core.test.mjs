@@ -14393,10 +14393,53 @@ test("chooseRouteAction immediately reissues a route walk after the last click m
   }
 });
 
-test("chooseRouteAction glides to the farthest safe reachable waypoint on a plain route segment", () => {
+test("chooseRouteAction walks the next recorded waypoint when exact route following is enabled", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     autowalkLoop: false,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 101, y: 100, z: 8, type: "walk" },
+      { x: 102, y: 100, z: 8, type: "walk" },
+      { x: 103, y: 100, z: 8, type: "walk" },
+      { x: 104, y: 100, z: 8, type: "walk" },
+      { x: 105, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  bot.resetRoute(0);
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+    reachableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+      { x: 102, y: 100, z: 8 },
+      { x: 103, y: 100, z: 8 },
+      { x: 104, y: 100, z: 8 },
+    ],
+  });
+
+  assert.equal(bot.routeIndex, 0);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.waypoint, bot.options.waypoints[0]);
+  assert.deepEqual(action?.destination, bot.options.waypoints[0]);
+  assert.equal(action?.progressKey, "101,100,8");
+  assert.equal(action?.walkReason, "direct");
+  assert.equal(action?.glideTargetIndex, null);
+});
+
+test("chooseRouteAction glides to the farthest safe reachable waypoint on a plain route segment when exact following is disabled", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    routeFollowExactWaypoints: false,
     waypointRadius: 0,
     waypoints: [
       { x: 101, y: 100, z: 8, type: "walk" },
@@ -14476,6 +14519,7 @@ test("resyncRouteProgress can relatch to a recently accepted glide destination",
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     autowalkLoop: false,
+    routeFollowExactWaypoints: false,
     waypointRadius: 0,
     waypoints: [
       { x: 101, y: 100, z: 8, type: "walk" },
