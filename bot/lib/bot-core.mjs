@@ -13637,45 +13637,6 @@ export class MinibiaTargetBot {
     });
   }
 
-  snapshotHasCombatFloorTransitionNoGo(snapshot = this.lastSnapshot) {
-    if (!snapshot?.ready || !this.shouldHoldRouteForCombat(snapshot)) {
-      return false;
-    }
-
-    const playerPosition = snapshot.playerPosition || null;
-    if (!playerPosition) {
-      return false;
-    }
-
-    const waypoint = this.getCurrentWaypoint();
-    const hazards = [
-      ...(Array.isArray(snapshot?.hazardTiles) ? snapshot.hazardTiles : []),
-      ...(Array.isArray(snapshot?.waypointAutoAvoidHazards) ? snapshot.waypointAutoAvoidHazards : []),
-    ];
-
-    return hazards.some((entry) => {
-      if (
-        !this.isFloorTransitionHazard(entry)
-        || !entry?.position
-        || Number(entry.position.z) !== Number(playerPosition.z)
-      ) {
-        return false;
-      }
-
-      const playerDistance = this.getPositionDistance(playerPosition, entry.position);
-      if (Number.isFinite(playerDistance) && playerDistance <= 1) {
-        return true;
-      }
-
-      return waypoint
-        && this.isPositionRelevantToRouteSafetySegment(snapshot, entry.position, {
-          destination: waypoint,
-          waypoint,
-          vicinity: ROUTE_SAFETY_SEGMENT_VICINITY + 1,
-        });
-    });
-  }
-
   hasReachableCombatFocus(snapshot = this.lastSnapshot) {
     if (!snapshot?.ready) {
       return false;
@@ -13707,10 +13668,6 @@ export class MinibiaTargetBot {
   shouldKeepNativeChaseStandingForRouteSafety(snapshot = this.lastSnapshot) {
     if (!this.isAutowalkRouteActiveForSafety(snapshot)) {
       return false;
-    }
-
-    if (this.snapshotHasCombatFloorTransitionNoGo(snapshot)) {
-      return true;
     }
 
     return !this.hasReachableCombatFocus(snapshot)
@@ -23555,7 +23512,20 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    return this.getFloorTransitionHazardAt(snapshot, position);
+    return this.getFloorTransitionHazardAt(snapshot, position)
+      || this.getRouteFloorTransitionNoGoAt(position);
+  }
+
+  getRouteFloorTransitionNoGoAt(position) {
+    const positionKey = this.getPositionKey(position);
+    if (!positionKey || !Array.isArray(this.options?.waypoints)) {
+      return null;
+    }
+
+    return this.options.waypoints.find((waypoint) => (
+      this.isFloorTransitionWaypointType(waypoint)
+      && this.getPositionKey(waypoint) === positionKey
+    )) || null;
   }
 
   shouldAvoidPosition(snapshot, position) {
@@ -31947,6 +31917,16 @@ export class MinibiaTargetBot {
 
     if (!destination) {
       return { ok: false, reason: "missing destination" };
+    }
+
+    const floorTransitionNoGo = this.getCombatFloorTransitionNoGoAt(this.lastSnapshot, destination);
+    if (floorTransitionNoGo) {
+      return {
+        ok: false,
+        reason: "floor transition no-go",
+        destination,
+        floorTransitionNoGo,
+      };
     }
 
     const walkKey = `${destination.x},${destination.y},${destination.z}`;

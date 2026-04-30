@@ -13937,6 +13937,100 @@ test("chooseDistanceKeeper never dodges onto stairs or ladders even when stair a
   assert.equal(action, null);
 });
 
+test("chooseDistanceKeeper avoids route floor-transition waypoints while wave dodging", () => {
+  for (const type of ["stairs-down", "shovel-hole"]) {
+    const bot = new MinibiaTargetBot({
+      autowalkEnabled: true,
+      autowalkLoop: true,
+      chaseMode: "aggressive",
+      avoidElementalFields: false,
+      avoidFieldCategories: {
+        holes: false,
+        stairsLadders: false,
+      },
+      distanceKeeperEnabled: false,
+      monsterNames: ["Dragon"],
+      targetProfiles: [
+        {
+          name: "Dragon",
+          avoidWave: true,
+        },
+      ],
+      waypoints: [
+        { x: 100, y: 99, z: 8, type },
+      ],
+    });
+
+    const action = bot.chooseDistanceKeeper({
+      ready: true,
+      playerPosition: { x: 100, y: 100, z: 8 },
+      currentTarget: {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        chebyshevDistance: 1,
+        distance: 1,
+        withinCombatBox: true,
+        withinCombatWindow: true,
+        reachableForCombat: true,
+        isAxisAligned: true,
+      },
+      candidates: [
+        {
+          id: 10,
+          name: "Dragon",
+          position: { x: 101, y: 100, z: 8 },
+          dx: 1,
+          dy: 0,
+          dz: 0,
+          chebyshevDistance: 1,
+          distance: 1,
+          withinCombatBox: true,
+          withinCombatWindow: true,
+          reachableForCombat: true,
+          isAxisAligned: true,
+        },
+      ],
+      visibleCreatures: [
+        {
+          id: 10,
+          name: "Dragon",
+          position: { x: 101, y: 100, z: 8 },
+          dx: 1,
+          dy: 0,
+          dz: 0,
+          chebyshevDistance: 1,
+          distance: 1,
+          withinCombatBox: true,
+          withinCombatWindow: true,
+          reachableForCombat: true,
+          isAxisAligned: true,
+        },
+      ],
+      hazardTiles: [],
+      reachableWalkableTiles: [
+        { x: 100, y: 100, z: 8 },
+        { x: 100, y: 99, z: 8 },
+        { x: 100, y: 101, z: 8 },
+      ],
+      safeTiles: [
+        { x: 100, y: 100, z: 8 },
+        { x: 100, y: 99, z: 8 },
+        { x: 100, y: 101, z: 8 },
+      ],
+      isMoving: false,
+      pathfinderAutoWalking: false,
+    });
+
+    assert.equal(action?.type, "distance-keeper", type);
+    assert.deepEqual(action?.destination, { x: 100, y: 101, z: 8 }, type);
+    assert.equal(action?.reason, "dodge", type);
+  }
+});
+
 test("chooseRouteAction holds the route while the current target is still a visible tracked monster outside the local combat box", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -20020,7 +20114,7 @@ test("restorePreferredChaseMode keeps aggressive chase during route-safe combat"
   assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "chase");
 });
 
-test("restorePreferredChaseMode keeps native chase standing during combat near stairs", async () => {
+test("restorePreferredChaseMode keeps aggressive chase during combat near stairs", async () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     autowalkLoop: true,
@@ -20031,7 +20125,7 @@ test("restorePreferredChaseMode keeps native chase standing during combat near s
     ],
   });
   const selector = {
-    currentChaseMode: 2,
+    currentChaseMode: 0,
     setChaseMode(mode) {
       this.currentChaseMode = mode;
     },
@@ -20092,9 +20186,9 @@ test("restorePreferredChaseMode keeps native chase standing during combat near s
     ],
     combatModes: {
       chaseMode: {
-        key: "chase",
-        label: "Aggressive",
-        rawValue: "2",
+        key: "stand",
+        label: "Stand",
+        rawValue: "0",
       },
     },
   });
@@ -20102,12 +20196,12 @@ test("restorePreferredChaseMode keeps native chase standing during combat near s
   const result = await bot.restorePreferredChaseMode();
 
   assert.equal(result?.ok, true);
-  assert.equal(result?.routeSafetyClamped, true);
+  assert.equal(result?.routeSafetyClamped, false);
   assert.equal(result?.preferredMode, 2);
-  assert.equal(result?.appliedMode, 0);
-  assert.equal(selector.currentChaseMode, 0);
+  assert.equal(result?.appliedMode, 2);
+  assert.equal(selector.currentChaseMode, 2);
   assert.equal(bot.preferredChaseMode, 2);
-  assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "stand");
+  assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "chase");
 });
 
 test("route-safe combat hold still holds for reach targets and close targets", () => {
@@ -20266,6 +20360,79 @@ test("reposition uses a viewport click for one-sqm combat setup steps", async ()
   assert.equal(restoreCalls, 1);
   assert.equal(bot.lastWalkKey, "101,100,8");
   assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "viewport-click");
+});
+
+test("reposition refuses combat floor-transition no-go destinations before clicking", async () => {
+  const destination = { x: 100, y: 99, z: 8 };
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    chaseMode: "aggressive",
+    monsterNames: ["Dragon"],
+    waypoints: [
+      { ...destination, type: "shovel-hole" },
+    ],
+  });
+  let clickCalls = 0;
+  let keyboardCalls = 0;
+  let nativeCalls = 0;
+
+  bot.lastSnapshot = createModuleSnapshot({
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 101, y: 100, z: 8 },
+      withinCombatBox: true,
+      withinCombatWindow: true,
+      reachableForCombat: true,
+    },
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        withinCombatBox: true,
+        withinCombatWindow: true,
+        reachableForCombat: true,
+      },
+    ],
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        withinCombatBox: true,
+        withinCombatWindow: true,
+        reachableForCombat: true,
+      },
+    ],
+  });
+  bot.clickViewportWalk = async () => {
+    clickCalls += 1;
+    return { ok: true };
+  };
+  bot.executeKeyboardStep = async () => {
+    keyboardCalls += 1;
+    return { ok: true };
+  };
+  bot.executeNativeWalk = async () => {
+    nativeCalls += 1;
+    return { ok: true };
+  };
+
+  const result = await bot.reposition({
+    type: "distance-keeper",
+    moduleKey: "targetProfile:dragon",
+    destination,
+    reason: "dodge",
+  });
+
+  assert.equal(result?.ok, false);
+  assert.equal(result?.reason, "floor transition no-go");
+  assert.equal(clickCalls, 0);
+  assert.equal(keyboardCalls, 0);
+  assert.equal(nativeCalls, 0);
 });
 
 test("reposition falls back to native pathfinder when viewport click is unavailable", async () => {
