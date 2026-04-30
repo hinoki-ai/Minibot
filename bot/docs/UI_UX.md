@@ -181,6 +181,10 @@ Current ownership split:
 - Route overview metrics should deep-link into the route builder modal or the saved-route quick picker as appropriate.
 - Waypoint quick-open shortcuts land on the relevant control inside the route builder modal.
 - Route validation warnings belong in the route builder and route overview. Waypoint-specific validation issues should highlight the affected waypoint row without changing route JSON.
+- Route pack import/export belongs in Route Builder. Import must show the pack
+  name, waypoint/rule counts, validation state, migration warnings, and a
+  scoped diff before the operator can apply it. Export and import must not ask
+  the operator to hand-edit JSON.
 - Route reset, clear, delete, and archive clear flows require explicit confirmation or undo paths.
 - The route overview should show live metrics only. Placeholder cards or dead slots are not acceptable in the shipping desk.
 
@@ -190,13 +194,24 @@ Current ownership split:
 - Module cards may expose power toggles, but rule editing stays in the shared module modal unless the feature belongs to targeting or route surfaces.
 - Full and compact module cards must mirror the same effective state. The
   Alarms card, in particular, mirrors `alarmsEnabled` and shows player
-  proximity alarms as armed or off in both layouts.
+  proximity alarms as armed or off in both layouts. When protector controls are
+  enabled, the Alarms card must also summarize whether route pause, targeter
+  stop, and acknowledgement are armed.
+- Looting summaries should distinguish loot movement from hunt economy. The
+  logs/runtime surfaces can show hunt ledger totals and capacity decisions, but
+  loot rule editing remains in the shared Looting module editor.
+- Hunt target summaries should expose the selected target, top candidate scores,
+  skipped reasons, and movement intent from the runtime target-scoring report
+  rather than recomputing a separate UI ranking.
 - Healer messaging must preserve the downward-safe coverage model instead of implying isolated HP bands.
 - Trainer messaging must make clear that it reuses anti-idle, auto-eat, healer, death-heal, and reconnect policy from their owning modules while keeping trainer-only partner, trainer mana, reconnect-while-training, and escape controls in the Trainer modal.
 - Auto eat messaging must make clear that it can source food from hotbar, equipped slots, or open containers, and it should outrank anti-idle when both are ready.
 - Ring and amulet replacement messaging must summarize both slot targets plus their repeat margin and combat or movement gates.
 - Anti-idle messaging must make clear that it fires only after real inactivity crosses the configured delay and may use a non-visible keepalive path before any input-style fallback.
 - Follow chain messaging must make the chain order clear: each member follows the name directly above it, and the default role can still be overridden per member.
+- Follow chain summaries must roll up live chain HP, supplies, and route loot
+  from the same session state used by the tab list; compact and full views must
+  not calculate different party numbers.
 
 ### Utility Controls
 
@@ -211,6 +226,10 @@ Current ownership split:
 - The console summary shows current decision owner and current blocker.
 - The logs modal may expand the trace into recent owner/state/reason rows, but
   it must not invent a separate runtime state model.
+- The logs modal is also the operator-facing runtime report surface for hunt
+  ledger totals, loot-rule/capacity decisions, target scores, stance intent,
+  and protector alarms. These blocks must read from active session or snapshot
+  reports and stay consistent with the decision trace.
 - Snapshot-confidence blockers should be worded as concrete runtime reasons,
   for example `snapshot tiles stale` or `snapshot inventory unknown`.
 
@@ -221,6 +240,10 @@ Current ownership split:
 - Low-HP, player-watch, staff-like, stale, and death alerts must remain visually distinct from idle or normal running state.
 - Staff-like names are a stronger player alert, not a separate hidden state; the tab must surface them visually and in accessible tab labeling.
 - Continuous alarm states for low HP, nearby players, and GM/GOD visibility should survive rerenders until the live condition clears.
+- Protector alarm pauses should show the alarm reason, paused modules, and an
+  acknowledgement/resume control when acknowledgement is required or automation
+  was paused. Acknowledging must clear only the protector hold state; it must
+  not hide the underlying live alarm condition from future snapshots.
 - Route reset completion should emit a takeover-ready signal.
 - The recent activity console should stay pinned to the active tab context and keep newest events first.
 - The Logs modal should include lightweight runtime timing for tick, live patch, live-state serialization, renderer render, and log rendering so hot-path changes can be based on live measurements.

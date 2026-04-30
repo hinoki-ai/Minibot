@@ -70,6 +70,42 @@ test("validateRouteConfig warns when a floor-change waypoint lacks a landing anc
   assert.equal(report.issues.some((issue) => issue.code === "floor-transition-landing-gap"), true);
 });
 
+test("validateRouteConfig reports editor-facing setup diagnostics", () => {
+  const source = {
+    cavebotName: "diagnostics",
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    lootingEnabled: true,
+    lootPreferredContainers: [],
+    bankingEnabled: true,
+    bankingRules: [],
+    partyFollowEnabled: true,
+    partyFollowMembers: [],
+    alarmsEnabled: true,
+    alarmsPlayerEnabled: false,
+    alarmsStaffEnabled: false,
+    alarmsBlacklistEnabled: false,
+    waypoints: Array.from({ length: 6 }, (_, index) => ({
+      x: 100 + index,
+      y: 100,
+      z: 7,
+      type: "walk",
+      label: `Waypoint ${String(index + 1).padStart(3, "0")}`,
+    })),
+  };
+
+  const report = validateRouteConfig(source, { rawConfig: source });
+  const codes = new Set(report.issues.map((issue) => issue.code));
+
+  assert.equal(report.ok, true);
+  assert.equal(codes.has("generated-labels-only"), true);
+  assert.equal(codes.has("linear-route-no-return"), true);
+  assert.equal(codes.has("loot-no-destination"), true);
+  assert.equal(codes.has("banking-no-rules"), true);
+  assert.equal(codes.has("party-follow-no-members"), true);
+  assert.equal(codes.has("alarms-no-scopes"), true);
+});
+
 test("validate-routes command checks route files deterministically", async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "minibot-route-validation-"));
   try {

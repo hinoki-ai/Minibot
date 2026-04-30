@@ -6,12 +6,12 @@ handoff, roadmap, audit, or next-agent markdown.
 Last verification baseline:
 
 - date: 2026-04-30, America/Santiago
-- full run: `npm test` -> `778` passed, `0` failed
+- full run: `npm test` -> `799` passed, `0` failed
 - route validation: `node scripts/validate-routes.mjs` -> `36` route files,
   `0` errors, `586` warnings
 - structure check: `npm run check:structure` -> OK
-- audit context: refill supply-plan progress pass against the current dirty
-  worktree; unrelated local changes were not reverted
+- audit context: open non-frozen P1/P2 queue closure pass against the current
+  dirty worktree; unrelated local changes were not reverted
 
 Recommended execution depth:
 
@@ -123,6 +123,81 @@ Completed in the 2026-04-30 cavehunt stairhop/loop pass:
   `586` warnings;
   `npm test` -> `770` passed, `0` failed.
 
+Completed in the 2026-04-30 P1 second-half pass:
+
+- Route profile packs now export/import route, targeting, sustain, loot,
+  refill, banking, alarms, party, options, notes, schema version, and
+  compatibility metadata through validation-first desktop controls.
+- Route pack import shows a diff, route validation report, migration warnings,
+  and read-only state for newer schema packs before an explicit apply. Local
+  ledgers, claims, secrets, active pauses, and runtime leases are excluded.
+- Route recorder diagnostics now write validation and warning sidecars,
+  including unsafe/floor-change exclusions, disconnected safe tiles, missing
+  coverage, generated-label notes, and incomplete recording reasons. Live
+  route recording can infer one-floor stair transitions with landing anchors.
+- Route validation and metadata diagnostics now surface generated-label-only
+  routes, linear no-return routes, missing loot destinations, empty banking
+  rules, empty follow-chain members, disabled alarm scopes, and item/tile
+  categories for fields, food, furniture, obstacles, traps, stairs, ladders,
+  holes, and blocked tiles.
+- Stability gates for this pass:
+  `npm test` -> `792` passed, `0` failed;
+  `node --test --test-concurrency=1 test/config-store.test.mjs` -> `14`
+  passed, `0` failed;
+  `node --test --test-concurrency=1 test/route-validation.test.mjs` -> `5`
+  passed, `0` failed;
+  `node --test --test-concurrency=1 test/record-same-floor-route.test.mjs test/minibia-item-metadata.test.mjs`
+  -> `6` passed, `0` failed;
+  `node --test --test-concurrency=1 test/desktop-renderer.test.mjs` -> `117`
+  passed, `0` failed;
+  `npm run check:structure` -> OK;
+  `node scripts/validate-routes.mjs` -> `36` route files, `0` errors,
+  `586` warnings.
+
+Completed in the 2026-04-30 P1 first-half pass:
+
+- Hunt ledger and loot economy reporting now track XP, kills, loot value,
+  profit rate, supply burn, rare drops, deaths, pauses, stucks, route loops,
+  unknown-value items, protected loot decisions, recent events, and top loot
+  rules from runtime state.
+- Capacity-aware loot handling now emits explicit decisions for continue,
+  sell branch, depot branch, drop-low-value, pause, or skip, with protected,
+  unknown, sellable, and low-value item context for the operator.
+- Targeting now emits a transparent target-scoring report with selected target,
+  top candidates, score factors, skipped reasons, and movement intent shared
+  with distance/stance behavior.
+- Alarms now have a protector status path that can log, pause route, stop
+  targeter, require acknowledgement, preserve route position, and resume from
+  the desktop logs surface while healer and utility decisions remain available.
+- Desktop state serialization and the Logs modal now expose Hunt Ledger, Loot
+  Rules, Target Scores, Stance Intent, and Protector acknowledgement blocks.
+- Targeted stability gates for this pass:
+  `node --test --test-concurrency=1 test/loot-economics.test.mjs` -> `4`
+  passed, `0` failed;
+  `node --test --test-concurrency=1 test/bot-core.test.mjs` -> `443`
+  passed, `0` failed;
+  `node --test --test-concurrency=1 test/desktop-renderer.test.mjs` -> `118`
+  passed, `0` failed;
+  `npm test` -> `798` passed, `0` failed.
+
+Completed in the 2026-04-30 open queue closure pass:
+
+- Route recorder output now keeps structured intent hints for service NPCs,
+  shop/trade windows, corpse pauses, and visible tool/floor-transition tiles in
+  route knowledge and attached waypoint metadata.
+- Runtime diagnostics now surface common setup blockers such as looting stuck,
+  backpack/window state loss, depot/deposit naming mismatch, targeter blockers,
+  NPC dialogue failures, route tile blockers, and active protector state through
+  the serialized session and Logs surface.
+- The remaining P1/P2 queue items were closed without changing the frozen work
+  boundaries for refill orchestration, daily tasks, or trainer/runemaking
+  productization.
+- Stability gates for this pass:
+  `npm test` -> `799` passed, `0` failed;
+  `npm run check:structure` -> OK;
+  `node scripts/validate-routes.mjs` -> `36` route files, `0` errors,
+  `586` warnings.
+
 ## P0
 
 No open P0 items remain in this queue after the 2026-04-30 completion pass.
@@ -192,161 +267,15 @@ Frozen context retained for later:
 
 ## P1
 
-1. Add hunt ledger and loot/economy reporting.
-   - Track XP/hour, kills/hour, loot/hour, profit/hour, supply burn, rare drops,
-     deaths, pauses, stucks, route loops, refill cycles, unknown-value items,
-     and protected-item decisions.
-   - Upgrade capacity-aware looting into explicit decisions: continue, skip,
-     drop low-value, sell branch, depot branch, or pause.
-   - Acceptance: operator can answer why the bot stopped, what it looted, what
-     it spent, when it will refill, and which loot rules fired most.
-   - Primary files: `lib/modules/looter.mjs`,
-     `lib/modules/container-routing.mjs`, `lib/modules/loot-economics.mjs`,
-     `lib/bot-core.mjs`, `desktop/renderer.js`, `docs/MODULES.md`,
-     `docs/UI_UX.md`, `test/looter.test.mjs`,
-     `test/loot-economics.test.mjs`.
-
-2. Add transparent target scoring and stance unification.
-   - Compute target scores from target profile order, danger, HP, distance,
-     reachability, target count, ownership/shared-spawn policy, route role, and
-     current target stickiness.
-   - Unify target profile stance and distance-keeper output into one movement
-     intent: hold, chase, approach, diagonal, distance, kite, lure, assist, or
-     escape.
-   - Acceptance: UI can show top target candidates, score breakdown, selected
-     stance, and why higher rows were skipped.
-   - Primary files: `lib/bot-core.mjs`, `desktop/renderer.js`,
-     `lib/hunt-presets.mjs`, `docs/MODULES.md`, `docs/UI_UX.md`,
-     `test/bot-core.test.mjs`, `test/hunt-presets.test.mjs`.
-
-3. Expand alarms into a real protector system.
-   - Add alarm types for low HP/MP, low supplies, no capacity, private message,
-     disconnect, death, route stuck, no progress, stale target, rare loot, high
-     incoming damage, and full backpack.
-   - Add operator actions: sound, desktop notification, log, pause route, pause
-     selected modules, stop targeter, and require acknowledgement.
-   - Alarm pauses must record the alarm owner, paused modules, resume policy, and
-     acknowledgement state without becoming staff-evasion or anti-detection
-     behavior.
-   - Acceptance: an alarm can pause route and targeter while healer remains
-     active, and the operator can acknowledge/resume without losing route
-     position.
-   - Primary files: `lib/bot-core.mjs`, `desktop/renderer.js`,
-     `docs/MODULES.md`, `docs/UI_UX.md`,
-     `test/bot-core.test.mjs`, `test/desktop-renderer.test.mjs`.
-
-4. Add route profile packs with validation-first import/export.
-   - A pack should include route, targeting, sustain, loot, refill, banking,
-     alarms, party, options, notes, schema version, and compatibility metadata.
-   - Import must show a diff and validation report before replacing current
-     state. Character-local ledgers, claims, secrets, active pauses, and runtime
-     leases must never be exported.
-   - Acceptance: operator can clone/import/export a route pack without editing
-     JSON, and old packs load read-only with migration warnings when needed.
-   - Primary files: `lib/config-store.mjs`, `desktop/renderer.js`,
-     `docs/OPERATIONS.md`, `docs/UI_UX.md`, `test/config-store.test.mjs`,
-     `test/desktop-renderer.test.mjs`.
-
-5. Upgrade route recorder after validation exists.
-   - Record walk nodes, floor changes, tool use, NPC open/travel/shop/bank
-     hints, corpse pauses, safe-zone points, and route annotations.
-   - The recorder should prefer useful route intent over raw noisy position
-     spam, and it should attach warnings for inferred or uncertain actions.
-   - Enhanced: runtime route recovery now relatches to the first forward
-     floor-transition landing when a stair hop already changed `z`, and route
-     validation warns when explicit floor-transition waypoints lack a nearby
-     target-floor landing anchor. Transition waypoints now require the expected
-     destination floor, so wrong-direction or extra-floor hops do not advance
-     route state.
-   - Acceptance: recorded routes need fewer manual edits for
-     rope/shovel/ladder/travel/refill loops and pass route validation with
-     actionable warnings.
-   - Primary files: `scripts/record-same-floor-route.mjs`,
-     `lib/bot-core.mjs`, `desktop/renderer.js`,
-     `test/record-same-floor-route.test.mjs`.
-
-6. Apply historical forum learnings as Minibot-native diagnostics and editors.
-   - Use the forum research as pattern input only. Do not copy WindBot behavior,
-     binaries, bypasses, official-server workflows, PvP abuse tools, or unsafe
-     scripts.
-   - Route quality: strengthen typed waypoint intent, label loops,
-     floor-change landing anchors, helper/recovery points, route annotations,
-     and validation-before-run feedback.
-   - Navigation: expose leader/follower role, floor/position sync, route
-     spacing, assist target, support status, shared supply/status summaries, and
-     clear why-stopped telemetry for local multi-session Minibia control.
-   - Targeting: show candidate monsters, score/reason breakdowns, skipped
-     reasons, shared-spawn policy, distance window, stance intent, and the owner
-     that blocked or selected the target.
-   - Item and tile metadata: expand walkable furniture, fields, food, obstacle,
-     trap, stair/ladder/hole, and blocked-tile diagnostics so stuck recovery can
-     say which object or tile rule caused the decision.
-   - Support hardening: turn repeated failure classes into validation and
-     operator messages: unsupported client/runtime, looting stuck, depot/deposit
-     naming mismatch, targeting not firing, backpack/window state loss, NPC
-     dialogue failure, and route/profile compatibility mismatch.
-   - Route packs and UI: make complete hunt profiles importable with route,
-     targeting, sustain, loot, navigation/follow roles, notes, schema version,
-     compatibility metadata, diff preview, validation report, and structured
-     controls instead of raw JSON/script editing.
-   - Acceptance: a route/profile author can load or import a hunt profile,
-     understand every route/navigation/targeting blocker from visible reasons,
-     diagnose common setup failures without reading logs, and start only after
-     validation warnings are acknowledged.
-   - Primary files: `lib/route-validation.mjs`, `lib/bot-core.mjs`,
-     `lib/config-store.mjs`, `lib/minibia-item-metadata.mjs`,
-     `desktop/renderer.js`, `docs/MODULES.md`, `docs/UI_UX.md`,
-     `docs/OPERATIONS.md`, `test/route-validation.test.mjs`,
-     `test/bot-core.test.mjs`, `test/config-store.test.mjs`,
-     `test/desktop-renderer.test.mjs`.
+No open P1 items remain in this queue after the 2026-04-30 open queue closure
+pass. Add new P1 items here only when they are explicit, non-frozen work with
+an owner surface, tests, and docs scope.
 
 ## P2
 
-1. Add a constrained JSON action-block system.
-   - Support typed primitives first: `say`, `npcSay`, `wait`, `useItem`,
-     `useHotbar`, `moveItem`, `openContainer`, `bank`, `shopBuy`, `shopSell`,
-     `travel`, `deposit`, `withdraw`, `gotoLabel`, `pauseRoute`, `setOption`,
-     `branchIf`, `emitAlert`, and `recordMetric`.
-   - Conditions should use stable runtime fields only: HP/MP/cap/supply,
-     inventory counts, nearby monster/player/NPC count, route position, recent
-     normalized messages, active target profile, active owner, and last action
-     result.
-   - Acceptance: deposit/sell/refill blocks validate and execute without custom
-     JavaScript; failed blocks pause with step index and reason.
-   - Primary files: `lib/action-router.mjs`, `lib/action-primitives.mjs`,
-     `lib/bot-core.mjs`, `docs/MINIBIA_ACTION_PRIMITIVES.md`,
-     `test/action-layer.test.mjs`.
-
-2. Add an AoE spell/rune solver only after target scoring and tile rules are
-   shared.
-   - Solver must respect target categories, monster count, player-safe policy,
-     no-aoe zones, route no-go zones, cooldowns, mana, floor, line of sight, and
-     target ownership.
-   - Acceptance: solver can explain cast, skip due player, skip due count, skip
-     due cooldown, skip due route tile rule, or skip due no safe tile.
-   - Primary files: `lib/bot-core.mjs`, `docs/MODULES.md`,
-     `docs/MINIBIA_RUNTIME_SURFACE.md`, `test/runtime-modules.test.mjs`.
-
-3. Add party planner and shared summaries.
-   - Productize follow chain into party roles, assist target, support allowlist,
-     party pause/resume, regroup, spacing visualization, shared loot summary,
-     and shared supply summary.
-   - Acceptance: a two-character route keeps spacing, follows floor changes,
-     assists targets, recovers from same-floor stalls, and never lets support
-     rules override emergency self-heal.
-   - Primary files: `lib/bot-core.mjs`, `desktop/renderer.js`,
-     `docs/MODULES.md`, `docs/UI_UX.md`,
-     `test/runtime-modules.test.mjs`, `test/desktop-renderer.test.mjs`.
-
-4. Refactor the renderer monolith after P0 ownership and validation are stable.
-   - `desktop/renderer.js` is about 19k lines and currently owns dashboard,
-     modal rendering, drafts, compact view, route tools, Hunt Studio, module
-     schema, event wiring, and feedback state.
-   - Split by existing ownership boundaries: route, hunt, module editor,
-     compact mirror, sessions/alerts, and shared DOM utilities.
-   - Acceptance: no behavioral rewrite lands without tests preserving the
-     existing renderer contracts.
-   - Primary files: `desktop/renderer.js`, `test/desktop-renderer.test.mjs`.
+No open P2 items remain in this queue after the 2026-04-30 open queue closure
+pass. Future renderer splits should be added as scoped follow-up work only when
+they preserve the existing desktop renderer contracts.
 
 ## Guardrails
 

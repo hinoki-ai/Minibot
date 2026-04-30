@@ -2881,6 +2881,37 @@ select[data-feedback="error"] {
   padding: 4px 5px;
 }
 
+.route-pack-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px;
+}
+
+.route-pack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.route-pack-preview {
+  min-height: 24px;
+  max-height: 78px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.route-pack-preview strong {
+  color: var(--text);
+}
+
 .route-card input,
 .route-card select {
   min-height: 20px;
@@ -5959,7 +5990,7 @@ select[data-feedback="error"] {
 .follow-train-overview {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 8px;
 }
 

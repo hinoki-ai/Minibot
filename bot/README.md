@@ -182,7 +182,7 @@ Useful flags: `--character`, `--route`, `--max-minutes`, `--poll-ms`,
 ## Project Layout
 
 - [`desktop/`](./desktop): Electron main process, app protocol, preload bridge,
-  renderer, power-save handling, Linux integration, and static assets
+  renderer, renderer helpers, power-save handling, Linux integration, and static assets
 - [`lib/`](./lib): runtime, CDP transport, persistence, data loading, item
   metadata, action router, and shared helpers
 - [`lib/modules/`](./lib/modules): shared gameplay planners and normalizers

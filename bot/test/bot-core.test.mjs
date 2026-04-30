@@ -11362,6 +11362,192 @@ test("chooseTarget uses target profiles to prefer danger and finish windows over
   assert.deepEqual(selection?.candidates.map((candidate) => candidate.id), [11, 10]);
 });
 
+test("target scoring report exposes score factors and stance intent", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Larva", "Rotworm"],
+    targetProfiles: [
+      {
+        name: "Larva",
+        priority: 120,
+        dangerLevel: 6,
+        finishBelowPercent: 50,
+        keepDistanceMin: 2,
+        keepDistanceMax: 4,
+      },
+      {
+        name: "Rotworm",
+        priority: 10,
+      },
+    ],
+  });
+  const larva = {
+    id: 11,
+    name: "Larva",
+    position: { x: 102, y: 101, z: 8 },
+    distance: 3,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 22,
+  };
+  const rotworm = {
+    id: 10,
+    name: "Rotworm",
+    position: { x: 101, y: 100, z: 8 },
+    distance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    healthPercent: 100,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [rotworm, larva],
+    candidates: [rotworm, larva],
+  });
+  const report = bot.getTargetScoreReport();
+  const larvaScore = report.candidates.find((candidate) => candidate.id === 11);
+
+  assert.equal(selection?.chosen?.id, 11);
+  assert.equal(report.selectedTargetId, 11);
+  assert.equal(report.selectedMovementIntent, "distance");
+  assert.equal(larvaScore.selected, true);
+  assert.ok(larvaScore.scoreBreakdown.priority > 0);
+  assert.ok(larvaScore.scoreBreakdown.finish > 0);
+  assert.ok(larvaScore.scoreBreakdown.rangePenalty < 0);
+});
+
+test("hunt ledger reports economy, supply burn, and capacity decisions", () => {
+  const bot = new MinibiaTargetBot({
+    lootingEnabled: true,
+    refillAutoSellEnabled: true,
+    refillAutoSellMinFreeSlots: 1,
+    refillAutoSellProtectedNames: ["Demon Shield"],
+    lootRareDropNames: ["Unknown Trophy"],
+    lootRareDropValue: 30,
+  });
+  let now = 1_000;
+  bot.getNow = () => now;
+  bot.running = true;
+  bot.startedAt = now;
+
+  bot.refreshHuntLedger({
+    ready: true,
+    playerStats: {
+      experience: 1_000,
+      level: 20,
+    },
+    inventory: {
+      supplies: [
+        { name: "Mana Potion", category: "potion", count: 10 },
+      ],
+    },
+    containers: [
+      {
+        name: "Backpack",
+        capacity: 3,
+        slots: [
+          { name: "Mana Potion", count: 10 },
+          null,
+          null,
+        ],
+      },
+    ],
+  }, now);
+
+  bot.noteRouteLootKill({ moduleKey: "looting", name: "Rotworm", position: { x: 100, y: 100, z: 7 } }, { ok: true });
+  bot.noteRouteLootAction({ moduleKey: "looting", name: "Mace", count: 2 }, { ok: true, name: "Mace", count: 2 });
+  bot.noteRouteLootEntry("Unknown Trophy", 1, { source: "observed" });
+  now += 3_600_000;
+
+  const ledger = bot.refreshHuntLedger({
+    ready: true,
+    playerStats: {
+      experience: 1_600,
+      level: 20,
+    },
+    inventory: {
+      supplies: [
+        { name: "Mana Potion", category: "potion", count: 6 },
+      ],
+    },
+    containers: [
+      {
+        name: "Backpack",
+        capacity: 2,
+        slots: [
+          { name: "Mace", count: 2 },
+          { name: "Demon Shield", count: 1 },
+        ],
+      },
+    ],
+    trade: {
+      sellItems: [
+        { name: "Mace", price: 30, side: "sell" },
+      ],
+    },
+  }, now);
+
+  assert.equal(ledger.xpGained, 600);
+  assert.equal(ledger.kills, 1);
+  assert.equal(ledger.lootGoldValue, 60);
+  assert.equal(ledger.capacityDecision.action, "sell-branch");
+  assert.equal(ledger.capacityDecision.protectedItems[0].name, "Demon Shield");
+  assert.equal(ledger.supplyBurn.entries[0].name, "Mana Potion");
+  assert.equal(ledger.supplyBurn.entries[0].count, 4);
+  assert.ok(ledger.rareDrops.some((entry) => entry.name === "Mace"));
+  assert.ok(ledger.unknownValueItems.some((entry) => entry.name === "Unknown Trophy"));
+  assert.ok(ledger.topLootRules.some((entry) => entry.name === "keep:mace"));
+});
+
+test("protector alarms pause route and targeter until acknowledged", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    monsterNames: ["Rotworm"],
+    waypoints: [
+      { x: 100, y: 100, z: 7, type: "walk" },
+    ],
+    alarmsProtectorEnabled: true,
+    alarmsPauseRoute: true,
+    alarmsStopTargeter: true,
+    alarmsRequireAcknowledgement: true,
+    alarmsLowHealthPercent: 50,
+  });
+  const emitted = [];
+  bot.on((event) => emitted.push(event));
+  const snapshot = {
+    ready: true,
+    playerName: "Own Knight",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    playerStats: {
+      healthPercent: 20,
+      manaPercent: 80,
+      capacity: 100,
+    },
+    visiblePlayers: [],
+    visibleCreatures: [],
+  };
+
+  const status = bot.refreshProtectorStatus(snapshot, { allowActions: true, now: 5_000 });
+
+  assert.equal(status.active, true);
+  assert.equal(status.highestSeverity, "critical");
+  assert.deepEqual(status.pausedModules.sort(), ["route", "targeter"]);
+  assert.equal(bot.options.cavebotPaused, true);
+  assert.equal(bot.options.stopAggroHold, true);
+  assert.ok(emitted.some((event) => event.type === "protector-paused"));
+
+  const acknowledged = bot.acknowledgeProtectorAlarms({ resume: true });
+  assert.equal(acknowledged.active, false);
+  assert.equal(acknowledged.acknowledged, true);
+  assert.equal(bot.options.cavebotPaused, false);
+  assert.equal(bot.options.stopAggroHold, false);
+  assert.ok(emitted.some((event) => event.type === "protector-resumed"));
+});
+
 test("chooseTarget lets dragon profile intent beat raw dragon-lord threat but keeps the current fight", () => {
   const bot = new MinibiaTargetBot({
     monsterNames: ["Dragon", "Dragon Lord"],
@@ -14551,7 +14737,7 @@ test("chooseRouteAction extends route glide across the connected reachable viewp
   };
 
   bot.resetRoute(0);
-  const action = bot.chooseRouteAction({
+  const snapshot = {
     ready: true,
     playerPosition: { x: 100, y: 100, z: 8 },
     currentTarget: null,
@@ -14561,13 +14747,19 @@ test("chooseRouteAction extends route glide across the connected reachable viewp
     pathfinderAutoWalking: false,
     pathfinderFinalDestination: null,
     reachableTiles,
-  });
+  };
+  const glideDestination = bot.resolveRouteGlideDestination(snapshot, bot.options.waypoints[0]);
+
+  assert.deepEqual(glideDestination?.destination, bot.options.waypoints[9]);
+  assert.equal(glideDestination?.index, 9);
+  assert.equal(connectedTileNavigationCalls, 1);
+
+  const action = bot.chooseRouteAction(snapshot);
 
   assert.equal(action?.kind, "walk");
   assert.deepEqual(action?.destination, bot.options.waypoints[9]);
   assert.equal(action?.walkReason, "glide");
   assert.equal(action?.glideTargetIndex, 9);
-  assert.ok(connectedTileNavigationCalls <= 2);
 });
 
 test("chooseRouteAction does not glide through route automation waypoints", () => {

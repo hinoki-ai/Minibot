@@ -34,6 +34,7 @@ The core runtime lives in [`lib/bot-core.mjs`](../lib/bot-core.mjs). The desktop
 - [`desktop/app-protocol.mjs`](../desktop/app-protocol.mjs): trusted `app://-/...` asset serving for the packaged renderer
 - [`desktop/preload.mjs`](../desktop/preload.mjs) and [`desktop/preload.cjs`](../desktop/preload.cjs): preload bridge exposing `window.bbApi`
 - [`desktop/renderer.js`](../desktop/renderer.js): desk rendering, dedicated Hunt Studio modal, route builder, route-library quick picker, quick controls, compact-view mirroring, editor drafts, and interaction wiring
+- [`desktop/party-follow-summary.js`](../desktop/party-follow-summary.js): pure follow-chain summary helpers shared by the full and compact renderer views
 - [`desktop/power-save-blocker.mjs`](../desktop/power-save-blocker.mjs): system sleep coordination while active sessions are running
 - [`desktop/linux-integration.mjs`](../desktop/linux-integration.mjs): Linux desktop entry and icon resolution
 

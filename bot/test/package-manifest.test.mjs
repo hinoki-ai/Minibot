@@ -17,6 +17,7 @@ const desktopRuntimePackageFiles = [
   "desktop/index.html",
   "desktop/linux-integration.mjs",
   "desktop/main.mjs",
+  "desktop/party-follow-summary.js",
   "desktop/power-save-blocker.mjs",
   "desktop/preload.cjs",
   "desktop/preload.mjs",

@@ -710,6 +710,102 @@ test("blank route profile files load as empty saved routes", async () => {
   }
 });
 
+test("route profile packs export grouped settings and preview validation-first imports", async () => {
+  const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minibot-route-pack-"));
+  const previousHome = process.env.HOME;
+
+  try {
+    process.env.HOME = tempHome;
+
+    const moduleUrl = new URL(`../lib/config-store.mjs?route-pack-test=${Date.now()}`, import.meta.url);
+    const {
+      PROFILE_PACK_DIR,
+      ROUTE_PROFILE_PACK_SCHEMA,
+      buildRouteProfilePack,
+      exportRouteProfilePack,
+      loadRouteProfilePackPreview,
+      previewRouteProfilePack,
+    } = await import(moduleUrl.href);
+
+    const config = normalizeOptions({
+      cavebotName: "scarab-pack",
+      monster: "Scarab",
+      targetProfiles: [
+        { name: "Scarab", priority: 180, behavior: "kite" },
+      ],
+      sustainEnabled: true,
+      lootingEnabled: true,
+      lootWhitelist: ["gold coin", "scarab coin"],
+      refillEnabled: true,
+      refillNpcNames: ["Asima"],
+      bankingEnabled: true,
+      bankingRules: [{ enabled: true, npcName: "Asima", action: "deposit-all" }],
+      alarmsEnabled: true,
+      alarmsBlacklistNames: ["Bad Actor"],
+      partyFollowEnabled: true,
+      partyFollowMembers: ["Scout Beta"],
+      cavebotPaused: true,
+      creatureLedger: {
+        monsters: ["Rotworm"],
+        players: ["Scout Beta"],
+        npcs: ["Asima"],
+      },
+      waypoints: [
+        { x: 100, y: 100, z: 7, label: "Start", type: "walk" },
+        { x: 101, y: 100, z: 7, label: "Loop", type: "action", action: "goto", targetLabel: "Start" },
+      ],
+    });
+
+    const pack = buildRouteProfilePack(config, { notes: "Scarab test pack" });
+    assert.equal(pack.schema, ROUTE_PROFILE_PACK_SCHEMA);
+    assert.equal(pack.metadata.name, "scarab-pack");
+    assert.equal(pack.metadata.notes, "Scarab test pack");
+    assert.equal(pack.route.waypoints.length, 2);
+    assert.equal(pack.targeting.monster, "Scarab");
+    assert.equal(pack.sustain.sustainEnabled, true);
+    assert.equal(pack.loot.lootingEnabled, true);
+    assert.equal(pack.refill.refillEnabled, true);
+    assert.equal(pack.banking.bankingEnabled, true);
+    assert.equal(pack.alarms.alarmsEnabled, true);
+    assert.deepEqual(pack.party.partyFollowMembers, ["Scout Beta"]);
+    assert.equal(Object.hasOwn(pack.options, "creatureLedger"), false);
+    assert.equal(Object.hasOwn(pack.options, "cavebotPaused"), false);
+
+    const exportResult = await exportRouteProfilePack(config);
+    assert.ok(exportResult.path.startsWith(PROFILE_PACK_DIR));
+    const preview = await loadRouteProfilePackPreview(exportResult.path, {
+      currentConfig: normalizeOptions({
+        cavebotName: "old-route",
+        monster: "Rotworm",
+        waypoints: [
+          { x: 1, y: 1, z: 7, type: "walk" },
+        ],
+      }),
+    });
+
+    assert.equal(preview.packName, "scarab-pack");
+    assert.equal(preview.readOnly, false);
+    assert.equal(preview.validation.ok, true);
+    assert.equal(preview.diff.changed, true);
+    assert.equal(preview.diff.changes.some((entry) => entry.key === "monster" && entry.scope === "targeting"), true);
+
+    const futurePreview = previewRouteProfilePack({
+      ...pack,
+      schemaVersion: 999,
+    }, {
+      currentConfig: config,
+    });
+    assert.equal(futurePreview.readOnly, true);
+    assert.match(futurePreview.migrationWarnings[0], /newer/i);
+  } finally {
+    if (previousHome == null) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+  }
+});
+
 test("account registry persists separate account files without leaking credentials into character configs", async () => {
   const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minibot-account-registry-"));
   const previousHome = process.env.HOME;

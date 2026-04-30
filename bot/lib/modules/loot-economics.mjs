@@ -242,6 +242,206 @@ function getFreeContainerSlotCount(snapshot = {}) {
     }, 0);
 }
 
+function buildLootDecisionItem(entry = {}, protectedMatchers = [], {
+  tradeState = {},
+  valueCatalog = loadNpcBuyValueCatalog(),
+} = {}) {
+  const item = entry?.item || {};
+  const name = normalizeText(resolveMinibiaItemName(item) || item?.name);
+  if (!name) {
+    return null;
+  }
+
+  const count = Math.max(1, normalizeInteger(item.count || 1));
+  const value = resolveLootSellValue(item, { tradeState, valueCatalog });
+  const protectedItem = isProtectedAutosellItem(entry, protectedMatchers);
+  return {
+    name,
+    count,
+    protected: protectedItem,
+    unitValue: value?.price || 0,
+    estimatedValue: (value?.price || 0) * count,
+    valueSource: value?.source || "",
+    npcName: value?.npcName || "",
+    unknownValue: !value,
+  };
+}
+
+function compactDecisionItems(items = []) {
+  const grouped = new Map();
+  for (const item of Array.isArray(items) ? items : []) {
+    const key = normalizeNameKey(item?.name);
+    if (!key) continue;
+
+    const previous = grouped.get(key) || {
+      name: normalizeText(item.name),
+      count: 0,
+      estimatedValue: 0,
+      unitValue: 0,
+      valueSource: item.valueSource || "",
+      protected: item.protected === true,
+      unknownValue: item.unknownValue === true,
+    };
+    previous.count += Math.max(0, normalizeInteger(item.count) || 0);
+    previous.estimatedValue += Math.max(0, normalizeInteger(item.estimatedValue) || 0);
+    previous.unitValue = Math.max(previous.unitValue, Math.max(0, normalizeInteger(item.unitValue) || 0));
+    previous.protected = previous.protected || item.protected === true;
+    previous.unknownValue = previous.unknownValue || item.unknownValue === true;
+    previous.valueSource ||= item.valueSource || "";
+    grouped.set(key, previous);
+  }
+
+  return Array.from(grouped.values())
+    .filter((item) => item.count > 0)
+    .sort((left, right) => (
+      right.estimatedValue - left.estimatedValue
+      || String(left.name).localeCompare(String(right.name), "en", { sensitivity: "base", numeric: true })
+    ));
+}
+
+export function buildCapacityAwareLootDecision(snapshotLike = {}, {
+  enabled = true,
+  minFreeSlots = 2,
+  protectedNames = [],
+  includeUnvalued = false,
+  allowDropLowValue = false,
+  depotBranchAvailable = false,
+  sellBranchAvailable = true,
+  maxRequests = 16,
+  moduleKey = "refill",
+  ruleIndex = null,
+  tradeState = null,
+  valueCatalog = loadNpcBuyValueCatalog(),
+} = {}) {
+  if (enabled === false) {
+    return {
+      action: "skip",
+      reason: "capacity decision disabled",
+      freeSlots: null,
+      minFreeSlots: Math.max(0, normalizeInteger(minFreeSlots)),
+      fullBackpack: false,
+      autosellRequests: [],
+      sellableItems: [],
+      protectedItems: [],
+      unknownValueItems: [],
+      lowValueDropItems: [],
+    };
+  }
+
+  const snapshot = toSnapshot(snapshotLike);
+  const freeSlots = getFreeContainerSlotCount(snapshot);
+  const threshold = Math.max(0, normalizeInteger(minFreeSlots));
+  const protectedMatchers = [
+    ...DEFAULT_AUTOSELL_PROTECTED_MATCHERS,
+    ...(Array.isArray(protectedNames) ? protectedNames : [protectedNames]),
+  ];
+  const trade = tradeState || snapshot.trade || snapshotLike?.trade || {};
+  const decisionItems = compactDecisionItems(
+    collectSnapshotInventoryItems(snapshot)
+      .filter((entry) => entry.ownerType === "container" && entry.item)
+      .map((entry) => buildLootDecisionItem(entry, protectedMatchers, { tradeState: trade, valueCatalog }))
+      .filter(Boolean),
+  );
+  const protectedItems = decisionItems.filter((item) => item.protected);
+  const unknownValueItems = decisionItems.filter((item) => !item.protected && item.unknownValue);
+  const sellableItems = decisionItems.filter((item) => !item.protected && !item.unknownValue && item.estimatedValue > 0);
+  const lowValueDropItems = sellableItems
+    .filter((item) => item.unitValue > 0)
+    .sort((left, right) => (
+      left.unitValue - right.unitValue
+      || left.estimatedValue - right.estimatedValue
+      || String(left.name).localeCompare(String(right.name), "en", { sensitivity: "base", numeric: true })
+    ))
+    .slice(0, 8);
+
+  if (freeSlots > threshold) {
+    return {
+      action: "continue",
+      reason: "capacity available",
+      freeSlots,
+      minFreeSlots: threshold,
+      fullBackpack: freeSlots <= 0,
+      autosellRequests: [],
+      sellableItems,
+      protectedItems,
+      unknownValueItems,
+      lowValueDropItems: [],
+    };
+  }
+
+  const autosellRequests = sellBranchAvailable === false
+    ? []
+    : buildCapacityAwareAutosellRequests(snapshot, {
+        enabled: true,
+        minFreeSlots: threshold,
+        protectedNames,
+        includeUnvalued,
+        maxRequests,
+        moduleKey,
+        ruleIndex,
+        tradeState: trade,
+        valueCatalog,
+      });
+
+  if (autosellRequests.length) {
+    return {
+      action: "sell-branch",
+      reason: "capacity tight; sellable loot available",
+      freeSlots,
+      minFreeSlots: threshold,
+      fullBackpack: freeSlots <= 0,
+      autosellRequests,
+      sellableItems,
+      protectedItems,
+      unknownValueItems,
+      lowValueDropItems: [],
+    };
+  }
+
+  if (depotBranchAvailable) {
+    return {
+      action: "depot-branch",
+      reason: "capacity tight; depot branch available",
+      freeSlots,
+      minFreeSlots: threshold,
+      fullBackpack: freeSlots <= 0,
+      autosellRequests: [],
+      sellableItems,
+      protectedItems,
+      unknownValueItems,
+      lowValueDropItems: [],
+    };
+  }
+
+  if (allowDropLowValue && lowValueDropItems.length) {
+    return {
+      action: "drop-low-value",
+      reason: "capacity tight; low-value loot can be dropped",
+      freeSlots,
+      minFreeSlots: threshold,
+      fullBackpack: freeSlots <= 0,
+      autosellRequests: [],
+      sellableItems,
+      protectedItems,
+      unknownValueItems,
+      lowValueDropItems,
+    };
+  }
+
+  return {
+    action: "pause",
+    reason: "capacity tight; no safe loot branch",
+    freeSlots,
+    minFreeSlots: threshold,
+    fullBackpack: freeSlots <= 0,
+    autosellRequests: [],
+    sellableItems,
+    protectedItems,
+    unknownValueItems,
+    lowValueDropItems: [],
+  };
+}
+
 export function buildCapacityAwareAutosellRequests(snapshotLike = {}, {
   enabled = true,
   minFreeSlots = 2,

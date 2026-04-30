@@ -217,6 +217,14 @@ Named cavebot files are saved separately from character config. Saving the route
 
 Because the route name becomes the JSON filename, keep route names filesystem-safe. Avoid `<>:"/\\|?*`, trailing spaces or periods, and reserved Windows names such as `CON` or `LPT1`.
 
+Use `Export Pack` in Route Builder to write a versioned route pack for sharing
+or cloning a hunt. A pack groups route, targeting, sustain, loot, refill,
+banking, alarms, party, compatibility metadata, and notes. Character-local
+ledgers, claims, secrets, active pauses, and runtime leases are excluded. Use
+`Import Pack` to pick a pack file; Minibot shows the diff and route validation
+report before `Apply Import` can replace the active route state. Newer pack
+schemas open read-only with a migration warning.
+
 Validate saved routes without rewriting them:
 
 ```bash
@@ -391,6 +399,10 @@ Useful flags:
 - `--silent`
 
 This script is an advanced route-capture helper, not the primary runtime.
+It writes a `.knowledge.json` sidecar with recorder diagnostics, route
+validation, excluded floor-change tiles, disconnected visible tiles, and
+coverage warnings so the captured route can be edited from intent instead of
+raw position spam.
 
 ## Portable Transfer Bundle
 
@@ -438,6 +450,7 @@ Minibot writes runtime data outside the repository:
 - per-character config: `~/.config/minibot/characters/<profileKey>.json`
 - claim files: `~/.config/minibot/claims/<profileKey>.json`
 - route spacing leases: `~/.config/minibot/route-spacing/*`
+- route pack exports: chosen by the operator, with default working storage under `~/.config/minibot/route-packs`
 - route profiles: `~/Minibot/cavebots/<routeName>.json`
 
 Claim files are treated as stale after a short heartbeat timeout and are cleaned up when the owning process is gone.

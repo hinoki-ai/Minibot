@@ -42,6 +42,7 @@ Current action types:
 - `dailyTask`
 - `runProgressionWorkflow`
 - `progressionWorkflow`
+- `actionBlock` / `block` for constrained JSON action blocks
 
 Supporting files:
 
@@ -64,6 +65,38 @@ The current repo already routes real behavior through the shared layer:
 - progression step builders emit travel, residence, blessing, promotion, daily-task, and workflow actions
 
 Banking is slightly different today. The bank module currently layers a dialogue state machine on top of keyword send and recent-message parsing rather than exposing dedicated `depositAmount` or `withdrawAmount` action types through the router.
+
+## Constrained Action Blocks
+
+`executeActionBlock(...)` runs ordered JSON-only blocks. Blocks reject script-like
+fields and support only typed primitives:
+
+- `say`
+- `npcSay`
+- `wait`
+- `useItem`
+- `useHotbar`
+- `moveItem`
+- `openContainer`
+- `bank`
+- `shopBuy`
+- `shopSell`
+- `travel`
+- `deposit`
+- `withdraw`
+- `gotoLabel`
+- `pauseRoute`
+- `setOption`
+- `branchIf`
+- `emitAlert`
+- `recordMetric`
+
+Conditions may read only stable runtime fields: HP/MP/capacity, supply and
+inventory counts, nearby monster/player/NPC counts, route index or position,
+recent normalized messages, active target profile, active decision owner, and
+the last action result. A failed block pauses the route by default and reports
+the failing `stepIndex`, primitive type, and reason. `pauseOnFailure: false` is
+allowed for nested or exploratory blocks.
 
 ## Normalized Result Shape
 

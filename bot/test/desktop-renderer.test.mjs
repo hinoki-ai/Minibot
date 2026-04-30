@@ -5,6 +5,7 @@ import { JSDOM } from "jsdom";
 import { mergeOptions, normalizeOptions } from "../lib/bot-core.mjs";
 
 const html = await fs.readFile(new URL("../desktop/index.html", import.meta.url), "utf8");
+const partyFollowSummarySource = await fs.readFile(new URL("../desktop/party-follow-summary.js", import.meta.url), "utf8");
 const rendererSource = await fs.readFile(new URL("../desktop/renderer.js", import.meta.url), "utf8");
 const stylesSource = await fs.readFile(new URL("../desktop/styles.css", import.meta.url), "utf8");
 const minibiaMonsterCatalog = JSON.parse(
@@ -145,6 +146,12 @@ function buildSessionsFromTopLevel(nextState) {
         playerStats: active
           ? clone(nextState.snapshot?.playerStats || instance.playerStats || null)
           : clone(instance.playerStats || null),
+        supplies: active
+          ? clone(nextState.snapshot?.inventory?.supplies || instance.supplies || [])
+          : clone(instance.supplies || []),
+        routeTelemetry: active
+          ? clone(nextState.snapshot?.routeTelemetry || instance.routeTelemetry || null)
+          : clone(instance.routeTelemetry || null),
         visiblePlayers: active
           ? clone(nextState.snapshot?.visiblePlayers || instance.visiblePlayers || [])
           : clone(instance.visiblePlayers || []),
@@ -722,6 +729,7 @@ async function createDesk({ initialState = createState(), initialStatePromise = 
     stopAllBots: [],
     stopAggro: [],
     reconnectSession: [],
+    acknowledgeProtector: [],
     toggleRun: [],
     updateOptions: [],
     saveAccount: [],
@@ -729,6 +737,10 @@ async function createDesk({ initialState = createState(), initialStatePromise = 
     testAntiIdle: [],
     setSessionWaypointOverlays: [],
     loadRoute: [],
+    exportRoutePack: [],
+    previewRoutePackImport: 0,
+    applyRoutePackImport: 0,
+    cancelRoutePackImport: 0,
     deleteRoute: [],
     returnToStart: [],
     setOverlayFocus: [],
@@ -1097,6 +1109,34 @@ async function createDesk({ initialState = createState(), initialStatePromise = 
         })),
       });
     },
+    async acknowledgeProtector(sessionId, options = {}) {
+      const targetId = String(sessionId || currentState.activeSessionId || "");
+      calls.acknowledgeProtector.push({ sessionId: targetId, options: clone(options) });
+      const nextProtectorStatus = {
+        ...(currentState.snapshot?.protectorStatus || {}),
+        active: false,
+        acknowledged: true,
+        pausedModules: [],
+      };
+      return syncState({
+        ...currentState,
+        options: normalizeOptions({
+          ...currentState.options,
+          cavebotPaused: false,
+          stopAggroHold: false,
+        }),
+        snapshot: {
+          ...currentState.snapshot,
+          protectorStatus: nextProtectorStatus,
+        },
+        sessions: patchSessionList(targetId, (session) => ({
+          ...session,
+          cavebotPaused: false,
+          stopAggroHold: false,
+          protectorStatus: nextProtectorStatus,
+        })),
+      });
+    },
     async updateOptions(partial) {
       calls.updateOptions.push(clone(partial));
       const nextOptions = mergeOptions(currentState.options, clone(partial));
@@ -1293,6 +1333,88 @@ async function createDesk({ initialState = createState(), initialStatePromise = 
         })),
       });
     },
+    async exportRoutePack(name) {
+      calls.exportRoutePack.push(name);
+      return snapshot();
+    },
+    async previewRoutePackImport() {
+      calls.previewRoutePackImport += 1;
+      return syncState({
+        ...currentState,
+        routePackImportPreview: {
+          schema: "minibot.route-profile-pack",
+          schemaVersion: 1,
+          sourcePath: "/home/test/imported.minibot-route-pack.json",
+          sourceName: "imported",
+          legacy: false,
+          importedSchemaVersion: 1,
+          readOnly: false,
+          migrationWarnings: [],
+          packName: "imported-route",
+          summary: {
+            waypointCount: 2,
+            tileRuleCount: 1,
+            targetProfileCount: 1,
+          },
+          validation: {
+            schemaVersion: 1,
+            sourceName: "imported-route",
+            signature: "pack-preview",
+            ok: true,
+            requiresAcknowledgement: false,
+            summary: {
+              ok: true,
+              errorCount: 0,
+              warningCount: 1,
+              infoCount: 0,
+              highestSeverity: "warning",
+              firstProblemWaypointIndex: null,
+            },
+            issues: [
+              {
+                severity: "warning",
+                code: "generated-labels-only",
+                message: "Route uses generated labels.",
+                waypointIndex: null,
+                field: "label",
+                requiresAcknowledgement: false,
+              },
+            ],
+          },
+          diff: {
+            changed: true,
+            changeCount: 2,
+            changes: [
+              { scope: "route", key: "waypoints", before: "3 entries", after: "2 entries" },
+              { scope: "targeting", key: "monster", before: "Rotworm", after: "Cyclops" },
+            ],
+          },
+        },
+      });
+    },
+    async applyRoutePackImport() {
+      calls.applyRoutePackImport += 1;
+      return syncState({
+        ...currentState,
+        routePackImportPreview: null,
+        options: normalizeOptions({
+          ...currentState.options,
+          cavebotName: "imported-route",
+          monster: "Cyclops",
+          waypoints: [
+            { x: 310, y: 410, z: 7, label: "Entry", type: "walk", radius: null },
+            { x: 311, y: 410, z: 7, label: "Loop", type: "walk", radius: null },
+          ],
+        }),
+      });
+    },
+    async cancelRoutePackImport() {
+      calls.cancelRoutePackImport += 1;
+      return syncState({
+        ...currentState,
+        routePackImportPreview: null,
+      });
+    },
     async deleteRoute(name) {
       calls.deleteRoute.push(name);
       const nextRouteLibrary = (currentState.routeLibrary || [])
@@ -1481,6 +1603,7 @@ async function createDesk({ initialState = createState(), initialStatePromise = 
   if (typeof beforeEval === "function") {
     beforeEval(window);
   }
+  window.eval(partyFollowSummarySource);
   window.eval(rendererSource);
   await flush();
 
@@ -2760,6 +2883,83 @@ test("decision trace is visible in desktop, compact, and logs surfaces", async (
   assert.match(document.getElementById("decision-trace-output").textContent, /snapshot tiles stale/i);
 });
 
+test("logs surface hunt ledger, target scoring, and protector acknowledgement", async () => {
+  const desk = await createDesk({
+    initialState: createState({
+      snapshot: {
+        huntLedger: {
+          kills: 12,
+          lootGoldValue: 3_200,
+          profitPerHour: 2_450,
+          unknownValueItems: [],
+          capacityDecision: {
+            action: "sell-branch",
+            reason: "capacity tight; sellable loot available",
+          },
+        },
+        targetScoring: {
+          selectedTargetName: "Dragon",
+          selectedMovementIntent: "distance",
+          candidates: [
+            { id: 101, name: "Dragon", score: 3450, skippedReasons: [] },
+            { id: 102, name: "Dragon Lord", score: 1180, skippedReasons: ["last profile"] },
+          ],
+        },
+        protectorStatus: {
+          active: true,
+          highestSeverity: "critical",
+          activeAlarms: [
+            {
+              type: "low-hp",
+              reason: "HP at 20%",
+              actions: ["pause-route", "stop-targeter", "require-acknowledgement"],
+            },
+          ],
+          pausedModules: ["route", "targeter"],
+          acknowledgementRequired: true,
+          acknowledged: false,
+        },
+        runtimeDiagnostics: {
+          ok: true,
+          diagnostics: [
+            {
+              severity: "warning",
+              code: "backpack-window-state-loss",
+              message: "no open backpack containers were detected",
+            },
+          ],
+        },
+      },
+    }),
+  });
+  const { document } = desk;
+
+  document.getElementById("open-logs").click();
+  await flush();
+
+  const output = document.getElementById("decision-trace-output");
+  assert.match(output.textContent, /Hunt Ledger/i);
+  assert.match(output.textContent, /12 kills/i);
+  assert.match(output.textContent, /Loot Rules/i);
+  assert.match(output.textContent, /sell-branch/i);
+  assert.match(output.textContent, /Target Scores/i);
+  assert.match(output.textContent, /Dragon 3450/i);
+  assert.match(output.textContent, /Stance Intent/i);
+  assert.match(output.textContent, /distance/i);
+  assert.match(output.textContent, /Protector/i);
+  assert.match(output.textContent, /HP at 20%/i);
+  assert.match(output.textContent, /Diagnostics/i);
+  assert.match(output.textContent, /no open backpack containers/i);
+
+  output.querySelector("[data-protector-ack]").click();
+  await flush(8);
+
+  assert.deepEqual(desk.calls.acknowledgeProtector, [
+    { sessionId: "page-1", options: { resume: true } },
+  ]);
+  assert.equal(desk.currentState().snapshot.protectorStatus.active, false);
+});
+
 test("route validation report is visible and highlights broken waypoints", async () => {
   const routeValidation = {
     schemaVersion: 1,
@@ -2806,6 +3006,29 @@ test("route validation report is visible and highlights broken waypoints", async
   assert.match(document.getElementById("route-overview-note").textContent, /Validation blocked/i);
   assert.equal(document.querySelector('.waypoint-row[data-index="1"]')?.classList.contains("validation-error"), true);
   assert.equal(document.querySelector('.waypoint-row[data-index="2"]')?.classList.contains("validation-warning"), true);
+});
+
+test("route pack import preview shows diff and requires explicit apply", async () => {
+  const desk = await createDesk();
+  const { document, calls, currentState } = desk;
+
+  document.getElementById("import-route-pack").click();
+  await flush();
+
+  const preview = document.getElementById("route-pack-preview");
+  assert.equal(calls.previewRoutePackImport, 1);
+  assert.equal(preview.hidden, false);
+  assert.match(preview.textContent, /imported-route/i);
+  assert.match(preview.textContent, /2 changes?/i);
+  assert.match(preview.textContent, /validation warning/i);
+  assert.equal(document.getElementById("apply-route-pack-import").hidden, false);
+
+  document.getElementById("apply-route-pack-import").click();
+  await flush();
+
+  assert.equal(calls.applyRoutePackImport, 1);
+  assert.equal(currentState().routePackImportPreview, null);
+  assert.equal(currentState().options.cavebotName, "imported-route");
 });
 
 test("main window controls expose brief informative tooltips", async () => {
@@ -7507,6 +7730,109 @@ test("anti-idle saves live keepalive timing and follow chain saves chain members
   });
   assert.equal(currentState().options.partyFollowDistance, 3);
   assert.equal(currentState().options.partyFollowCombatMode, "follow-only");
+});
+
+test("follow chain surfaces shared HP supply and loot summaries", async () => {
+  const initialState = createState({
+    options: {
+      partyFollowEnabled: true,
+      partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+      partyFollowDistance: 2,
+    },
+    snapshot: {
+      playerStats: {
+        health: 870,
+        maxHealth: 1000,
+        mana: 320,
+        maxMana: 500,
+        healthPercent: 87,
+        manaPercent: 64,
+      },
+      inventory: {
+        supplies: [
+          { category: "potion", name: "health potion", count: 12 },
+          { category: "rune", name: "sudden death rune", count: 8 },
+        ],
+      },
+      routeTelemetry: {
+        lapCount: 1,
+        killCount: 2,
+        lootGoldValue: 1500,
+        lootLine: "1.5k",
+      },
+    },
+  });
+  const builtSessions = buildSessionsFromTopLevel(initialState);
+  initialState.sessions = builtSessions.sessions.map((session) => (
+    String(session.id) === "page-1"
+      ? {
+          ...session,
+          followTrainStatus: {
+            enabled: true,
+            active: false,
+            pilot: true,
+            selfName: "Knight Alpha",
+            selfIndex: 0,
+            role: "attack-and-follow",
+            leaderName: "",
+            currentState: "DISABLED",
+          },
+        }
+      : {
+          ...session,
+          running: true,
+          connected: true,
+          playerStats: {
+            health: 660,
+            maxHealth: 1000,
+            mana: 210,
+            maxMana: 500,
+            healthPercent: 66,
+            manaPercent: 42,
+          },
+          supplies: [
+            { category: "potion", name: "health potion", count: 18 },
+            { category: "ammo", name: "arrow", count: 120 },
+          ],
+          routeTelemetry: {
+            lapCount: 0,
+            killCount: 3,
+            lootGoldValue: 250,
+            lootLine: "250",
+          },
+          followTrainStatus: {
+            enabled: true,
+            active: true,
+            pilot: false,
+            selfName: "Scout Beta",
+            selfIndex: 1,
+            role: "attack-and-follow",
+            leaderName: "Knight Alpha",
+            currentState: "FOLLOWING",
+            followActive: true,
+          },
+        }
+  ));
+
+  const desk = await createDesk({ initialState });
+  const { document } = desk;
+
+  const quickDetail = document.getElementById("summary-party-follow-detail").textContent;
+  assert.match(quickDetail, /2\/2 live/);
+  assert.match(quickDetail, /HP 77%/);
+  assert.match(quickDetail, /supplies pots 30 \/ runes 8/);
+  assert.match(quickDetail, /loot 1\.8k gp \/ 5 kills/);
+
+  document.querySelector('[data-open-modal="partyFollow"]').click();
+  await flush();
+
+  const overviewText = document.querySelector(".follow-train-overview").textContent;
+  assert.match(overviewText, /Team HP/);
+  assert.match(overviewText, /Min Scout Beta 66% \/ avg 77%/);
+  assert.match(overviewText, /Supplies/);
+  assert.match(overviewText, /pots 30 \/ runes 8 \/ ammo 120/);
+  assert.match(overviewText, /Loot/);
+  assert.match(overviewText, /1\.8k gp \/ 5 kills \/ 1 lap/);
 });
 
 test("follow chain auto-fills live tabs when enabled and refreshes seen players while open", async () => {

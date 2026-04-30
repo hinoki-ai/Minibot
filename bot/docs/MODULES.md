@@ -37,19 +37,20 @@ tick order is:
 2. handle disconnect-only reconnect
 3. run death heal
 4. run vocation sustain, then spell, potion, and condition healer families if sustain did not act
-5. enforce follow-only and shared-spawn target clearing
-6. refresh follow-chain runtime state
-7. handle paused cavebot or trainer mode utilities
-8. run trainer escape and rookiller
-9. handle route-only rookiller branch when active
-10. handle field or distance escape threats
-11. run follow-chain suspend or follow actions
-12. run auto eat, ammo reload, equipment replacement, light, mana trainer, and rune maker
-13. run urgent coin conversion or value-slot repair
-14. run ammo restock, refill, then looting
-15. run pending route actions
-16. choose combat target, distance keeper, and spell caster
-17. run normal coin conversion, route movement, auto eat, equipment replacement,
+5. refresh protector alarms and apply configured route or targeter holds
+6. enforce follow-only and shared-spawn target clearing
+7. refresh follow-chain runtime state
+8. handle paused cavebot or trainer mode utilities
+9. run trainer escape and rookiller
+10. handle route-only rookiller branch when active
+11. handle field or distance escape threats
+12. run follow-chain suspend or follow actions
+13. run auto eat, ammo reload, equipment replacement, light, mana trainer, and rune maker
+14. run urgent coin conversion or value-slot repair
+15. run ammo restock, refill, then looting
+16. run pending route actions
+17. choose combat target, distance keeper, and spell caster
+18. run normal coin conversion, route movement, auto eat, equipment replacement,
     and anti-idle fallbacks
 
 That ordering is intentional. In particular, sustain/healer must stay ahead of
@@ -59,7 +60,10 @@ route movement.
 Every tick also records a decision trace. A record contains owner, action,
 acted/skipped/blocked state, reason, required snapshot families, action result,
 cooldown when known, and suppressed owners when a higher-priority owner wins the
-tick. The trace is runtime state, not configuration.
+tick. The trace is runtime state, not configuration. The runtime snapshot can
+also carry hunt-ledger, target-scoring, and protector-status reports so the UI
+can explain economy, target choice, stance intent, and alarm holds from the
+same state feed.
 
 ## Operator Modules
 
@@ -67,9 +71,9 @@ These are the feature modules visible in the desktop app or route workspace.
 
 | Canonical name | Source | State keys | Current feature contract |
 | --- | --- | --- | --- |
-| `route` / `autowalk` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/config-store.mjs`](../lib/config-store.mjs), [`lib/route-validation.mjs`](../lib/route-validation.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `autowalkEnabled`, `autowalkLoop`, `routeRecording`, `showWaypointOverlay`, `waypoints`, `tileRules`, `waypointRadius`, `walkRepathMs`, `cavebotPaused`, `stopAggroHold`, `cavebotName` | Waypoint route execution, route recording, route library persistence, validation reporting, waypoint overlay, route reset, route resync, ambiguous-crossing recovery, floor-transition relatch/recovery, label-based route loops, helper recovery, corpse return, route spacing leases, route-local snapshots, route action execution, and route-owned bank/shop/NPC/daily-task waypoint dispatch. Route spacing uses live peer positions near the route spine before falling back to stored spacing indices. Plain same-floor walk/node/safe-zone runs may glide to a farther reachable waypoint, while automation, reset/recovery, wait-tile, blocked, floor-changing, or spacing-sensitive segments keep single-step destinations. |
+| `route` / `autowalk` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/config-store.mjs`](../lib/config-store.mjs), [`lib/route-validation.mjs`](../lib/route-validation.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `autowalkEnabled`, `autowalkLoop`, `routeRecording`, `showWaypointOverlay`, `waypoints`, `tileRules`, `waypointRadius`, `walkRepathMs`, `cavebotPaused`, `stopAggroHold`, `cavebotName` | Waypoint route execution, route recording, route library persistence, route pack import/export, validation reporting, waypoint overlay, route reset, route resync, ambiguous-crossing recovery, floor-transition relatch/recovery, label-based route loops, helper recovery, corpse return, route spacing leases, route-local snapshots, route action execution, and route-owned bank/shop/NPC/daily-task waypoint dispatch. Route spacing uses live peer positions near the route spine before falling back to stored spacing indices. Plain same-floor walk/node/safe-zone runs may glide to a farther reachable waypoint, while automation, reset/recovery, wait-tile, blocked, floor-changing, or spacing-sensitive segments keep single-step destinations. |
 | `avoidFields` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `avoidElementalFields`, `avoidFieldCategories` | Avoids configured field categories while choosing route and combat movement. Categories are `fire`, `energy`, `poison`, `holes`, `stairsLadders`, `teleports`, `traps`, and `invisibleWalls`. Route safety may keep native chase standing only while there is no reachable combat target. |
-| `targeting` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`lib/hunt-presets.mjs`](../lib/hunt-presets.mjs) | `monsterNames`, `targetProfiles`, `sharedSpawnMode`, `creatureLedger`, `rangeX`, `rangeY`, `combatRangeX`, `combatRangeY`, `floorTolerance`, `retargetMs` | Hunt queue, per-monster target profiles, shared-spawn policy, creature registry, visible monster/player/NPC ledgers, official hunt presets, target selection, target clearing, and fallback combat range rules. Reachable combat targets in the combat window suspend route movement and allow the configured or profile chase stance to be restored. |
+| `targeting` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`lib/hunt-presets.mjs`](../lib/hunt-presets.mjs) | `monsterNames`, `targetProfiles`, `sharedSpawnMode`, `creatureLedger`, `rangeX`, `rangeY`, `combatRangeX`, `combatRangeY`, `floorTolerance`, `retargetMs` | Hunt queue, per-monster target profiles, shared-spawn policy, creature registry, visible monster/player/NPC ledgers, official hunt presets, target selection, target clearing, transparent target scoring, movement intent reporting, and fallback combat range rules. Reachable combat targets in the combat window suspend route movement and allow the configured or profile chase stance to be restored. Target scoring explains profile order, priority, danger, finish window, HP, threat, reachability, target count, ownership, route role, distance, and current-target stickiness for the top candidates. |
 | `sustain` | [`lib/modules/sustain.mjs`](../lib/modules/sustain.mjs), [`lib/vocation-pack.mjs`](../lib/vocation-pack.mjs) | `sustainEnabled`, `sustainCooldownMs`, `preferHotbarConsumables`, `vocation` | Vocation-aware emergency spell, health potion, mana potion, food, ammo, and supply status planning from vendored vocation packs. Health-potion fallback yields to live healer tiers and potion-healer rules. |
 | `healer` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `healerEnabled`, `healerRules`, `healerEmergencyHealthPercent` plus legacy `healerWords`, `healerHotkey`, `healerHealthPercent`, `healerMinMana`, `healerMinManaPercent`, `healerRuneName`, `healerRuneHotkey`, `healerRuneHealthPercent` | Ordered spell, healing-rune, mass-heal, and heal-friend tiers. Legacy auto-rune fields migrate into normal top-tier healer rules, so Ultimate Healing Rune is part of the same left-side priority stack instead of a separate fallback lane. Rules match HP bands and mana gates, then cast or use the configured self-heal. Hotbar-backed runes preserve self-targeting. The emergency threshold raises healing priority without reordering rules, and self emergency keeps friend-heal support behind self-heals. The lowest actionable tier covers down to `0%` HP. |
 | `potionHealer` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `potionHealerEnabled`, `potionHealerRules` | Ordered self-use healing potion rules inside the Healer modal. Rules match HP bands plus optional mana gates, prefer hotbar-first consumable resolution, preserve self-targeting for hotbar-backed potions, and run after spell self-heals but before support heals. Sustain still owns mana-potion behavior and health-potion fallback when no potion-healer rule matches. |
@@ -83,23 +87,31 @@ These are the feature modules visible in the desktop app or route workspace.
 | `ringAutoReplace` | [`lib/modules/equipment-replace.mjs`](../lib/modules/equipment-replace.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `ringAutoReplaceEnabled`, `ringAutoReplaceItemName`, `ringAutoReplaceCooldownMs`, `ringAutoReplaceRequireNoTargets`, `ringAutoReplaceRequireStationary` | Equips a replacement ring from open containers when the ring slot is empty. Matches explicit item names, generic ring requests, or vendored metadata when live labels are opaque. |
 | `amuletAutoReplace` | [`lib/modules/equipment-replace.mjs`](../lib/modules/equipment-replace.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `amuletAutoReplaceEnabled`, `amuletAutoReplaceItemName`, `amuletAutoReplaceCooldownMs`, `amuletAutoReplaceRequireNoTargets`, `amuletAutoReplaceRequireStationary` | Equips a replacement amulet or necklace from open containers when the amulet slot is empty. Uses the same matching and metadata fallback as ring replacement. |
 | `runeMaker` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `runeMakerEnabled`, `runeMakerRules` | Ordered rune windows. Rules gate by HP min, MP min/max, cooldown, no-target requirement, and stationary requirement. Supports template insertion from the desktop module editor. |
-| `spellCaster` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `spellCasterEnabled`, `spellCasterRules` | Ordered offensive spell rules. Rules gate by MP min, max target distance, target count, cooldown, target requirement, stationary requirement, and pattern. Patterns are `any`, `adjacent`, `aligned`, `diagonal`, and `pack`. |
+| `spellCaster` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `spellCasterEnabled`, `spellCasterRules` | Ordered offensive spell and rune rules. Rules gate by MP min, max target distance, target count, cooldown, target requirement, stationary requirement, and pattern. Patterns are `any`, `adjacent`, `aligned`, `diagonal`, `pack`, and `aoe`. AoE rules explain cast, player-safety, count, cooldown, route tile-rule, safe-tile, ownership, floor, and line-of-sight decisions before emitting either a cast action or rune tile-use action. |
 | `distanceKeeper` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), route hunt workspace | `distanceKeeperEnabled`, `distanceKeeperRules`, target-profile distance fields | Kiting and dodge movement. Rules gate by target distance window, monster count, cooldown, beam/wave dodge flags, and target requirement. Behaviors are `retreat`, `kite`, `hold`, and `escape`. Target profiles can also contribute distance behavior. |
 | `autoLight` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `autoLightEnabled`, `autoLightRules` plus legacy `autoLightWords`, `autoLightHotkey`, `autoLightMinManaPercent` | Ordered light spell rules. Rules gate by spell words, MP min, cooldown, no-light requirement, no-target requirement, and stationary requirement. |
 | `autoConvert` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`lib/modules/economy.mjs`](../lib/modules/economy.mjs) | `autoConvertEnabled`, `autoConvertRules`, legacy `convertCooldownMs` | Coin conversion and value-slot repair. Handles urgent overflow and remembered value-slot repair before normal conversion. Rules gate by cooldown, no-target requirement, and stationary requirement. |
 | `refill` | [`lib/modules/refill.mjs`](../lib/modules/refill.mjs), [`lib/modules/shopper.mjs`](../lib/modules/shopper.mjs), [`lib/modules/loot-economics.mjs`](../lib/modules/loot-economics.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `refillEnabled`, hidden `refillPlan`, `refillSellRequests`, `refillAutoSellEnabled`, `refillAutoSellMinFreeSlots`, `refillAutoSellProtectedNames`, `refillNpcNames`, `refillShopKeyword`, hidden loop keys `refillLoopEnabled`, `refillLoopStartWaypoint`, `refillLoopReturnWaypoint`, `refillShopDialogueMaxAttempts`, vocation sustain thresholds | Builds buy/sell requests from vocation supply thresholds, hidden supply-plan overrides, capacity-aware autosell planning, configured sell requests, and visible shop state. The supply plan can separate hunt minimums from desired shop counts, cap buy amounts, reserve carried gold, protect autosell names, add sell lists, and provide NPC/keyword/branch/return metadata. Refill executes visible trade actions, can run from `shop` route waypoints, and can branch from a hunt waypoint into a service leg when the hidden refill loop is enabled. Shop dialogue retries are bounded, and active refill-loop bank or NPC service failures pause the cavebot with the failed service reason instead of retrying forever. |
-| `looting` | [`lib/modules/looter.mjs`](../lib/modules/looter.mjs), [`lib/modules/container-routing.mjs`](../lib/modules/container-routing.mjs), [`lib/modules/loot-economics.mjs`](../lib/modules/loot-economics.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `lootingEnabled`, `lootWhitelist`, `lootBlacklist`, `lootPreferredContainers`, `corpseReturnEnabled` | Opens map corpses, identifies corpse containers, filters contents by keep/skip matchers, infers item categories, resolves vendored item names, routes kept items into preferred open containers or merge stacks, and can summarize item value from visible trade or vendored NPC buy prices. |
+| `looting` | [`lib/modules/looter.mjs`](../lib/modules/looter.mjs), [`lib/modules/container-routing.mjs`](../lib/modules/container-routing.mjs), [`lib/modules/loot-economics.mjs`](../lib/modules/loot-economics.mjs), [`lib/modules/hunt-ledger.mjs`](../lib/modules/hunt-ledger.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `lootingEnabled`, `lootWhitelist`, `lootBlacklist`, `lootPreferredContainers`, `lootRareDropNames`, `lootRareDropValue`, `huntLedgerEnabled`, `corpseReturnEnabled` | Opens map corpses, identifies corpse containers, filters contents by keep/skip matchers, infers item categories, resolves vendored item names, routes kept items into preferred open containers or merge stacks, summarizes item value from visible trade or vendored NPC buy prices, records hunt ledger metrics, and emits capacity-aware decisions: continue, skip, sell branch, depot branch, drop low-value, or pause. |
 | `banking` | [`lib/modules/banker.mjs`](../lib/modules/banker.mjs), [`lib/modules/npc-dialogue.mjs`](../lib/modules/npc-dialogue.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `bankingEnabled`, `bankingRules` | Ordered bank rules with banker matching, operation selection, nearby NPC checks, no-target/stationary gates, cooldowns, keyword dialogue, confirmation handling, recent-message success/failure parsing, and bank waypoint execution. |
 | `reconnect` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `reconnectEnabled`, `reconnectRetryDelayMs`, `reconnectMaxAttempts`, `trainerReconnectEnabled` | Disconnect-only reconnect guard. Uses the real Minibia reconnect UI or exposed reconnect hook, handles retry ladders, server-save delay handling, exhaustion telemetry, and death-modal blocking. Trainer can keep reconnect armed independently. |
 | `antiIdle` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `antiIdleEnabled`, `antiIdleIntervalMs` | Idle keepalive. Prefers direct keepalive hooks, then reversible inventory move pulse, then keyboard/input fallback. Trainer reuses the same pulse timing. |
-| `alarms` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `alarmsEnabled`, `alarmsPlayerEnabled`, `alarmsPlayerRadiusSqm`, `alarmsPlayerFloorRange`, `alarmsStaffEnabled`, `alarmsStaffRadiusSqm`, `alarmsStaffFloorRange`, `alarmsBlacklistEnabled`, `alarmsBlacklistNames`, `alarmsBlacklistRadiusSqm`, `alarmsBlacklistFloorRange` | Regular player, staff-like name, and explicit blacklist proximity alarms with separate radius and floor windows. Staff and blacklist alerts use stronger alarm treatment. |
-| `partyFollow` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `partyFollowEnabled`, `partyFollowMembers`, `partyFollowManualPlayers`, `partyFollowMemberRoles`, `partyFollowDistance`, `partyFollowCombatMode` plus legacy `followChain*` aliases | Ordered follow chain. Slot 1 leads; each later member follows the name above it. Supports live tabs, seen players, manual names, per-member roles, follow-and-fight, follow-only, stair recovery, same-floor stall recovery, and target clearing for passive roles. |
+| `alarms` | [`lib/modules/protector.mjs`](../lib/modules/protector.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `alarmsEnabled`, `alarmsPlayerEnabled`, `alarmsPlayerRadiusSqm`, `alarmsPlayerFloorRange`, `alarmsStaffEnabled`, `alarmsStaffRadiusSqm`, `alarmsStaffFloorRange`, `alarmsBlacklistEnabled`, `alarmsBlacklistNames`, `alarmsBlacklistRadiusSqm`, `alarmsBlacklistFloorRange`, `alarmsProtectorEnabled`, `alarmsPauseRoute`, `alarmsPauseTargeter`, `alarmsStopTargeter`, `alarmsRequireAcknowledgement`, `alarmsPauseModules`, `alarmsLowHpPercent`, `alarmsLowHealthPercent`, `alarmsLowMpPercent`, `alarmsLowManaPercent`, `alarmsNoCapacityAt`, `alarmsFullBackpackFreeSlots`, `alarmsHighIncomingDamagePerSecond` | Regular player, staff-like name, explicit blacklist proximity alarms, and protector alarms for low HP/MP, capacity, full backpack, private message, route stuck/no progress, stale target, incoming damage, disconnect, and death. Protector actions can log, notify, sound, pause route, stop targeter, pause configured modules, and require acknowledgement. Alarm pauses record owner, paused modules, resume policy, and acknowledgement state without changing healer priority. |
+| `partyFollow` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`desktop/party-follow-summary.js`](../desktop/party-follow-summary.js) | `partyFollowEnabled`, `partyFollowMembers`, `partyFollowManualPlayers`, `partyFollowMemberRoles`, `partyFollowDistance`, `partyFollowCombatMode` plus legacy `followChain*` aliases | Ordered follow chain. Slot 1 leads; each later member follows the name above it. Supports live tabs, seen players, manual names, per-member roles, follow-and-fight, follow-only, stair recovery, same-floor stall recovery, target clearing for passive roles, and shared live HP/supply/loot summaries across chain members. |
 | `rookiller` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `rookillerEnabled` | Rook guard that watches level progress, returns to waypoint 1 at the configured cap, and closes the live client. Can temporarily constrain runtime to route-only behavior. |
 
 ## Route Schema
 
 Route profiles are full route-local build snapshots saved outside the repo under
 `~/Minibot/cavebots/*.json` or the portable storage equivalent.
+
+Route packs are versioned import/export wrappers around the same route-local
+snapshot. They group route, targeting, sustain, loot, refill, banking, alarms,
+party, notes, schema version, and compatibility metadata, while excluding
+character-local ledgers, claims, active pauses, secrets, and runtime leases.
+Pack import is validation-first: the desktop stores a pending preview with a
+scoped diff and route validation report, and only applies it after the operator
+uses `Apply Import`.
 
 Supported waypoint types:
 
@@ -177,6 +189,10 @@ Route validation reports are generated by [`lib/route-validation.mjs`](../lib/ro
 They flag empty enabled routes, unsupported control fields, broken `goto`
 targets, duplicate labels, floor jumps, missing NPC context, unknown catalog
 names, required tool waypoints, floor-transition landing gaps, and helper gaps.
+They also report setup diagnostics for generated-only labels, linear routes
+without return intent, enabled looting without destination containers, enabled
+banking without rules, enabled follow chain without members, and alarm scopes
+that are all disabled.
 The report is read-only; save compatibility remains separate from validation
 warnings.
 
@@ -199,7 +215,7 @@ These are the canonical rule arrays and fields used by the rule-based modules.
 | `conditionHealer` | `conditionHealerRules` | `enabled`, `label`, `condition`, `words`, `hotkey`, `minHealthPercent`, `maxHealthPercent`, `minMana`, `minManaPercent`, `cooldownMs` |
 | `manaTrainer` | `manaTrainerRules` | `enabled`, `label`, `words`, `hotkey`, `minHealthPercent`, `minManaPercent`, `maxManaPercent`, `cooldownMs`, `requireNoTargets`, `requireStationary` |
 | `runeMaker` | `runeMakerRules` | `enabled`, `label`, `words`, `hotkey`, `minHealthPercent`, `minManaPercent`, `maxManaPercent`, `cooldownMs`, `requireNoTargets`, `requireStationary` |
-| `spellCaster` | `spellCasterRules` | `enabled`, `label`, `words`, `hotkey`, `minManaPercent`, `maxTargetDistance`, `minTargetCount`, `cooldownMs`, `pattern`, `requireTarget`, `requireStationary` |
+| `spellCaster` | `spellCasterRules` | `enabled`, `label`, `words`, `hotkey`, `runeName`, `itemName`, `itemId`, `minManaPercent`, `maxTargetDistance`, `minTargetCount`, `cooldownMs`, `pattern`, `aoeRadius`, `targetCategories`, `playerSafe`, `noAoeZones`, `requireSafeTile`, `requireLineOfSight`, `requireTarget`, `requireStationary` |
 | `distanceKeeper` | `distanceKeeperRules` | `enabled`, `label`, `minTargetDistance`, `maxTargetDistance`, `minMonsterCount`, `cooldownMs`, `behavior`, `dodgeBeams`, `dodgeWaves`, `requireTarget` |
 | `autoLight` | `autoLightRules` | `enabled`, `label`, `words`, `hotkey`, `minManaPercent`, `cooldownMs`, `requireNoLight`, `requireNoTargets`, `requireStationary` |
 | `autoConvert` | `autoConvertRules` | `enabled`, `label`, `cooldownMs`, `requireNoTargets`, `requireStationary` |
@@ -222,6 +238,7 @@ Spell-caster patterns are:
 - `aligned`
 - `diagonal`
 - `pack`
+- `aoe`
 
 Distance-keeper behaviors are:
 
@@ -269,14 +286,17 @@ support layers.
 | [`economy.mjs`](../lib/modules/economy.mjs) | `GOLD_PER_PLATINUM`, `GOLD_PER_CRYSTAL`, `normalizeGoldValue`, `sumCoinCounts`, `describeCoinBreakdown`, `parseOverflowSignature`, `getCarriedGoldValue` | Coin value math, carried-gold calculation, coin breakdowns, and overflow signature parsing. |
 | [`equipment-replace.mjs`](../lib/modules/equipment-replace.mjs) | `findEquipmentReplaceSlot`, `hasEmptyEquipmentReplaceSlot`, `buildEquipmentAutoReplaceAction` | Detects ring/amulet slots, checks emptiness, finds replacement items in containers, resolves opaque item labels through vendored metadata, and emits equipment move actions. |
 | [`hotbar.mjs`](../lib/modules/hotbar.mjs) | `normalizeHotbarSelector`, `hotbarSlotMatches`, `findHotbarSlot`, `buildHotbarSlotAction` | Selects hotbar slots by index, kind, action type, label, words, spell name, item id, category, and enabled state; emits hotbar slot actions while preserving discovered hotkey metadata. |
+| [`hunt-ledger.mjs`](../lib/modules/hunt-ledger.mjs) | `createHuntLedger`, `normalizeHuntLedgerEvent`, `recordHuntLedgerEvent`, `recordHuntLedgerSnapshot`, `buildHuntLedgerReport` | Normalizes hunt events and snapshots into operator-facing XP, kill, loot, profit, supply burn, rare drop, pause, stuck, death, refill, unknown-value, and loot-rule reports. |
 | [`inventory.mjs`](../lib/modules/inventory.mjs) | `normalizeItemSelector`, `entryMatchesSelector`, `findInventoryEntries`, `buildInventorySourceRef`, `summarizeContainers`, `findContainer`, `findFirstEmptyContainerSlot`, `findStackTarget` | Normalized inventory selection, source-address building, container summaries, empty-slot lookup, and stack merge target lookup. |
 | [`looter.mjs`](../lib/modules/looter.mjs) | `findLootSourceContainers`, `findLootableCorpses`, `buildCorpseOpenAction`, `buildLootPlan` | Corpse detection, corpse scoring, corpse open action creation, loot keep/skip filtering, category inference, item metadata resolution, and preferred-container routing. |
-| [`loot-economics.mjs`](../lib/modules/loot-economics.mjs) | `getNpcBuyValue`, `getVisibleTradeSellValue`, `resolveLootSellValue`, `summarizeLootEconomics`, `buildCapacityAwareAutosellRequests` | Loot value lookup from visible trade or vendored NPC buy catalogs, total loot-value summaries, unknown-value tracking, and capacity-aware autosell request generation. |
+| [`loot-economics.mjs`](../lib/modules/loot-economics.mjs) | `getNpcBuyValue`, `getVisibleTradeSellValue`, `resolveLootSellValue`, `summarizeLootEconomics`, `buildCapacityAwareLootDecision`, `buildCapacityAwareAutosellRequests` | Loot value lookup from visible trade or vendored NPC buy catalogs, total loot-value summaries, unknown-value tracking, explicit capacity decisions, and capacity-aware autosell request generation. |
 | [`npc-dialogue.mjs`](../lib/modules/npc-dialogue.mjs) | `NPC_DIALOGUE_WINDOW`, `normalizeDialogueMessage`, `buildDialogueMessageSignature`, `findBankBalanceInText`, `findBankBalanceFromMessages`, `normalizeDialogueOption`, `normalizeDialogueState`, `findDialogueOption`, `hasSpeakerMatch`, `findMatchingDialogueMessage` | Dialogue message/option normalization, recent-message signatures, bank-balance parsing, option lookup, speaker matching, and text-pattern matching. |
+| [`protector.mjs`](../lib/modules/protector.mjs) | `buildProtectorAlarmPlan` | Builds alarm events, actions, paused modules, severity, and acknowledgement requirements for player, staff, blacklist, low HP/MP, capacity, full backpack, message, stuck route, no-progress, stale-target, incoming-damage, disconnect, and death conditions. |
 | [`progression.mjs`](../lib/modules/progression.mjs) | `DEFAULT_NPC_GREETING`, `DEFAULT_NPC_FAREWELL`, `PROGRESSION_WORKFLOW_ACTIONS`, `buildOpenNpcDialogueStep`, `buildCloseNpcDialogueStep`, `buildTravelToCityStep`, `buildSetResidenceStep`, `buildBuyBlessingStep`, `buildBuyAllMissingBlessingsStep`, `buildBuyPromotionStep`, `buildDailyTaskStep`, `buildProgressionWorkflowStep` | NPC progression step builders for opening/closing dialogue, city travel, residence, blessings, missing-blessing purchase, promotion purchase, daily task accept/reward flows, and ordered progression workflows. |
 | [`refill.mjs`](../lib/modules/refill.mjs) | `normalizeRefillSupplyPlan`, `buildRefillRequests`, `buildRefillPlan`, `hasRefillNeed`, `buildRefillRuntimePlan`, `buildRefillReport`, `chooseRefillAction` | Supply-plan normalization, hunt-minimum detection, desired-count buy planning, buy-cap and gold-reserve enforcement, buy/sell request generation, autosell request prepending, visible trade matching, runtime shop-plan creation, report summaries, and first executable refill action selection. |
 | [`shopper.mjs`](../lib/modules/shopper.mjs) | `SHOP_OPERATION_TYPES`, `normalizeShopRequest`, `buildShopAction`, `normalizeTradeState`, `findTradeEntryForRequest`, `buildExecutableShopAction`, `prioritizeShopRequests` | Shop request normalization, buy/sell/sell-all action creation, trade-state normalization, visible item matching, and sell-before-buy prioritization. |
 | [`sustain.mjs`](../lib/modules/sustain.mjs) | `summarizeSustainStatus`, `buildSustainAction` | Vocation sustain status and action planning for emergency spell, health potion, mana potion, food, low supplies, and ammo status. |
+| [`target-scoring.mjs`](../lib/modules/target-scoring.mjs) | `resolveTargetMovementIntent`, `buildTargetScoreBreakdown`, `buildTargetScoringReport` | Pure target-scoring and stance-report helpers for explaining target candidate rank, skipped reasons, and selected movement intent. |
 
 ## Action Surface Used By Modules
 

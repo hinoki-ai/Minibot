@@ -53,6 +53,7 @@ const WAYPOINT_BASE_FIELDS = Object.freeze(new Set([
   "progressionAction",
   "refillRole",
   "steps",
+  "recorderIntents",
   "advanceOnBlocked",
 ]));
 
@@ -425,6 +426,9 @@ export function validateRouteConfig(config = {}, {
       .map((label) => normalizeKey(label)),
   );
   const labels = new Map();
+  let explicitLabelCount = 0;
+  let generatedLabelCount = 0;
+  let gotoActionCount = 0;
   normalizedWaypoints.forEach((waypoint, index) => {
     const rawWaypoint = normalizeRawWaypoint(rawWaypoints[index], waypoint);
     const label = normalizeText(waypoint.label);
@@ -441,6 +445,7 @@ export function validateRouteConfig(config = {}, {
     }
 
     if (labelKey && !isGeneratedWaypointLabel(label)) {
+      explicitLabelCount += 1;
       const existing = labels.get(labelKey);
       if (Number.isInteger(existing)) {
         addIssue("warning", "duplicate-label", `${formatWaypointReference(index)} duplicates label "${label}" from waypoint ${existing + 1}.`, {
@@ -451,6 +456,8 @@ export function validateRouteConfig(config = {}, {
       } else {
         labels.set(labelKey, index);
       }
+    } else if (label && isGeneratedWaypointLabel(label)) {
+      generatedLabelCount += 1;
     }
 
     for (const key of Object.keys(rawWaypoint || {})) {
@@ -473,6 +480,9 @@ export function validateRouteConfig(config = {}, {
       }
 
       const action = normalizeWaypointAction(rawAction);
+      if (action === "goto") {
+        gotoActionCount += 1;
+      }
       const targetIndex = normalizeWaypointTargetIndex(rawWaypoint?.targetIndex ?? waypoint.targetIndex);
       const targetLabel = normalizeText(rawWaypoint?.targetLabel || rawWaypoint?.gotoLabel || rawWaypoint?.labelTarget || waypoint.targetLabel);
       const targetLabelValid = Boolean(targetLabel && allLabelKeys.has(normalizeKey(targetLabel)));
@@ -615,6 +625,59 @@ export function validateRouteConfig(config = {}, {
         value: name,
       });
     }
+  }
+
+  if (normalizedWaypoints.length >= 6 && explicitLabelCount === 0 && generatedLabelCount > 0) {
+    addIssue("info", "generated-labels-only", "Route uses only generated waypoint labels; named labels make validation and recovery messages easier to act on.", {
+      field: "label",
+      requiresAcknowledgement: false,
+    });
+  }
+
+  if (
+    normalized.autowalkEnabled
+    && normalized.autowalkLoop === false
+    && normalizedWaypoints.length > 1
+    && gotoActionCount === 0
+    && !normalizedWaypoints.some((waypoint) => normalizeWaypointType(waypoint?.type) === "exit-zone")
+  ) {
+    addIssue("info", "linear-route-no-return", "Autowalk is enabled on a linear route without a goto or exit-zone waypoint; route completion will stop instead of looping.", {
+      field: "autowalkLoop",
+      requiresAcknowledgement: false,
+    });
+  }
+
+  if (normalized.partyFollowEnabled && !collectTextList(normalized.partyFollowMembers).length) {
+    addIssue("warning", "party-follow-no-members", "Follow Chain is enabled without saved members; support/follower diagnostics will have no leader to sync to.", {
+      field: "partyFollowMembers",
+      requiresAcknowledgement: false,
+    });
+  }
+
+  if (normalized.lootingEnabled && !collectTextList(normalized.lootPreferredContainers).length) {
+    addIssue("warning", "loot-no-destination", "Looting is enabled without preferred containers; backpack/window state loss will be harder to diagnose.", {
+      field: "lootPreferredContainers",
+      requiresAcknowledgement: false,
+    });
+  }
+
+  if (normalized.bankingEnabled && !(Array.isArray(normalized.bankingRules) && normalized.bankingRules.length)) {
+    addIssue("warning", "banking-no-rules", "Banking is enabled without banking rules; depot/deposit naming mismatches cannot be validated before runtime.", {
+      field: "bankingRules",
+      requiresAcknowledgement: false,
+    });
+  }
+
+  if (
+    normalized.alarmsEnabled
+    && normalized.alarmsPlayerEnabled === false
+    && normalized.alarmsStaffEnabled === false
+    && normalized.alarmsBlacklistEnabled === false
+  ) {
+    addIssue("warning", "alarms-no-scopes", "Alarms are enabled but every alarm scope is disabled.", {
+      field: "alarmsEnabled",
+      requiresAcknowledgement: false,
+    });
   }
 
   issues.sort((left, right) => issueSortKey(right).localeCompare(issueSortKey(left)));

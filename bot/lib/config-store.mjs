@@ -14,10 +14,22 @@ import {
   serializeRouteWaypoint,
   serializeTileRule,
 } from "./bot-core.mjs";
+import {
+  buildRoutePack,
+  diffRoutePack,
+  importRoutePack,
+  validateRoutePack,
+} from "./route-packs.mjs";
 import { resolveRuntimeLayout } from "./runtime-layout.mjs";
 import { validateRouteConfig } from "./route-validation.mjs";
 
 export { validateRouteConfig };
+export {
+  buildRoutePack,
+  diffRoutePack,
+  importRoutePack,
+  validateRoutePack,
+};
 
 const RUNTIME_LAYOUT = resolveRuntimeLayout({
   baseDir: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -38,6 +50,9 @@ export const ACCOUNT_DIR = path.join(CONFIG_DIR, "accounts");
 export const ROUTE_SPACING_DIR = path.join(CONFIG_DIR, "route-spacing");
 export const ROUTE_SPACING_STALE_MS = 8_000;
 export const PROFILE_DIR = RUNTIME_LAYOUT.routeProfileDir;
+export const PROFILE_PACK_DIR = path.join(CONFIG_DIR, "route-packs");
+export const ROUTE_PROFILE_PACK_SCHEMA = "minibot.route-profile-pack";
+export const ROUTE_PROFILE_PACK_SCHEMA_VERSION = 1;
 const SESSION_STATE_VERSION = 1;
 const SESSION_STATE_MAX_SESSIONS = 32;
 const SESSION_STATE_VIEW_MODES = new Set(["desk", "compact"]);
@@ -65,6 +80,158 @@ const ROUTE_PROFILE_METADATA_KEYS = new Set([
   "waypoints",
   "tileRules",
 ]);
+const ROUTE_PROFILE_PACK_SECTION_KEYS = Object.freeze({
+  route: [
+    "cavebotName",
+    "autowalkEnabled",
+    "autowalkLoop",
+    "routeStrictClear",
+    "routeFollowExactWaypoints",
+    "routeRecording",
+    "routeRecordStep",
+    "showWaypointOverlay",
+    "waypointRadius",
+    "walkRepathMs",
+    "avoidElementalFields",
+    "avoidFieldCategories",
+    "waypoints",
+    "tileRules",
+  ],
+  targeting: [
+    "monster",
+    "monsterNames",
+    "targetProfiles",
+    "sharedSpawnMode",
+    "rangeX",
+    "rangeY",
+    "combatRangeX",
+    "combatRangeY",
+    "floorTolerance",
+    "retargetMs",
+    "chaseMode",
+    "spellCasterEnabled",
+    "spellCasterRules",
+    "aoeSolverEnabled",
+    "aoeSolverRules",
+    "distanceKeeperEnabled",
+    "distanceKeeperRules",
+  ],
+  sustain: [
+    "vocation",
+    "sustainEnabled",
+    "sustainCooldownMs",
+    "preferHotbarConsumables",
+    "healerEnabled",
+    "healerRules",
+    "healerEmergencyHealthPercent",
+    "potionHealerEnabled",
+    "potionHealerRules",
+    "conditionHealerEnabled",
+    "conditionHealerRules",
+    "deathHealEnabled",
+    "deathHealVocation",
+    "deathHealWords",
+    "deathHealHotkey",
+    "deathHealHealthPercent",
+    "deathHealCooldownMs",
+    "manaTrainerEnabled",
+    "manaTrainerRules",
+    "autoEatEnabled",
+    "autoEatFoodName",
+    "autoEatForbiddenFoodNames",
+    "autoEatCooldownMs",
+    "autoEatRequireNoTargets",
+    "autoEatRequireStationary",
+    "ammoEnabled",
+    "ammoRestockEnabled",
+    "ammoReloadEnabled",
+    "ammoPreferredNames",
+    "ammoMinimumCount",
+    "ammoWarningCount",
+    "ammoReloadAtOrBelow",
+    "ammoReloadCooldownMs",
+    "ammoRequireNoTargets",
+    "ammoRequireStationary",
+    "ringAutoReplaceEnabled",
+    "ringAutoReplaceItemName",
+    "ringAutoReplaceCooldownMs",
+    "ringAutoReplaceRequireNoTargets",
+    "ringAutoReplaceRequireStationary",
+    "amuletAutoReplaceEnabled",
+    "amuletAutoReplaceItemName",
+    "amuletAutoReplaceCooldownMs",
+    "amuletAutoReplaceRequireNoTargets",
+    "amuletAutoReplaceRequireStationary",
+  ],
+  loot: [
+    "lootingEnabled",
+    "lootWhitelist",
+    "lootBlacklist",
+    "lootPreferredContainers",
+    "corpseReturnEnabled",
+    "autoConvertEnabled",
+    "convertCooldownMs",
+  ],
+  refill: [
+    "refillEnabled",
+    "refillPlan",
+    "refillSellRequests",
+    "refillAutoSellEnabled",
+    "refillAutoSellMinFreeSlots",
+    "refillAutoSellProtectedNames",
+    "refillNpcNames",
+    "refillShopKeyword",
+    "refillLoopEnabled",
+    "refillLoopStartWaypoint",
+    "refillLoopReturnWaypoint",
+    "refillShopDialogueMaxAttempts",
+    "refillPauseOnFailure",
+  ],
+  banking: [
+    "bankingEnabled",
+    "bankingRules",
+  ],
+  alarms: [
+    "alarmsEnabled",
+    "alarmsPlayerEnabled",
+    "alarmsPlayerRadiusSqm",
+    "alarmsPlayerFloorRange",
+    "alarmsStaffEnabled",
+    "alarmsStaffRadiusSqm",
+    "alarmsStaffFloorRange",
+    "alarmsBlacklistEnabled",
+    "alarmsBlacklistNames",
+    "alarmsBlacklistRadiusSqm",
+    "alarmsBlacklistFloorRange",
+    "alarmsProtectorEnabled",
+    "alarmsPauseRoute",
+    "alarmsPauseTargeter",
+    "alarmsStopTargeter",
+    "alarmsRequireAcknowledgement",
+    "alarmsPauseModules",
+    "alarmsLowHpPercent",
+    "alarmsLowHealthPercent",
+    "alarmsLowMpPercent",
+    "alarmsLowManaPercent",
+    "alarmsLowSupplyCount",
+    "alarmsNoCapacityAt",
+    "alarmsFullBackpackFreeSlots",
+    "alarmsHighIncomingDamagePerSecond",
+  ],
+  party: [
+    "partyFollowEnabled",
+    "partyFollowMembers",
+    "partyFollowManualPlayers",
+    "partyFollowMemberRoles",
+    "partyFollowMemberChaseModes",
+    "partyFollowDistance",
+    "partyFollowCombatMode",
+  ],
+});
+const ROUTE_PROFILE_PACK_SECTION_BY_KEY = new Map(
+  Object.entries(ROUTE_PROFILE_PACK_SECTION_KEYS)
+    .flatMap(([section, keys]) => keys.map((key) => [key, section])),
+);
 
 function sanitizeProfileFileBase(name = DEFAULTS.cavebotName) {
   const trimmed = String(name || "").trim() || DEFAULTS.cavebotName;
@@ -308,6 +475,336 @@ function buildRouteProfilePayload(config) {
   }
 
   return payload;
+}
+
+function normalizePackNotes(value = "") {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function collectRoutePackTextList(value = []) {
+  const entries = Array.isArray(value)
+    ? value
+    : String(value ?? "").split(/[\n,;]+/);
+  return entries
+    .map((entry) => String(entry ?? "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+function getRouteProfilePackSectionForKey(key = "") {
+  return ROUTE_PROFILE_PACK_SECTION_BY_KEY.get(String(key || "")) || "options";
+}
+
+function pickRouteProfilePackSection(payload = {}, section = "") {
+  const keys = ROUTE_PROFILE_PACK_SECTION_KEYS[section] || [];
+  const picked = {};
+
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      picked[key] = cloneConfigValue(payload[key]);
+    }
+  }
+
+  return picked;
+}
+
+function stripPackLocalOnlyKeys(payload = {}) {
+  const stripped = cloneConfigValue(payload && typeof payload === "object" ? payload : {});
+  for (const key of ROUTE_PROFILE_LOCAL_ONLY_KEYS) {
+    delete stripped[key];
+  }
+  return stripped;
+}
+
+function summarizeRouteProfilePackValue(value) {
+  if (Array.isArray(value)) {
+    return `${value.length} entr${value.length === 1 ? "y" : "ies"}`;
+  }
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value);
+    return `${keys.length} field${keys.length === 1 ? "" : "s"}`;
+  }
+  if (typeof value === "boolean") {
+    return value ? "enabled" : "disabled";
+  }
+  if (value == null || value === "") {
+    return "";
+  }
+  return String(value);
+}
+
+function buildRouteProfilePackDiff(currentConfig = {}, nextConfig = {}) {
+  const current = stripPackLocalOnlyKeys(buildRouteProfilePayload(normalizeOptions(currentConfig)));
+  const next = stripPackLocalOnlyKeys(buildRouteProfilePayload(normalizeOptions(nextConfig)));
+  const keys = [...new Set([
+    ...Object.keys(current),
+    ...Object.keys(next),
+  ])].sort((left, right) => (
+    getRouteProfilePackSectionForKey(left).localeCompare(getRouteProfilePackSectionForKey(right))
+    || left.localeCompare(right)
+  ));
+  const changes = [];
+
+  for (const key of keys) {
+    const beforeValue = Object.prototype.hasOwnProperty.call(current, key) ? current[key] : null;
+    const afterValue = Object.prototype.hasOwnProperty.call(next, key) ? next[key] : null;
+    if (JSON.stringify(beforeValue) === JSON.stringify(afterValue)) {
+      continue;
+    }
+
+    changes.push({
+      scope: getRouteProfilePackSectionForKey(key),
+      key,
+      before: summarizeRouteProfilePackValue(beforeValue),
+      after: summarizeRouteProfilePackValue(afterValue),
+    });
+  }
+
+  return {
+    changed: changes.length > 0,
+    changeCount: changes.length,
+    changes,
+  };
+}
+
+function buildRouteProfilePackSummary(options = {}) {
+  const normalized = normalizeOptions(options);
+  return {
+    name: normalized.cavebotName,
+    waypointCount: normalized.waypoints.length,
+    tileRuleCount: normalized.tileRules.length,
+    targetProfileCount: normalized.targetProfiles.length,
+    targetCount: Array.isArray(normalized.monsterNames) ? normalized.monsterNames.length : 0,
+    lootRuleCount: collectRoutePackTextList(normalized.lootWhitelist).length
+      + collectRoutePackTextList(normalized.lootBlacklist).length,
+    refillConfigured: Boolean(
+      normalized.refillEnabled
+      || normalized.refillPlan
+      || normalized.refillLoopEnabled
+      || normalized.refillSellRequests.length
+    ),
+    bankingRuleCount: Array.isArray(normalized.bankingRules) ? normalized.bankingRules.length : 0,
+    alarmScopeCount: [
+      normalized.alarmsPlayerEnabled,
+      normalized.alarmsStaffEnabled,
+      normalized.alarmsBlacklistEnabled,
+    ].filter(Boolean).length,
+    partyMemberCount: Array.isArray(normalized.partyFollowMembers) ? normalized.partyFollowMembers.length : 0,
+  };
+}
+
+export function buildRouteProfilePack(config, {
+  notes = "",
+  exportedAt = new Date().toISOString(),
+} = {}) {
+  const payload = buildRouteProfilePayload(config);
+  const normalized = normalizeOptions({
+    ...payload,
+    cavebotName: payload.name,
+  });
+  const route = {
+    name: payload.name,
+    waypoints: cloneConfigValue(payload.waypoints || []),
+    tileRules: cloneConfigValue(payload.tileRules || []),
+  };
+  const pack = {
+    schema: ROUTE_PROFILE_PACK_SCHEMA,
+    schemaVersion: ROUTE_PROFILE_PACK_SCHEMA_VERSION,
+    metadata: {
+      name: payload.name,
+      exportedAt: String(exportedAt || new Date().toISOString()),
+      notes: normalizePackNotes(notes),
+      compatibility: {
+        minSchemaVersion: 1,
+        maxSchemaVersion: ROUTE_PROFILE_PACK_SCHEMA_VERSION,
+      },
+    },
+    route,
+    targeting: pickRouteProfilePackSection(payload, "targeting"),
+    sustain: pickRouteProfilePackSection(payload, "sustain"),
+    loot: pickRouteProfilePackSection(payload, "loot"),
+    refill: pickRouteProfilePackSection(payload, "refill"),
+    banking: pickRouteProfilePackSection(payload, "banking"),
+    alarms: pickRouteProfilePackSection(payload, "alarms"),
+    party: pickRouteProfilePackSection(payload, "party"),
+    options: stripPackLocalOnlyKeys(payload),
+    summary: buildRouteProfilePackSummary(normalized),
+  };
+
+  return pack;
+}
+
+function parseRouteProfilePackRaw(raw, fallbackName = DEFAULTS.cavebotName) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) {
+    return {
+      payload: {},
+      legacy: true,
+      schemaVersion: 0,
+      migrationWarnings: ["Imported file was empty; it will load as a blank route profile."],
+      readOnly: false,
+    };
+  }
+
+  return normalizeRouteProfilePackPayload(JSON.parse(trimmed), fallbackName);
+}
+
+function isRouteProfilePackPayload(payload = {}) {
+  return payload?.schema === ROUTE_PROFILE_PACK_SCHEMA
+    || payload?.kind === ROUTE_PROFILE_PACK_SCHEMA
+    || payload?.type === ROUTE_PROFILE_PACK_SCHEMA;
+}
+
+function buildRouteProfilePayloadFromPack(pack = {}, fallbackName = DEFAULTS.cavebotName) {
+  const options = pack?.options && typeof pack.options === "object"
+    ? cloneConfigValue(pack.options)
+    : {};
+  const route = pack?.route && typeof pack.route === "object" ? pack.route : {};
+
+  for (const section of ["targeting", "sustain", "loot", "refill", "banking", "alarms", "party"]) {
+    if (pack?.[section] && typeof pack[section] === "object") {
+      Object.assign(options, cloneConfigValue(pack[section]));
+    }
+  }
+
+  const routeName = String(
+    route.name
+    || options.name
+    || options.cavebotName
+    || pack?.metadata?.name
+    || fallbackName,
+  ).trim() || fallbackName;
+  options.name = routeName;
+  options.cavebotName = routeName;
+  if (Array.isArray(route.waypoints)) {
+    options.waypoints = cloneConfigValue(route.waypoints);
+  }
+  if (Array.isArray(route.tileRules)) {
+    options.tileRules = cloneConfigValue(route.tileRules);
+  }
+
+  return stripPackLocalOnlyKeys(options);
+}
+
+function normalizeRouteProfilePackPayload(payload = {}, fallbackName = DEFAULTS.cavebotName) {
+  if (!payload || typeof payload !== "object") {
+    return {
+      payload: {},
+      legacy: true,
+      schemaVersion: 0,
+      migrationWarnings: ["Imported document was not an object; it will load as a blank route profile."],
+      readOnly: false,
+    };
+  }
+
+  if (!isRouteProfilePackPayload(payload)) {
+    return {
+      payload: stripPackLocalOnlyKeys(payload),
+      legacy: true,
+      schemaVersion: 0,
+      migrationWarnings: ["Legacy route JSON will be imported as a versioned route profile pack."],
+      readOnly: false,
+    };
+  }
+
+  const schemaVersion = Math.max(0, Math.trunc(Number(payload.schemaVersion) || 0));
+  const migrationWarnings = [];
+  const readOnly = schemaVersion > ROUTE_PROFILE_PACK_SCHEMA_VERSION;
+  if (schemaVersion < ROUTE_PROFILE_PACK_SCHEMA_VERSION) {
+    migrationWarnings.push(`Route pack schema ${schemaVersion || "unknown"} will be normalized to schema ${ROUTE_PROFILE_PACK_SCHEMA_VERSION}.`);
+  }
+  if (readOnly) {
+    migrationWarnings.push(`Route pack schema ${schemaVersion} is newer than this Minibot build and is read-only.`);
+  }
+
+  return {
+    payload: buildRouteProfilePayloadFromPack(payload, fallbackName),
+    pack: payload,
+    legacy: false,
+    schemaVersion,
+    migrationWarnings,
+    readOnly,
+  };
+}
+
+export function previewRouteProfilePack(rawOrPayload = {}, {
+  currentConfig = {},
+  fallbackName = DEFAULTS.cavebotName,
+  sourcePath = "",
+  sourceName = "",
+} = {}) {
+  const normalizedPack = typeof rawOrPayload === "string"
+    ? parseRouteProfilePackRaw(rawOrPayload, fallbackName)
+    : normalizeRouteProfilePackPayload(rawOrPayload, fallbackName);
+  const normalizedProfile = normalizeRouteProfilePayload(normalizedPack.payload, fallbackName);
+  const routeName = normalizedProfile.routeName;
+  const validation = validateRouteConfig(normalizedProfile.options, {
+    sourceName: sourceName || routeName,
+    sourcePath,
+    rawConfig: normalizedPack.payload,
+  });
+  const diff = buildRouteProfilePackDiff(currentConfig, normalizedProfile.options);
+  const pack = normalizedPack.pack && isRouteProfilePackPayload(normalizedPack.pack)
+    ? normalizedPack.pack
+    : buildRouteProfilePack(normalizedProfile.options, {
+        notes: normalizedPack.migrationWarnings.join(" "),
+      });
+
+  return {
+    schema: ROUTE_PROFILE_PACK_SCHEMA,
+    schemaVersion: ROUTE_PROFILE_PACK_SCHEMA_VERSION,
+    sourcePath: String(sourcePath || ""),
+    sourceName: String(sourceName || routeName || ""),
+    legacy: normalizedPack.legacy,
+    importedSchemaVersion: normalizedPack.schemaVersion,
+    readOnly: normalizedPack.readOnly,
+    migrationWarnings: normalizedPack.migrationWarnings,
+    packName: routeName,
+    summary: buildRouteProfilePackSummary(normalizedProfile.options),
+    validation,
+    diff,
+    options: normalizedProfile.options,
+    pack,
+  };
+}
+
+export async function loadRouteProfilePackPreview(filePath, {
+  currentConfig = {},
+  fallbackName = DEFAULTS.cavebotName,
+} = {}) {
+  const raw = await fs.readFile(filePath, "utf8");
+  return previewRouteProfilePack(raw, {
+    currentConfig,
+    fallbackName,
+    sourcePath: filePath,
+    sourceName: routeNameFromFileName(path.basename(filePath)),
+  });
+}
+
+export async function exportRouteProfilePack(config, {
+  filePath = "",
+  notes = "",
+} = {}) {
+  const pack = buildRouteProfilePack(config, { notes });
+  const routeName = String(pack?.metadata?.name || DEFAULTS.cavebotName).trim() || DEFAULTS.cavebotName;
+  const targetPath = filePath
+    ? path.resolve(filePath)
+    : path.join(PROFILE_PACK_DIR, `${sanitizeProfileFileBase(routeName)}.minibot-route-pack.json`);
+  const validation = validateRouteConfig(normalizeOptions(config), {
+    sourceName: routeName,
+    sourcePath: targetPath,
+    rawConfig: pack.options,
+  });
+
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  const changed = await writeTextFileIfChanged(targetPath, serializeJsonFile(pack));
+
+  return {
+    path: targetPath,
+    fileName: path.basename(targetPath),
+    changed,
+    pack,
+    validation,
+  };
 }
 
 function routeNameFromFileName(fileName = "") {

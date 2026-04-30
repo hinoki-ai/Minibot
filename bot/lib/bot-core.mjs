@@ -30,6 +30,10 @@ import {
   buildLootPlan,
   findLootSourceContainers,
 } from "./modules/looter.mjs";
+import {
+  buildCapacityAwareLootDecision,
+  summarizeLootEconomics,
+} from "./modules/loot-economics.mjs";
 import { normalizeDialogueState } from "./modules/npc-dialogue.mjs";
 import {
   buildRefillReport,
@@ -64,6 +68,17 @@ import {
   buildSustainAction,
   summarizeSustainStatus,
 } from "./modules/sustain.mjs";
+import { buildRuntimeDiagnostics } from "./diagnostics.mjs";
+import {
+  buildHuntLedgerReport,
+  createHuntLedger,
+  recordHuntLedgerEvent as appendHuntLedgerEvent,
+  recordHuntLedgerSnapshot,
+} from "./modules/hunt-ledger.mjs";
+import { buildProtectorAlarmPlan } from "./modules/protector.mjs";
+import { buildTargetScoringReport } from "./modules/target-scoring.mjs";
+import { solveAoeAction } from "./modules/aoe-solver.mjs";
+import { buildPartyPlannerSummary } from "./modules/party-planner.mjs";
 import { buildConsumableAction } from "./modules/consumables.mjs";
 import { MINIBIA_DATA_ROOT } from "./minibia-data.mjs";
 import { buildAutoEatAction } from "./modules/auto-eat.mjs";
@@ -89,6 +104,12 @@ export { BANKING_OPERATION_TYPES, DEFAULT_BANKING_RULE };
 
 const RUNTIME_TIMING_EWMA_ALPHA = 0.18;
 const DECISION_TRACE_LIMIT = 80;
+const HUNT_LEDGER_RECENT_LIMIT = 40;
+const HUNT_LEDGER_TOP_RULE_LIMIT = 12;
+const DEFAULT_RARE_LOOT_VALUE = 1_000;
+const DEFAULT_PROTECTOR_HIGH_DAMAGE_PERCENT = 35;
+const DEFAULT_PROTECTOR_STALE_TARGET_MS = 15_000;
+const DEFAULT_PROTECTOR_NO_PROGRESS_MS = 60_000;
 const MODULE_REQUIRED_SNAPSHOT_FAMILIES = Object.freeze({
   sustain: Object.freeze(["self", "inventory", "hotbar"]),
   healer: Object.freeze(["self", "inventory", "hotbar"]),
@@ -451,9 +472,12 @@ export const DEFAULTS = {
   refillShopDialogueMaxAttempts: 3,
   refillPauseOnFailure: true,
   lootingEnabled: false,
+  huntLedgerEnabled: true,
   lootWhitelist: [],
   lootBlacklist: [],
   lootPreferredContainers: ["Backpack"],
+  lootRareDropNames: [],
+  lootRareDropValue: DEFAULT_RARE_LOOT_VALUE,
   corpseReturnEnabled: true,
   walkRepathMs: 1200,
   reconnectEnabled: false,
@@ -509,6 +533,33 @@ export const DEFAULTS = {
   alarmsBlacklistNames: [],
   alarmsBlacklistRadiusSqm: 9,
   alarmsBlacklistFloorRange: 1,
+  alarmsProtectorEnabled: false,
+  alarmsPauseRoute: false,
+  alarmsPauseTargeter: false,
+  alarmsStopTargeter: false,
+  alarmsRequireAcknowledgement: false,
+  alarmsPauseModules: [],
+  alarmsLowHpPercent: 25,
+  alarmsLowHealthPercent: 25,
+  alarmsLowMpPercent: 10,
+  alarmsLowManaPercent: 10,
+  alarmsLowSupplyCount: 0,
+  alarmsNoCapacityAt: 0,
+  alarmsFullBackpackFreeSlots: 0,
+  alarmsHighIncomingDamagePerSecond: 120,
+  alarmsNoCapacityEnabled: true,
+  alarmsPrivateMessageEnabled: true,
+  alarmsDisconnectEnabled: true,
+  alarmsDeathEnabled: true,
+  alarmsRouteStuckEnabled: true,
+  alarmsNoProgressMs: DEFAULT_PROTECTOR_NO_PROGRESS_MS,
+  alarmsStaleTargetMs: DEFAULT_PROTECTOR_STALE_TARGET_MS,
+  alarmsRareLootEnabled: true,
+  alarmsFullBackpackEnabled: true,
+  alarmsHighIncomingDamagePercent: DEFAULT_PROTECTOR_HIGH_DAMAGE_PERCENT,
+  alarmsLogEnabled: true,
+  alarmsSoundEnabled: true,
+  alarmsDesktopNotificationEnabled: false,
   trainerEnabled: false,
   trainerConfigured: false,
   trainerReconnectEnabled: true,
@@ -548,6 +599,8 @@ export const DEFAULTS = {
   runeMakerRules: [],
   spellCasterEnabled: false,
   spellCasterRules: [],
+  aoeSolverEnabled: false,
+  aoeSolverRules: [],
   distanceKeeperEnabled: false,
   distanceKeeperRules: [],
   stopAggroHold: false,
@@ -891,6 +944,7 @@ export const SPELL_CASTER_PATTERNS = Object.freeze([
   "aligned",
   "diagonal",
   "pack",
+  "aoe",
 ]);
 
 export const DISTANCE_KEEPER_BEHAVIORS = Object.freeze([
@@ -935,11 +989,20 @@ export const DEFAULT_SPELL_CASTER_RULE = Object.freeze({
   label: "",
   words: "",
   hotkey: "",
+  runeName: "",
+  itemName: "",
+  itemId: null,
   minManaPercent: 20,
   maxTargetDistance: 4,
   minTargetCount: 1,
   cooldownMs: 900,
   pattern: "any",
+  aoeRadius: 1,
+  targetCategories: [],
+  playerSafe: true,
+  noAoeZones: [],
+  requireSafeTile: false,
+  requireLineOfSight: true,
   requireTarget: true,
   requireStationary: false,
 });
@@ -1078,6 +1141,10 @@ const EMPTY_AUTO_LIGHT_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: "",
+  hotkey: "",
+  runeName: "",
+  itemName: "",
+  itemId: null,
   minManaPercent: 0,
   cooldownMs: 0,
   requireNoLight: true,
@@ -1114,6 +1181,12 @@ const EMPTY_SPELL_CASTER_RULE = Object.freeze({
   minTargetCount: 1,
   cooldownMs: 0,
   pattern: "any",
+  aoeRadius: 1,
+  targetCategories: [],
+  playerSafe: true,
+  noAoeZones: [],
+  requireSafeTile: false,
+  requireLineOfSight: true,
   requireTarget: true,
   requireStationary: false,
 });
@@ -1511,6 +1584,23 @@ function normalizePosition(value = null) {
     y: Math.trunc(y),
     z: Math.trunc(z),
   };
+}
+
+function normalizeAoeZones(value = []) {
+  const source = Array.isArray(value) ? value : [];
+  return source
+    .map((entry) => {
+      const position = normalizePosition(entry?.position || entry);
+      if (!position) {
+        return null;
+      }
+      return {
+        ...position,
+        radius: Math.max(0, Math.trunc(Number(entry?.radius) || 0)),
+        label: String(entry?.label || entry?.name || "").trim(),
+      };
+    })
+    .filter(Boolean);
 }
 
 function normalizeRefillSellRequests(value = []) {
@@ -1937,6 +2027,11 @@ export function normalizeWaypoint(waypoint, index = null) {
       .filter((step) => step && typeof step === "object")
       .map((step) => ({ ...step }));
   }
+  if (Array.isArray(waypoint?.recorderIntents)) {
+    normalized.recorderIntents = waypoint.recorderIntents
+      .filter((intent) => intent && typeof intent === "object")
+      .map((intent) => ({ ...intent }));
+  }
   if (waypoint?.advanceOnBlocked === true || waypoint?.advanceOnBlocked === false) {
     normalized.advanceOnBlocked = waypoint.advanceOnBlocked;
   }
@@ -2006,6 +2101,9 @@ export function serializeRouteWaypoint(waypoint, index = null) {
   }
   if (Array.isArray(normalized.steps) && normalized.steps.length) {
     serialized.steps = normalized.steps.map((step) => ({ ...step }));
+  }
+  if (Array.isArray(normalized.recorderIntents) && normalized.recorderIntents.length) {
+    serialized.recorderIntents = normalized.recorderIntents.map((intent) => ({ ...intent }));
   }
   if (normalized.advanceOnBlocked === true || normalized.advanceOnBlocked === false) {
     serialized.advanceOnBlocked = normalized.advanceOnBlocked;
@@ -2902,6 +3000,9 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     label: String(fallback?.label || "").trim(),
     words: String(fallback?.words || "").trim(),
     hotkey: normalizeHotkey(fallback?.hotkey),
+    runeName: String(fallback?.runeName || fallback?.itemName || "").trim(),
+    itemName: String(fallback?.itemName || fallback?.runeName || "").trim(),
+    itemId: Number.isFinite(Number(fallback?.itemId)) ? Math.trunc(Number(fallback.itemId)) : null,
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_SPELL_CASTER_RULE.minManaPercent),
     maxTargetDistance: normalizeNonNegativeNumber(fallback?.maxTargetDistance, DEFAULT_SPELL_CASTER_RULE.maxTargetDistance),
     minTargetCount: Math.max(1, Math.trunc(normalizeNonNegativeNumber(
@@ -2910,6 +3011,15 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     ))),
     cooldownMs: normalizeNonNegativeNumber(fallback?.cooldownMs, DEFAULT_SPELL_CASTER_RULE.cooldownMs),
     pattern: normalizeEnum(fallback?.pattern, SPELL_CASTER_PATTERNS, DEFAULT_SPELL_CASTER_RULE.pattern),
+    aoeRadius: Math.max(0, Math.trunc(normalizeNonNegativeNumber(
+      fallback?.aoeRadius ?? fallback?.areaRadius ?? fallback?.radius,
+      DEFAULT_SPELL_CASTER_RULE.aoeRadius,
+    ))),
+    targetCategories: normalizeTextList(fallback?.targetCategories ?? fallback?.categories),
+    playerSafe: normalizeBoolean(fallback?.playerSafe, DEFAULT_SPELL_CASTER_RULE.playerSafe),
+    noAoeZones: normalizeAoeZones(fallback?.noAoeZones ?? fallback?.noAoeTiles),
+    requireSafeTile: normalizeBoolean(fallback?.requireSafeTile, DEFAULT_SPELL_CASTER_RULE.requireSafeTile),
+    requireLineOfSight: normalizeBoolean(fallback?.requireLineOfSight, DEFAULT_SPELL_CASTER_RULE.requireLineOfSight),
     requireTarget: normalizeBoolean(fallback?.requireTarget, DEFAULT_SPELL_CASTER_RULE.requireTarget),
     requireStationary: normalizeBoolean(fallback?.requireStationary, DEFAULT_SPELL_CASTER_RULE.requireStationary),
   };
@@ -2919,11 +3029,25 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     label: String(rule?.label ?? normalizedFallback.label).trim(),
     words: String(rule?.words ?? normalizedFallback.words).trim(),
     hotkey: normalizeHotkey(rule?.hotkey ?? normalizedFallback.hotkey),
+    runeName: String(rule?.runeName ?? rule?.itemName ?? normalizedFallback.runeName).trim(),
+    itemName: String(rule?.itemName ?? rule?.runeName ?? normalizedFallback.itemName).trim(),
+    itemId: Number.isFinite(Number(rule?.itemId ?? normalizedFallback.itemId))
+      ? Math.trunc(Number(rule?.itemId ?? normalizedFallback.itemId))
+      : null,
     minManaPercent: clampPercent(rule?.minManaPercent, normalizedFallback.minManaPercent),
     maxTargetDistance: normalizeNonNegativeNumber(rule?.maxTargetDistance, normalizedFallback.maxTargetDistance),
     minTargetCount: Math.max(1, Math.trunc(normalizeNonNegativeNumber(rule?.minTargetCount, normalizedFallback.minTargetCount))),
     cooldownMs: normalizeNonNegativeNumber(rule?.cooldownMs, normalizedFallback.cooldownMs),
     pattern: normalizeEnum(rule?.pattern, SPELL_CASTER_PATTERNS, normalizedFallback.pattern),
+    aoeRadius: Math.max(0, Math.trunc(normalizeNonNegativeNumber(
+      rule?.aoeRadius ?? rule?.areaRadius ?? rule?.radius,
+      normalizedFallback.aoeRadius,
+    ))),
+    targetCategories: normalizeTextList(rule?.targetCategories ?? rule?.categories ?? normalizedFallback.targetCategories),
+    playerSafe: normalizeBoolean(rule?.playerSafe, normalizedFallback.playerSafe),
+    noAoeZones: normalizeAoeZones(rule?.noAoeZones ?? rule?.noAoeTiles ?? normalizedFallback.noAoeZones),
+    requireSafeTile: normalizeBoolean(rule?.requireSafeTile, normalizedFallback.requireSafeTile),
+    requireLineOfSight: normalizeBoolean(rule?.requireLineOfSight, normalizedFallback.requireLineOfSight),
     requireTarget: normalizeBoolean(rule?.requireTarget, normalizedFallback.requireTarget),
     requireStationary: normalizeBoolean(rule?.requireStationary, normalizedFallback.requireStationary),
   };
@@ -2940,7 +3064,7 @@ function normalizeSpellCasterRules(value = []) {
 
   return value
     .map((rule) => normalizeSpellCasterRule(rule, EMPTY_SPELL_CASTER_RULE))
-    .filter((rule) => rule.words);
+    .filter((rule) => rule.words || rule.hotkey || rule.runeName || rule.itemName || rule.itemId != null);
 }
 
 function normalizeDistanceKeeperRule(rule = {}, fallback = DEFAULT_DISTANCE_KEEPER_RULE) {
@@ -3175,9 +3299,15 @@ export function normalizeOptions(options = {}) {
   );
   merged.refillPauseOnFailure = merged.refillPauseOnFailure !== false;
   merged.lootingEnabled = Boolean(merged.lootingEnabled);
+  merged.huntLedgerEnabled = merged.huntLedgerEnabled !== false;
   merged.lootWhitelist = normalizeTextList(merged.lootWhitelist);
   merged.lootBlacklist = normalizeTextList(merged.lootBlacklist);
   merged.lootPreferredContainers = normalizeTextList(merged.lootPreferredContainers);
+  merged.lootRareDropNames = normalizeTextList(merged.lootRareDropNames);
+  merged.lootRareDropValue = Math.max(
+    0,
+    Math.trunc(normalizeNonNegativeNumber(merged.lootRareDropValue, DEFAULTS.lootRareDropValue)),
+  );
   merged.corpseReturnEnabled = merged.corpseReturnEnabled !== false;
   merged.walkRepathMs = Number(merged.walkRepathMs) || DEFAULTS.walkRepathMs;
   merged.reconnectEnabled = Boolean(merged.reconnectEnabled);
@@ -3306,6 +3436,57 @@ export function normalizeOptions(options = {}) {
     0,
     Math.trunc(normalizeNonNegativeNumber(merged.alarmsBlacklistFloorRange, DEFAULTS.alarmsBlacklistFloorRange)),
   );
+  merged.alarmsProtectorEnabled = Boolean(merged.alarmsProtectorEnabled);
+  if (hasOwn("alarmsStopTargeter") && !hasOwn("alarmsPauseTargeter")) {
+    merged.alarmsPauseTargeter = options.alarmsStopTargeter;
+  }
+  if (hasOwn("alarmsLowHealthPercent") && !hasOwn("alarmsLowHpPercent")) {
+    merged.alarmsLowHpPercent = options.alarmsLowHealthPercent;
+  }
+  if (hasOwn("alarmsLowManaPercent") && !hasOwn("alarmsLowMpPercent")) {
+    merged.alarmsLowMpPercent = options.alarmsLowManaPercent;
+  }
+  merged.alarmsPauseRoute = Boolean(merged.alarmsPauseRoute);
+  merged.alarmsPauseTargeter = Boolean(merged.alarmsPauseTargeter);
+  merged.alarmsStopTargeter = Boolean(merged.alarmsStopTargeter || merged.alarmsPauseTargeter);
+  merged.alarmsRequireAcknowledgement = Boolean(merged.alarmsRequireAcknowledgement);
+  merged.alarmsPauseModules = normalizeTextList(merged.alarmsPauseModules);
+  merged.alarmsLowHpPercent = clampPercent(merged.alarmsLowHpPercent, DEFAULTS.alarmsLowHpPercent);
+  merged.alarmsLowHealthPercent = merged.alarmsLowHpPercent;
+  merged.alarmsLowMpPercent = clampPercent(merged.alarmsLowMpPercent, DEFAULTS.alarmsLowMpPercent);
+  merged.alarmsLowManaPercent = merged.alarmsLowMpPercent;
+  merged.alarmsLowSupplyCount = normalizeNonNegativeNumber(merged.alarmsLowSupplyCount, DEFAULTS.alarmsLowSupplyCount);
+  merged.alarmsNoCapacityAt = normalizeNonNegativeNumber(merged.alarmsNoCapacityAt, DEFAULTS.alarmsNoCapacityAt);
+  merged.alarmsFullBackpackFreeSlots = normalizeNonNegativeNumber(
+    merged.alarmsFullBackpackFreeSlots,
+    DEFAULTS.alarmsFullBackpackFreeSlots,
+  );
+  merged.alarmsHighIncomingDamagePerSecond = normalizeNonNegativeNumber(
+    merged.alarmsHighIncomingDamagePerSecond,
+    DEFAULTS.alarmsHighIncomingDamagePerSecond,
+  );
+  merged.alarmsNoCapacityEnabled = merged.alarmsNoCapacityEnabled !== false;
+  merged.alarmsPrivateMessageEnabled = merged.alarmsPrivateMessageEnabled !== false;
+  merged.alarmsDisconnectEnabled = merged.alarmsDisconnectEnabled !== false;
+  merged.alarmsDeathEnabled = merged.alarmsDeathEnabled !== false;
+  merged.alarmsRouteStuckEnabled = merged.alarmsRouteStuckEnabled !== false;
+  merged.alarmsNoProgressMs = Math.max(
+    0,
+    Math.trunc(normalizeNonNegativeNumber(merged.alarmsNoProgressMs, DEFAULTS.alarmsNoProgressMs)),
+  );
+  merged.alarmsStaleTargetMs = Math.max(
+    0,
+    Math.trunc(normalizeNonNegativeNumber(merged.alarmsStaleTargetMs, DEFAULTS.alarmsStaleTargetMs)),
+  );
+  merged.alarmsRareLootEnabled = merged.alarmsRareLootEnabled !== false;
+  merged.alarmsFullBackpackEnabled = merged.alarmsFullBackpackEnabled !== false;
+  merged.alarmsHighIncomingDamagePercent = clampPercent(
+    merged.alarmsHighIncomingDamagePercent,
+    DEFAULTS.alarmsHighIncomingDamagePercent,
+  );
+  merged.alarmsLogEnabled = merged.alarmsLogEnabled !== false;
+  merged.alarmsSoundEnabled = merged.alarmsSoundEnabled !== false;
+  merged.alarmsDesktopNotificationEnabled = Boolean(merged.alarmsDesktopNotificationEnabled);
   merged.trainerEnabled = Boolean(merged.trainerEnabled);
   merged.trainerConfigured = hasOwn("trainerConfigured")
     ? Boolean(merged.trainerConfigured)
@@ -3424,6 +3605,8 @@ export function normalizeOptions(options = {}) {
   merged.runeMakerRules = normalizeRuneMakerRules(merged.runeMakerRules);
   merged.spellCasterEnabled = Boolean(merged.spellCasterEnabled);
   merged.spellCasterRules = normalizeSpellCasterRules(merged.spellCasterRules);
+  merged.aoeSolverEnabled = Boolean(merged.aoeSolverEnabled);
+  merged.aoeSolverRules = normalizeSpellCasterRules(merged.aoeSolverRules);
   merged.distanceKeeperEnabled = Boolean(merged.distanceKeeperEnabled);
   merged.distanceKeeperRules = normalizeDistanceKeeperRules(merged.distanceKeeperRules);
   merged.sharedSpawnMode = normalizeEnum(
@@ -12907,6 +13090,18 @@ export class MinibiaTargetBot {
     this.routeLootTelemetryPrimed = false;
     this.routeCorpseOpenKillCredits = 0;
     this.routeStallState = null;
+    this.huntLedgerStartedAt = 0;
+    this.huntLedgerBaseline = null;
+    this.huntLedgerDeathCount = 0;
+    this.huntLedgerPauseCount = 0;
+    this.huntLedgerStuckCount = 0;
+    this.huntLedgerRefillCycleCount = 0;
+    this.huntLedgerProtectedDecisionCount = 0;
+    this.huntLedgerRuleCounts = new Map();
+    this.huntLedgerRecentEvents = [];
+    this.lastHuntLedger = null;
+    this.lastCapacityLootDecision = null;
+    this.lastCapacityLootDecisionSignature = "";
     this.lastWalkAt = 0;
     this.lastWalkKey = null;
     this.lastWalkDestinationKey = null;
@@ -12993,6 +13188,20 @@ export class MinibiaTargetBot {
       records: [],
       updatedAt: 0,
     };
+    this.lastRuntimeDiagnostics = null;
+    this.lastTargetScoreReport = null;
+    this.protectorState = {
+      active: false,
+      activeAlarms: [],
+      pausedModules: [],
+      acknowledgementRequired: false,
+      acknowledged: false,
+      resumePolicy: "manual",
+      updatedAt: 0,
+    };
+    this.protectorAcknowledgedKeys = new Set();
+    this.protectorLoggedKeys = new Set();
+    this.lastProtectorSnapshot = null;
     this.listeners = new Set();
   }
 
@@ -13145,6 +13354,19 @@ export class MinibiaTargetBot {
     if (snapshot && typeof snapshot === "object") {
       snapshot.decisionTrace = this.lastDecisionTrace;
       snapshot.routeState = this.getRouteStateTelemetry(snapshot);
+      this.refreshHuntLedger(snapshot);
+      if (this.lastTargetScoreReport) {
+        snapshot.targetScoring = this.getTargetScoreReport();
+      }
+      snapshot.protectorStatus = this.refreshProtectorState(snapshot);
+      this.lastRuntimeDiagnostics = buildRuntimeDiagnostics({
+        snapshot,
+        options: this.options,
+        routeValidation: snapshot.routeValidation || null,
+        decisionTrace: this.lastDecisionTrace,
+        protectorStatus: snapshot.protectorStatus,
+      });
+      snapshot.runtimeDiagnostics = this.getRuntimeDiagnostics();
     }
 
     return this.lastDecisionTrace;
@@ -13161,6 +13383,259 @@ export class MinibiaTargetBot {
       currentReason: normalizeDecisionText(this.lastDecisionTrace.currentReason),
       blockerReason: normalizeDecisionText(this.lastDecisionTrace.blockerReason),
     };
+  }
+
+  getRuntimeDiagnostics() {
+    return this.lastRuntimeDiagnostics ? {
+      ok: this.lastRuntimeDiagnostics.ok !== false,
+      diagnostics: Array.isArray(this.lastRuntimeDiagnostics.diagnostics)
+        ? this.lastRuntimeDiagnostics.diagnostics.map((entry) => ({
+            severity: String(entry?.severity || "info"),
+            code: String(entry?.code || ""),
+            message: String(entry?.message || ""),
+            details: entry?.details && typeof entry.details === "object"
+              ? { ...entry.details }
+              : {},
+          }))
+        : [],
+    } : null;
+  }
+
+  getProtectorEventSignature(event = {}) {
+    return [
+      event.type || "",
+      event.severity || "",
+      event.reason || "",
+      event.target?.name || "",
+      event.target || "",
+    ].join("|");
+  }
+
+  getProtectorEventActions(event = {}) {
+    if (Array.isArray(event.actions)) {
+      return event.actions.map((action) => String(action || "").trim()).filter(Boolean);
+    }
+    if (event.actions && typeof event.actions === "object") {
+      const actionMap = {
+        sound: "sound",
+        desktopNotification: "desktop-notification",
+        log: "log",
+        pauseRoute: "pause-route",
+        stopTargeter: "stop-targeter",
+        requireAcknowledgement: "require-acknowledgement",
+      };
+      return Object.entries(actionMap)
+        .filter(([key]) => event.actions[key] === true)
+        .map(([, action]) => action);
+    }
+    return [];
+  }
+
+  isProtectorEventEnabled(event = {}) {
+    switch (event.type) {
+      case "death":
+        return this.options.alarmsDeathEnabled !== false;
+      case "disconnect":
+        return this.options.alarmsDisconnectEnabled !== false;
+      case "private-message":
+        return this.options.alarmsPrivateMessageEnabled !== false;
+      case "route-stuck":
+      case "no-progress":
+        return this.options.alarmsRouteStuckEnabled !== false;
+      case "full-backpack":
+        return this.options.alarmsFullBackpackEnabled !== false;
+      default:
+        return true;
+    }
+  }
+
+  getProtectorPausedModulesForAlarms(activeAlarms = []) {
+    const actions = new Set(
+      (Array.isArray(activeAlarms) ? activeAlarms : [])
+        .flatMap((event) => this.getProtectorEventActions(event)),
+    );
+    return Array.from(new Set([
+      actions.has("pause-route") ? "route" : "",
+      actions.has("stop-targeter") ? "targeter" : "",
+      ...normalizeTextList(this.options?.alarmsPauseModules),
+    ])).filter(Boolean);
+  }
+
+  refreshProtectorState(snapshot = this.lastSnapshot, nowOrOptions = this.getNow(), maybeOptions = {}) {
+    const refreshOptions = nowOrOptions && typeof nowOrOptions === "object"
+      ? nowOrOptions
+      : maybeOptions;
+    const now = nowOrOptions && typeof nowOrOptions === "object"
+      ? Math.trunc(Number(nowOrOptions.now) || this.getNow())
+      : Math.trunc(Number(nowOrOptions) || this.getNow());
+    const allowActions = refreshOptions?.allowActions === true;
+    const plan = buildProtectorAlarmPlan(snapshot || {}, this.options || {}, {
+      now,
+      decisionTrace: this.getDecisionTrace(),
+    });
+    const plannedEvents = (Array.isArray(plan.events) ? plan.events : [])
+      .filter((event) => this.isProtectorEventEnabled(event));
+    const activeSignatures = new Set(plannedEvents.map((event) => this.getProtectorEventSignature(event)));
+    this.protectorAcknowledgedKeys = new Set(
+      Array.from(this.protectorAcknowledgedKeys || []).filter((key) => activeSignatures.has(key)),
+    );
+    this.protectorLoggedKeys = new Set(
+      Array.from(this.protectorLoggedKeys || []).filter((key) => activeSignatures.has(key)),
+    );
+
+    const activeAlarms = plannedEvents
+      .filter((event) => !this.protectorAcknowledgedKeys.has(this.getProtectorEventSignature(event)));
+    const acknowledged = plannedEvents.length > 0 && activeAlarms.length === 0;
+    const activeActions = Array.from(new Set(activeAlarms.flatMap((event) => this.getProtectorEventActions(event))));
+    const pausedModules = this.getProtectorPausedModulesForAlarms(activeAlarms);
+    const acknowledgementRequired = activeAlarms.some((event) => this.getProtectorEventActions(event).includes("require-acknowledgement"));
+
+    if (allowActions && activeAlarms.length) {
+      const strongest = activeAlarms[0];
+      for (const alarm of activeAlarms) {
+        const signature = this.getProtectorEventSignature(alarm);
+        if (this.getProtectorEventActions(alarm).includes("log") && !this.protectorLoggedKeys.has(signature)) {
+          this.log(`Protector alarm: ${alarm.type} (${alarm.reason || alarm.target?.name || "active"})`);
+          this.protectorLoggedKeys.add(signature);
+        }
+      }
+
+      const shouldPauseRoute = pausedModules.includes("route");
+      const shouldStopTargeter = pausedModules.includes("targeter");
+      if (shouldPauseRoute || shouldStopTargeter) {
+        const wasRoutePaused = this.options.cavebotPaused === true;
+        const wasTargeterStopped = this.options.stopAggroHold === true;
+        if (shouldPauseRoute) {
+          if (!wasRoutePaused) {
+            this.huntLedgerPauseCount += 1;
+            this.noteHuntLedgerEvent("pause", {
+              reason: strongest.reason || strongest.type,
+              owner: "alarms",
+            });
+          }
+          this.options.cavebotPaused = true;
+          this.lastRoutePauseReason = strongest.reason || strongest.type || "protector alarm";
+        }
+        if (shouldStopTargeter) {
+          this.options.stopAggroHold = true;
+        }
+        if (!wasRoutePaused || !wasTargeterStopped) {
+          this.emit("protector-paused", {
+            reason: strongest.reason || strongest.type || "protector alarm",
+            pausedModules,
+            cavebotPaused: this.options.cavebotPaused,
+            stopAggroHold: this.options.stopAggroHold,
+          });
+          this.emit("options", { options: this.options });
+        }
+      }
+
+      this.recordDecision({
+        owner: "alarms",
+        state: "acted",
+        reason: strongest.reason || strongest.type || "protector alarm",
+        action: {
+          type: "protector",
+          label: strongest.type,
+          moduleKey: "alarms",
+        },
+        suppressedOwners: pausedModules,
+      });
+    }
+
+    this.protectorState = {
+      active: activeAlarms.length > 0,
+      activeAlarms,
+      highestSeverity: activeAlarms[0]?.severity || (acknowledged ? "acknowledged" : "clear"),
+      owner: activeAlarms[0]?.owner || null,
+      reason: activeAlarms[0]?.reason || "",
+      actions: activeActions,
+      pausedModules: activeAlarms.length ? pausedModules : [],
+      acknowledgementRequired,
+      acknowledged,
+      resumePolicy: acknowledgementRequired ? "manual" : "automatic",
+      updatedAt: now,
+    };
+    this.lastProtectorSnapshot = snapshot || null;
+    if (snapshot && typeof snapshot === "object") {
+      snapshot.protectorStatus = this.getProtectorStatus();
+    }
+    return this.getProtectorStatus();
+  }
+
+  refreshProtectorStatus(snapshot = this.lastSnapshot, options = {}) {
+    return this.refreshProtectorState(snapshot, options);
+  }
+
+  getProtectorStatus() {
+    const state = this.protectorState || {};
+    return {
+      active: state.active === true,
+      highestSeverity: state.highestSeverity || "clear",
+      owner: state.owner || null,
+      reason: normalizeDecisionText(state.reason),
+      actions: Array.isArray(state.actions) ? [...state.actions] : [],
+      activeAlarms: Array.isArray(state.activeAlarms)
+        ? state.activeAlarms.map((entry) => ({
+            ...entry,
+            actions: Array.isArray(entry.actions) ? [...entry.actions] : [],
+            target: entry.target && typeof entry.target === "object" ? { ...entry.target } : null,
+            details: entry.details && typeof entry.details === "object" ? { ...entry.details } : {},
+          }))
+        : [],
+      pausedModules: Array.isArray(state.pausedModules) ? [...state.pausedModules] : [],
+      acknowledgementRequired: state.acknowledgementRequired === true,
+      acknowledged: state.acknowledged === true,
+      resumePolicy: state.resumePolicy || "automatic",
+      updatedAt: Math.max(0, Math.trunc(Number(state.updatedAt) || 0)),
+    };
+  }
+
+  acknowledgeProtectorAlarms(snapshotOrOptions = this.lastSnapshot) {
+    const looksLikeSnapshot = snapshotOrOptions?.ready != null
+      || snapshotOrOptions?.playerStats
+      || snapshotOrOptions?.visiblePlayers
+      || snapshotOrOptions?.visibleCreatures
+      || snapshotOrOptions?.connection;
+    const resume = !looksLikeSnapshot && snapshotOrOptions?.resume === true;
+    const snapshot = looksLikeSnapshot
+      ? snapshotOrOptions
+      : (this.lastProtectorSnapshot || this.lastSnapshot);
+    const status = this.refreshProtectorState(snapshot, { allowActions: false });
+    for (const event of Array.isArray(status.activeAlarms) ? status.activeAlarms : []) {
+      this.protectorAcknowledgedKeys.add(this.getProtectorEventSignature(event));
+    }
+    this.noteHuntLedgerEvent("protector-ack", {
+      alarmCount: Array.isArray(status.activeAlarms) ? status.activeAlarms.length : 0,
+      resume,
+    });
+    const acknowledgedStatus = this.refreshProtectorState(snapshot, { allowActions: false });
+    if (resume) {
+      this.options.cavebotPaused = false;
+      this.options.stopAggroHold = false;
+      this.lastRoutePauseReason = "";
+      this.protectorState = {
+        ...this.protectorState,
+        pausedModules: [],
+        acknowledged: true,
+        updatedAt: this.getNow(),
+      };
+      this.emit("protector-resumed", {
+        alarmCount: Array.isArray(status.activeAlarms) ? status.activeAlarms.length : 0,
+      });
+      this.emit("options", { options: this.options });
+    }
+    return resume ? this.getProtectorStatus() : acknowledgedStatus;
+  }
+
+  isRoutePausedByProtector(snapshot = this.lastSnapshot) {
+    const status = this.refreshProtectorState(snapshot, { allowActions: false });
+    return status.active && status.pausedModules.includes("route");
+  }
+
+  isTargeterPausedByProtector(snapshot = this.lastSnapshot) {
+    const status = this.refreshProtectorState(snapshot, { allowActions: false });
+    return status.active && status.pausedModules.includes("targeter");
   }
 
   getRouteStateTelemetry(snapshot = this.lastSnapshot) {
@@ -17606,6 +18081,11 @@ export class MinibiaTargetBot {
     const normalizedReason = String(reason || "route paused").trim();
     this.lastRoutePauseReason = normalizedReason;
     this.options.cavebotPaused = true;
+    this.huntLedgerPauseCount += 1;
+    this.noteHuntLedgerEvent("pause", {
+      reason: normalizedReason,
+      owner: "route",
+    });
     this.recordDecision({
       owner: "route",
       state: "failed",
@@ -17890,6 +18370,7 @@ export class MinibiaTargetBot {
           waypoint?.refillRole,
           waypoint?.advanceOnBlocked,
           Array.isArray(waypoint?.steps) ? JSON.stringify(waypoint.steps) : "",
+          Array.isArray(waypoint?.recorderIntents) ? JSON.stringify(waypoint.recorderIntents) : "",
         ].map((value) => String(value ?? "").trim()).join("~");
         return [
           index,
@@ -17946,6 +18427,7 @@ export class MinibiaTargetBot {
           waypoint?.refillRole ?? "",
           waypoint?.advanceOnBlocked ?? "",
           Array.isArray(waypoint?.steps) ? waypoint.steps : [],
+          Array.isArray(waypoint?.recorderIntents) ? waypoint.recorderIntents : [],
         ];
       }),
     });
@@ -18086,6 +18568,326 @@ export class MinibiaTargetBot {
       }
     }
     return 0;
+  }
+
+  resetHuntLedger({ resetStartedAt = false } = {}) {
+    if (!this.running) {
+      this.huntLedgerStartedAt = 0;
+    } else if (resetStartedAt || !this.huntLedgerStartedAt) {
+      this.huntLedgerStartedAt = this.running ? (this.startedAt || this.getNow()) : 0;
+    }
+    this.huntLedgerBaseline = null;
+    this.huntLedgerDeathCount = 0;
+    this.huntLedgerPauseCount = 0;
+    this.huntLedgerStuckCount = 0;
+    this.huntLedgerRefillCycleCount = 0;
+    this.huntLedgerProtectedDecisionCount = 0;
+    this.huntLedgerRuleCounts = new Map();
+    this.huntLedgerRecentEvents = [];
+    this.lastHuntLedger = null;
+    this.lastCapacityLootDecision = null;
+    this.lastCapacityLootDecisionSignature = "";
+  }
+
+  noteHuntLedgerEvent(type = "", detail = {}) {
+    const eventType = String(type || "").trim();
+    if (!eventType) {
+      return null;
+    }
+
+    const event = {
+      type: eventType,
+      at: this.getNow(),
+      ...detail,
+    };
+    this.huntLedgerRecentEvents = [
+      event,
+      ...(Array.isArray(this.huntLedgerRecentEvents) ? this.huntLedgerRecentEvents : []),
+    ].slice(0, HUNT_LEDGER_RECENT_LIMIT);
+    return event;
+  }
+
+  incrementHuntLedgerRuleCount(ruleKey = "") {
+    const key = String(ruleKey || "").trim();
+    if (!key) {
+      return;
+    }
+
+    if (!(this.huntLedgerRuleCounts instanceof Map)) {
+      this.huntLedgerRuleCounts = new Map();
+    }
+    this.huntLedgerRuleCounts.set(key, Math.max(0, Number(this.huntLedgerRuleCounts.get(key)) || 0) + 1);
+  }
+
+  getSnapshotExperienceValue(snapshot = this.lastSnapshot) {
+    const candidates = [
+      snapshot?.playerStats?.experience,
+      snapshot?.playerStats?.xp,
+      snapshot?.playerStats?.experiencePoints,
+      snapshot?.experience,
+      snapshot?.xp,
+      snapshot?.player?.experience,
+      snapshot?.player?.stats?.experience,
+    ];
+    for (const value of candidates) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && parsed >= 0) {
+        return Math.trunc(parsed);
+      }
+    }
+    return null;
+  }
+
+  getSnapshotSupplyEntries(snapshot = this.lastSnapshot) {
+    const rawSupplies = Array.isArray(snapshot?.inventory?.supplies)
+      ? snapshot.inventory.supplies
+      : Array.isArray(snapshot?.inventory?.supplies?.entries)
+        ? snapshot.inventory.supplies.entries
+        : [];
+    return rawSupplies
+      .map((entry) => {
+        const name = String(entry?.name || entry?.itemName || "").trim();
+        const category = String(entry?.category || entry?.categories?.[0] || "").trim().toLowerCase();
+        const count = Math.max(0, Math.trunc(Number(entry?.count) || 0));
+        if (!name && !category) {
+          return null;
+        }
+        return {
+          name: name || category,
+          category,
+          count,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  getSnapshotSupplyCounts(snapshot = this.lastSnapshot) {
+    const counts = new Map();
+    for (const entry of this.getSnapshotSupplyEntries(snapshot)) {
+      const key = [
+        entry.category || "item",
+        String(entry.name || "").trim().toLowerCase(),
+      ].join("|");
+      const previous = counts.get(key) || {
+        name: entry.name,
+        category: entry.category,
+        count: 0,
+      };
+      previous.count += Math.max(0, Math.trunc(Number(entry.count) || 0));
+      counts.set(key, previous);
+    }
+    return counts;
+  }
+
+  getHuntLedgerBaseline(snapshot = this.lastSnapshot) {
+    if (!this.huntLedgerBaseline && snapshot?.ready) {
+      this.huntLedgerBaseline = {
+        at: this.getNow(),
+        experience: this.getSnapshotExperienceValue(snapshot),
+        supplies: this.getSnapshotSupplyCounts(snapshot),
+        level: Number.isFinite(Number(snapshot?.playerStats?.level))
+          ? Math.trunc(Number(snapshot.playerStats.level))
+          : null,
+        levelPercent: Number.isFinite(Number(snapshot?.playerStats?.levelPercent))
+          ? Number(snapshot.playerStats.levelPercent)
+          : null,
+      };
+    }
+    return this.huntLedgerBaseline;
+  }
+
+  getHuntSupplyBurn(snapshot = this.lastSnapshot) {
+    const baseline = this.getHuntLedgerBaseline(snapshot);
+    const baselineSupplies = baseline?.supplies instanceof Map ? baseline.supplies : new Map();
+    const currentSupplies = this.getSnapshotSupplyCounts(snapshot);
+    const entries = [];
+
+    for (const [key, baselineEntry] of baselineSupplies.entries()) {
+      const current = currentSupplies.get(key);
+      const consumed = Math.max(
+        0,
+        Math.trunc(Number(baselineEntry?.count) || 0) - Math.trunc(Number(current?.count) || 0),
+      );
+      if (consumed <= 0) {
+        continue;
+      }
+
+      entries.push({
+        name: baselineEntry.name,
+        category: baselineEntry.category,
+        count: consumed,
+      });
+    }
+
+    entries.sort((left, right) => (
+      String(left.category || "").localeCompare(String(right.category || ""))
+      || String(left.name || "").localeCompare(String(right.name || ""), "en", { sensitivity: "base", numeric: true })
+    ));
+
+    return {
+      entries,
+      totalCount: entries.reduce((sum, entry) => sum + Math.max(0, Number(entry.count) || 0), 0),
+    };
+  }
+
+  getCapacityAwareLootDecision(snapshot = this.lastSnapshot) {
+    const decision = buildCapacityAwareLootDecision(snapshot || {}, {
+      enabled: this.options.lootingEnabled || this.options.refillAutoSellEnabled,
+      minFreeSlots: this.options.refillAutoSellMinFreeSlots ?? 2,
+      protectedNames: this.options.refillAutoSellProtectedNames || [],
+      includeUnvalued: false,
+      allowDropLowValue: false,
+      depotBranchAvailable: Boolean(this.activeRefillLoop?.depotBranch || this.options.refillPlan?.depotBranch),
+      sellBranchAvailable: this.options.refillAutoSellEnabled !== false,
+      moduleKey: "looting",
+      tradeState: snapshot?.trade || {},
+    });
+    const signature = JSON.stringify([
+      decision.action,
+      decision.reason,
+      decision.freeSlots,
+      decision.minFreeSlots,
+      (decision.protectedItems || []).map((item) => `${item.name}:${item.count}`).join(","),
+      (decision.unknownValueItems || []).map((item) => `${item.name}:${item.count}`).join(","),
+    ]);
+    if (signature !== this.lastCapacityLootDecisionSignature) {
+      if ((decision.protectedItems || []).length) {
+        this.huntLedgerProtectedDecisionCount += 1;
+        this.noteHuntLedgerEvent("protected-loot", {
+          action: decision.action,
+          itemCount: decision.protectedItems.length,
+          reason: decision.reason,
+        });
+      }
+      this.lastCapacityLootDecisionSignature = signature;
+    }
+    this.lastCapacityLootDecision = decision;
+    return decision;
+  }
+
+  refreshHuntLedger(snapshot = this.lastSnapshot, now = this.getNow()) {
+    if (this.options.huntLedgerEnabled === false) {
+      this.lastHuntLedger = null;
+      return null;
+    }
+
+    if (!this.huntLedgerStartedAt) {
+      this.huntLedgerStartedAt = this.startedAt || now;
+    }
+    const baseline = this.getHuntLedgerBaseline(snapshot);
+    const elapsedMs = Math.max(0, Math.trunc(Number(now) - Number(this.huntLedgerStartedAt || now)));
+    const elapsedHours = elapsedMs > 0 ? elapsedMs / 3_600_000 : 0;
+    const currentExperience = this.getSnapshotExperienceValue(snapshot);
+    const baselineExperience = baseline?.experience ?? null;
+    const xpGained = currentExperience != null && baselineExperience != null
+      ? Math.max(0, currentExperience - baselineExperience)
+      : null;
+    const lootItems = this.getRouteLootItemEntries();
+    const lootSummary = summarizeLootEconomics({
+      goldValue: this.routeLootGoldValue,
+      items: lootItems,
+      tradeState: snapshot?.trade || {},
+    });
+    const supplyBurn = this.getHuntSupplyBurn(snapshot);
+    const rareNameKeys = new Set(
+      normalizeTextList(this.options.lootRareDropNames)
+        .map((name) => name.toLowerCase()),
+    );
+    const rareValue = Math.max(0, Math.trunc(Number(this.options.lootRareDropValue) || DEFAULT_RARE_LOOT_VALUE));
+    const rareDrops = lootSummary.valuedItems
+      .filter((item) => (
+        rareNameKeys.has(String(item.name || "").trim().toLowerCase())
+        || Number(item.totalValue) >= rareValue
+      ))
+      .concat(
+        lootSummary.unknownItems
+          .filter((item) => rareNameKeys.has(String(item.name || "").trim().toLowerCase()))
+          .map((item) => ({
+            ...item,
+            unitValue: 0,
+            totalValue: 0,
+            source: "unknown",
+          })),
+      );
+    const capacityDecision = this.getCapacityAwareLootDecision(snapshot);
+    const profitGoldValue = lootSummary.totalGoldValue;
+    const topLootRules = Array.from(this.huntLedgerRuleCounts instanceof Map ? this.huntLedgerRuleCounts.entries() : [])
+      .map(([name, count]) => ({
+        name,
+        count: Math.max(0, Math.trunc(Number(count) || 0)),
+      }))
+      .sort((left, right) => right.count - left.count || String(left.name).localeCompare(String(right.name)))
+      .slice(0, HUNT_LEDGER_TOP_RULE_LIMIT);
+
+    this.lastHuntLedger = {
+      schemaVersion: 1,
+      startedAt: Math.max(0, Math.trunc(Number(this.huntLedgerStartedAt) || 0)),
+      updatedAt: now,
+      elapsedMs,
+      xpGained,
+      xpPerHour: xpGained == null || elapsedHours <= 0 ? null : Math.round(xpGained / elapsedHours),
+      kills: Math.max(0, Math.trunc(Number(this.routeKillCount) || 0)),
+      killsPerHour: elapsedHours <= 0 ? 0 : Math.round((Number(this.routeKillCount) || 0) / elapsedHours),
+      lootGoldValue: lootSummary.totalGoldValue,
+      lootPerHour: elapsedHours <= 0 ? 0 : Math.round(lootSummary.totalGoldValue / elapsedHours),
+      profitGoldValue,
+      profitPerHour: elapsedHours <= 0 ? 0 : Math.round(profitGoldValue / elapsedHours),
+      supplyBurn,
+      rareDrops,
+      deaths: Math.max(0, Math.trunc(Number(this.huntLedgerDeathCount) || 0)),
+      pauses: Math.max(0, Math.trunc(Number(this.huntLedgerPauseCount) || 0)),
+      stucks: Math.max(0, Math.trunc(Number(this.huntLedgerStuckCount) || 0)),
+      routeLoops: Math.max(0, Math.trunc(Number(this.routeLapCount) || 0)),
+      refillCycles: Math.max(0, Math.trunc(Number(this.huntLedgerRefillCycleCount) || 0)),
+      unknownValueItems: lootSummary.unknownItems,
+      protectedItemDecisions: Math.max(0, Math.trunc(Number(this.huntLedgerProtectedDecisionCount) || 0)),
+      capacityDecision,
+      topLootRules,
+      recentEvents: Array.isArray(this.huntLedgerRecentEvents) ? this.huntLedgerRecentEvents.slice(0, HUNT_LEDGER_RECENT_LIMIT) : [],
+    };
+
+    if (snapshot && typeof snapshot === "object") {
+      snapshot.huntLedger = this.lastHuntLedger;
+      snapshot.capacityLootDecision = capacityDecision;
+    }
+
+    return this.lastHuntLedger;
+  }
+
+  getHuntLedger() {
+    return this.lastHuntLedger ? {
+      ...this.lastHuntLedger,
+      supplyBurn: {
+        ...this.lastHuntLedger.supplyBurn,
+        entries: Array.isArray(this.lastHuntLedger.supplyBurn?.entries)
+          ? this.lastHuntLedger.supplyBurn.entries.map((entry) => ({ ...entry }))
+          : [],
+      },
+      rareDrops: Array.isArray(this.lastHuntLedger.rareDrops)
+        ? this.lastHuntLedger.rareDrops.map((entry) => ({ ...entry }))
+        : [],
+      unknownValueItems: Array.isArray(this.lastHuntLedger.unknownValueItems)
+        ? this.lastHuntLedger.unknownValueItems.map((entry) => ({ ...entry }))
+        : [],
+      capacityDecision: this.lastHuntLedger.capacityDecision ? {
+        ...this.lastHuntLedger.capacityDecision,
+        autosellRequests: Array.isArray(this.lastHuntLedger.capacityDecision.autosellRequests)
+          ? this.lastHuntLedger.capacityDecision.autosellRequests.map((entry) => ({ ...entry }))
+          : [],
+        protectedItems: Array.isArray(this.lastHuntLedger.capacityDecision.protectedItems)
+          ? this.lastHuntLedger.capacityDecision.protectedItems.map((entry) => ({ ...entry }))
+          : [],
+        unknownValueItems: Array.isArray(this.lastHuntLedger.capacityDecision.unknownValueItems)
+          ? this.lastHuntLedger.capacityDecision.unknownValueItems.map((entry) => ({ ...entry }))
+          : [],
+      } : null,
+      topLootRules: Array.isArray(this.lastHuntLedger.topLootRules)
+        ? this.lastHuntLedger.topLootRules.map((entry) => ({ ...entry }))
+        : [],
+      recentEvents: Array.isArray(this.lastHuntLedger.recentEvents)
+        ? this.lastHuntLedger.recentEvents.map((entry) => ({ ...entry }))
+        : [],
+    } : null;
   }
 
   getRouteLootItemEntries() {
@@ -18230,6 +19032,13 @@ export class MinibiaTargetBot {
       name: actionName || resultName,
     });
     const itemName = String(resolvedItemName || actionName || resultName).trim();
+    if (itemName) {
+      this.incrementHuntLedgerRuleCount(`keep:${itemName.toLowerCase()}`);
+      this.noteHuntLedgerEvent("loot", {
+        name: itemName,
+        count: count || 1,
+      });
+    }
     return this.noteRouteLootEntry(itemName, count || 1, { source: "picked" });
   }
 
@@ -18244,6 +19053,10 @@ export class MinibiaTargetBot {
 
     this.routeKillCount += 1;
     this.routeCorpseOpenKillCredits = Math.max(0, Math.trunc(Number(this.routeCorpseOpenKillCredits) || 0)) + 1;
+    this.noteHuntLedgerEvent("corpse-opened", {
+      name: String(action?.name || result?.name || "").trim(),
+      position: action.position,
+    });
     return true;
   }
 
@@ -18292,8 +19105,18 @@ export class MinibiaTargetBot {
       }
       this.routeKillCount += parsedKillCount;
       this.noteRouteLootGoldValue(parsed.goldValue, { source: "observed" });
+      if (parsedKillCount > 0 || parsed.goldValue > 0) {
+        this.noteHuntLedgerEvent("loot-message", {
+          kills: parsedKillCount,
+          goldValue: parsed.goldValue,
+        });
+      }
       for (const item of Array.isArray(parsed.items) ? parsed.items : []) {
         const count = Math.max(0, Math.trunc(Number(item?.count) || 0));
+        const itemName = item?.displayName || item?.name || "";
+        if (itemName) {
+          this.incrementHuntLedgerRuleCount(`observed:${String(itemName).trim().toLowerCase()}`);
+        }
         this.noteRouteLootEntry(item?.displayName || item?.name || "", count, { source: "observed" });
       }
     }
@@ -18316,6 +19139,7 @@ export class MinibiaTargetBot {
     this.routeLootTelemetryPrimed = this.lastSnapshot != null;
     this.routeCorpseOpenKillCredits = 0;
     this.routeStallState = null;
+    this.resetHuntLedger({ resetStartedAt: resetLapCount });
   }
 
   noteRouteLapTransition(previousIndex, nextIndex, reason = "") {
@@ -18335,6 +19159,12 @@ export class MinibiaTargetBot {
     }
 
     this.routeLapCount += 1;
+    this.noteHuntLedgerEvent("route-loop", {
+      lapCount: this.routeLapCount,
+      fromIndex: previousIndex,
+      toIndex: nextIndex,
+      reason: normalizedReason || "loop",
+    });
     this.emit("route-lap", {
       lapCount: this.routeLapCount,
       fromIndex: previousIndex,
@@ -18441,6 +19271,11 @@ export class MinibiaTargetBot {
     }
 
     this.routeStallState = nextStall;
+    this.huntLedgerStuckCount += 1;
+    this.noteHuntLedgerEvent("stuck", {
+      waypointIndex: nextStall.stuckWaypointIndex,
+      reason: nextStall.stuckReason,
+    });
     return {
       ...baseTelemetry,
       stuck: true,
@@ -20944,15 +21779,21 @@ export class MinibiaTargetBot {
   }
 
   recordCorpseReturnDeath(snapshot = this.lastSnapshot, previousSnapshot = this.lastSnapshot) {
-    if (!this.isCorpseReturnEnabled()) {
-      return null;
-    }
-
     if (!this.isSnapshotDead(snapshot) || this.isSnapshotDead(previousSnapshot)) {
       return null;
     }
 
     const deathPosition = normalizePosition(previousSnapshot?.playerPosition || snapshot?.playerPosition);
+    this.huntLedgerDeathCount += 1;
+    this.noteHuntLedgerEvent("death", {
+      position: deathPosition,
+      reason: snapshot?.reason || snapshot?.connection?.deathMessage || "dead",
+    });
+
+    if (!this.isCorpseReturnEnabled()) {
+      return null;
+    }
+
     if (!deathPosition) {
       return null;
     }
@@ -21749,6 +22590,10 @@ export class MinibiaTargetBot {
     }
     if (this.isCavebotPaused() && !this.isRouteResetActive()) return null;
     if (this.options.stopAggroHold) return null;
+    if (this.isTargeterPausedByProtector(snapshot)) {
+      this.buildTargetScoreReport(snapshot, { extraSkippedReason: "protector paused targeter" });
+      return null;
+    }
     if (this.isFollowTrainFollower(snapshot) && !this.canUseFollowTrainCombatActions(snapshot)) return null;
     if (this.getVisibleEscapeThreats(snapshot).length > 0) return null;
 
@@ -21763,13 +22608,17 @@ export class MinibiaTargetBot {
     const candidates = closeCandidates.length > 0
       ? this.mergeCurrentReachTargetCandidate(closeCandidates, reachCandidates, snapshot)
       : reachCandidates;
-    if (this.shouldDeferTargetForRoute(snapshot, candidates)) return null;
+    if (this.shouldDeferTargetForRoute(snapshot, candidates)) {
+      this.buildTargetScoreReport(snapshot, { extraSkippedReason: "route walk in progress" });
+      return null;
+    }
     const signature = candidates.map((candidate) => candidate.id).join(",");
     const currentTargetStillVisible = currentTarget
       ? candidates.some((candidate) => candidate.id === currentTarget.id)
       : false;
 
     if (!candidates.length) {
+      this.buildTargetScoreReport(snapshot);
       return null;
     }
 
@@ -21781,15 +22630,18 @@ export class MinibiaTargetBot {
       && Number.isFinite(chosenId)
       && chosenId === currentTargetId
     ) {
+      this.buildTargetScoreReport(snapshot, { selection: candidates[0] });
       return null;
     }
 
-    return {
+    const selection = {
       chosen: candidates[0],
       candidates,
       signature,
       refresh: false,
     };
+    this.buildTargetScoreReport(snapshot, { selection });
+    return selection;
   }
 
   chooseRookillerTarget(snapshot) {
@@ -21912,6 +22764,115 @@ export class MinibiaTargetBot {
     }
 
     return getKnownMinibiaMonsterThreatScore(entry?.name);
+  }
+
+  getTargetProfileIndex(name = "") {
+    const lowerName = String(name || "").trim().toLowerCase();
+    if (!lowerName) return -1;
+    const alphaBaseName = getAlphaBaseMonsterNameKey(lowerName);
+    return (this.options.targetProfiles || [])
+      .findIndex((entry) => {
+        const entryName = String(entry?.name || "").trim().toLowerCase();
+        return entryName === lowerName || (alphaBaseName !== lowerName && entryName === alphaBaseName);
+      });
+  }
+
+  getTargetNameCount(entry = null, snapshot = this.lastSnapshot) {
+    const nameKey = String(entry?.name || "").trim().toLowerCase();
+    if (!nameKey) {
+      return 0;
+    }
+
+    const source = Array.isArray(snapshot?.allMatches) && snapshot.allMatches.length
+      ? snapshot.allMatches
+      : Array.isArray(snapshot?.visibleCreatures)
+        ? snapshot.visibleCreatures
+        : Array.isArray(snapshot?.candidates)
+          ? snapshot.candidates
+          : [];
+    return source.filter((candidate) => String(candidate?.name || "").trim().toLowerCase() === nameKey).length;
+  }
+
+  getTargetRouteRoleScore(snapshot = this.lastSnapshot, { scanFollowTrainThreats = true } = {}) {
+    if (this.activeRefillLoop) {
+      return -300;
+    }
+    if (this.isFollowTrainFollower(snapshot)) {
+      if (!scanFollowTrainThreats) {
+        return this.isFollowTrainAttackAndFollow(snapshot) ? 180 : -1200;
+      }
+      return this.canUseFollowTrainCombatActions(snapshot) ? 180 : -1200;
+    }
+    if (this.options.autowalkEnabled) {
+      return 40;
+    }
+    return 0;
+  }
+
+  buildTargetScoreBreakdown(entry, playerPosition = null, snapshot = this.lastSnapshot) {
+    const profile = this.getTargetProfile(entry?.name);
+    const profileIndex = this.getTargetProfileIndex(entry?.name);
+    const range = this.getEntryDistance(entry, playerPosition);
+    const distance = Number.isFinite(Number(entry?.distance)) ? Number(entry.distance) : range;
+    const healthPercent = Number(entry?.healthPercent);
+    const profileOrder = profileIndex >= 0
+      ? Math.max(0, ((this.options.targetProfiles || []).length - profileIndex) * 10)
+      : 0;
+    const priority = profile ? Number(profile.priority || 0) * 1000 : 0;
+    const danger = profile ? Number(profile.dangerLevel || 0) * 260 : 0;
+    const killMode = profile ? this.getKillModeScore(profile) : 0;
+    const stickiness = profile?.stickToTarget && this.isCurrentTargetEntry(entry, snapshot)
+      ? TARGET_PROFILE_STICK_TO_TARGET_SCORE
+      : (!profile && this.isCurrentTargetEntry(entry, snapshot) ? 200 : 0);
+    const shootable = profile?.preferShootable && entry?.isShootable === false ? -600 : 0;
+    const beam = profile?.avoidBeam && this.hasBeamExposure(entry, playerPosition)
+      ? -(700 + (Number(profile.dangerLevel || 0) * 50))
+      : 0;
+    const wave = profile?.avoidWave && this.hasWaveExposure(entry, playerPosition)
+      ? -(560 + (Number(profile.dangerLevel || 0) * 45))
+      : 0;
+    const finish = Number.isFinite(healthPercent) && Number(profile?.finishBelowPercent) > 0 && healthPercent <= Number(profile.finishBelowPercent)
+      ? 1600 + ((Number(profile.finishBelowPercent) - healthPercent) * 22)
+      : 0;
+    const health = Number.isFinite(healthPercent) ? (100 - healthPercent) * 4 : 0;
+    const threat = this.getMonsterThreatScoreForEntry(entry);
+    const rangePenalty = -(Number.isFinite(range) ? range : 999999) * 60;
+    const distancePenalty = -(Number.isFinite(distance) ? distance : 999999) * 4;
+    const reachability = this.isEntryReachableForCombat(entry) ? 0 : -100_000;
+    const targetCount = Math.max(0, this.getTargetNameCount(entry, snapshot) - 1) * 18;
+    const ownership = this.isEntryBlockedBySharedSpawn(entry, snapshot) ? -100_000 : 0;
+    const routeRole = this.getTargetRouteRoleScore(snapshot, { scanFollowTrainThreats: false });
+    const components = {
+      profileOrder,
+      priority,
+      danger,
+      killMode,
+      stickiness,
+      shootable,
+      beam,
+      wave,
+      finish,
+      health,
+      threat,
+      reachability,
+      targetCount,
+      ownership,
+      routeRole,
+      rangePenalty,
+      distancePenalty,
+    };
+    const total = Object.values(components)
+      .reduce((sum, value) => sum + (Number.isFinite(Number(value)) ? Number(value) : 0), 0);
+
+    return {
+      total,
+      components,
+      profileName: profile?.name || "",
+      profileIndex,
+      range: Number.isFinite(range) ? range : null,
+      distance: Number.isFinite(distance) ? distance : null,
+      healthPercent: Number.isFinite(healthPercent) ? healthPercent : null,
+    };
   }
 
   getThreatFacingDirections(threatPosition, targetPosition) {
@@ -22081,48 +23042,132 @@ export class MinibiaTargetBot {
   }
 
   getTargetPriorityScore(entry, playerPosition = null, snapshot = null) {
+    return this.buildTargetScoreBreakdown(entry, playerPosition, snapshot).total;
+  }
+
+  getTargetSkipReasons(entry, snapshot = this.lastSnapshot, playerPosition = snapshot?.playerPosition || null) {
+    const reasons = [];
+    if (!this.isTrackedMonsterName(entry?.name)) {
+      reasons.push("not tracked");
+    }
+    if (this.isEscapeEntry(entry)) {
+      reasons.push("escape profile");
+    }
+    if (this.isEntryBlockedBySharedSpawn(entry, snapshot)) {
+      reasons.push("shared spawn reserved");
+    }
+    if (!this.isEntryWithinCombatWindow(entry, playerPosition)) {
+      reasons.push("outside combat window");
+    }
+    if (!this.isEntryWithinCombatBox(entry, playerPosition)) {
+      reasons.push("outside target box");
+    }
+    if (!this.isEntryReachableForCombat(entry)) {
+      reasons.push("unreachable");
+    }
+    return reasons;
+  }
+
+  normalizeMovementIntentFromAction(action = null, snapshot = this.lastSnapshot) {
+    if (!action) {
+      return "hold";
+    }
+    const reason = String(action.reason || action.walkReason || "").trim().toLowerCase();
+    const moduleKey = String(action.moduleKey || "").trim().toLowerCase();
+    if (reason === "escape" || moduleKey.includes("escape")) return "escape";
+    if (action.plannedStance) return "diagonal";
+    if (reason === "retreat") return "kite";
+    if (reason === "approach") return "approach";
+    if (reason === "dodge") return "diagonal";
+    if (Number(action.nextDistance) > Number(action.currentDistance)) return "distance";
+    if (Number(action.nextDistance) < Number(action.currentDistance)) return "chase";
+    if (this.isFollowTrainFollower(snapshot)) return "assist";
+    return "hold";
+  }
+
+  getTargetMovementIntent(entry = null, snapshot = this.lastSnapshot) {
     const profile = this.getTargetProfile(entry?.name);
-    const range = this.getEntryDistance(entry, playerPosition);
-    const distance = Number.isFinite(Number(entry?.distance)) ? Number(entry.distance) : range;
-    const healthPercent = Number(entry?.healthPercent);
-    let score = 0;
+    const behavior = String(profile?.behavior || "").trim().toLowerCase();
+    if (behavior === "escape") return "escape";
+    if (this.isFollowTrainFollower(snapshot)) return "assist";
+    if (Number(profile?.keepDistanceMin) > 1 || Number(profile?.keepDistanceMax) > 1) return "distance";
+    const chaseMode = this.getTargetProfileChaseMode(entry?.name);
+    if (chaseMode === "stand") return "hold";
+    if (chaseMode === "chase" || chaseMode === "aggressive") return "chase";
+    return "hold";
+  }
 
-    if (profile) {
-      score += Number(profile.priority || 0) * 1000;
-      score += Number(profile.dangerLevel || 0) * 260;
-      score += this.getKillModeScore(profile);
+  buildTargetScoreReport(snapshot = this.lastSnapshot, {
+    selection = null,
+    extraSkippedReason = "",
+  } = {}) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const rawEntries = Array.isArray(snapshot?.allMatches) && snapshot.allMatches.length
+      ? snapshot.allMatches
+      : Array.isArray(snapshot?.visibleCreatures) && snapshot.visibleCreatures.length
+        ? snapshot.visibleCreatures.filter((entry) => this.isTrackedMonsterName(entry?.name))
+        : Array.isArray(snapshot?.candidates)
+          ? snapshot.candidates
+          : [];
+    const selected = selection?.chosen || selection || null;
+    const selectedId = Number(selected?.id);
+    const ranked = rawEntries
+      .map((entry) => {
+        const score = this.buildTargetScoreBreakdown(entry, playerPosition, snapshot);
+        const skippedReasons = this.getTargetSkipReasons(entry, snapshot, playerPosition);
+        if (extraSkippedReason && (!selected || Number(entry?.id) !== selectedId)) {
+          skippedReasons.push(extraSkippedReason);
+        }
+        return {
+          id: Number.isFinite(Number(entry?.id)) ? Number(entry.id) : null,
+          name: String(entry?.name || "").trim(),
+          score: Math.round(score.total),
+          scoreBreakdown: score.components,
+          profileName: score.profileName,
+          profileIndex: score.profileIndex,
+          healthPercent: score.healthPercent,
+          range: score.range,
+          distance: score.distance,
+          reachable: this.isEntryReachableForCombat(entry),
+          selected: Number.isFinite(selectedId) && Number(entry?.id) === selectedId,
+          movementIntent: this.getTargetMovementIntent(entry, snapshot),
+          skippedReasons: Array.from(new Set(skippedReasons)),
+        };
+      })
+      .sort((left, right) => (
+        right.score - left.score
+        || Number(left.profileIndex < 0 ? 999999 : left.profileIndex) - Number(right.profileIndex < 0 ? 999999 : right.profileIndex)
+        || String(left.name || "").localeCompare(String(right.name || ""), "en", { sensitivity: "base", numeric: true })
+        || Number(left.id || 0) - Number(right.id || 0)
+      ))
+      .slice(0, 12);
 
-      if (profile.stickToTarget && this.isCurrentTargetEntry(entry, snapshot)) {
-        score += TARGET_PROFILE_STICK_TO_TARGET_SCORE;
-      }
-
-      if (profile.preferShootable && entry?.isShootable === false) {
-        score -= 600;
-      }
-
-      if (profile.avoidBeam && this.hasBeamExposure(entry, playerPosition)) {
-        score -= 700 + (Number(profile.dangerLevel || 0) * 50);
-      }
-
-      if (profile.avoidWave && this.hasWaveExposure(entry, playerPosition)) {
-        score -= 560 + (Number(profile.dangerLevel || 0) * 45);
-      }
-
-      if (Number.isFinite(healthPercent) && Number(profile.finishBelowPercent) > 0 && healthPercent <= Number(profile.finishBelowPercent)) {
-        score += 1600 + ((Number(profile.finishBelowPercent) - healthPercent) * 22);
-      }
-    } else if (this.isCurrentTargetEntry(entry, snapshot)) {
-      score += 200;
+    const report = {
+      schemaVersion: 1,
+      updatedAt: this.getNow(),
+      selectedTargetId: Number.isFinite(selectedId) ? selectedId : null,
+      selectedTargetName: String(selected?.name || "").trim(),
+      selectedMovementIntent: selected ? this.getTargetMovementIntent(selected, snapshot) : "hold",
+      candidates: ranked,
+    };
+    this.lastTargetScoreReport = report;
+    if (snapshot && typeof snapshot === "object") {
+      snapshot.targetScoring = report;
     }
+    return report;
+  }
 
-    if (Number.isFinite(healthPercent)) {
-      score += (100 - healthPercent) * 4;
-    }
-
-    score += this.getMonsterThreatScoreForEntry(entry);
-    score -= (Number.isFinite(range) ? range : 999999) * 60;
-    score -= (Number.isFinite(distance) ? distance : 999999) * 4;
-    return score;
+  getTargetScoreReport() {
+    return this.lastTargetScoreReport ? {
+      ...this.lastTargetScoreReport,
+      candidates: Array.isArray(this.lastTargetScoreReport.candidates)
+        ? this.lastTargetScoreReport.candidates.map((candidate) => ({
+            ...candidate,
+            scoreBreakdown: { ...(candidate.scoreBreakdown || {}) },
+            skippedReasons: Array.isArray(candidate.skippedReasons) ? [...candidate.skippedReasons] : [],
+          }))
+        : [],
+    } : null;
   }
 
   getGreatestCommonDivisor(left = 0, right = 0) {
@@ -26035,6 +27080,331 @@ export class MinibiaTargetBot {
     return visibleThreats[0] || null;
   }
 
+  isAoeSpellRule(rule = {}) {
+    return rule?.aoe === true
+      || normalizeEnum(rule?.pattern, SPELL_CASTER_PATTERNS, DEFAULT_SPELL_CASTER_RULE.pattern) === "aoe";
+  }
+
+  getAoeRuleTargetCategories(rule = {}) {
+    return normalizeTextList(rule?.targetCategories ?? rule?.categories)
+      .map((entry) => this.getNameKey(entry))
+      .filter(Boolean);
+  }
+
+  getAoeEntryCategories(entry = null) {
+    const profile = this.getTargetProfile(entry?.name);
+    return new Set(normalizeTextList([
+      entry?.category,
+      entry?.kind,
+      entry?.type,
+      entry?.race,
+      entry?.family,
+      ...(Array.isArray(entry?.categories) ? entry.categories : []),
+      ...(Array.isArray(entry?.types) ? entry.types : []),
+      profile?.category,
+      profile?.kind,
+      ...(Array.isArray(profile?.categories) ? profile.categories : []),
+    ]).map((value) => this.getNameKey(value)));
+  }
+
+  matchesAoeTargetCategories(entry = null, rule = {}) {
+    const requiredCategories = this.getAoeRuleTargetCategories(rule);
+    if (!requiredCategories.length) {
+      return true;
+    }
+    if (requiredCategories.includes("monster") || requiredCategories.includes("creature")) {
+      return true;
+    }
+
+    const categories = this.getAoeEntryCategories(entry);
+    return requiredCategories.some((category) => categories.has(category));
+  }
+
+  getAoeRuleNoAoeZones(rule = {}) {
+    return normalizeAoeZones(rule?.noAoeZones ?? rule?.noAoeTiles);
+  }
+
+  getAoeAreaPositions(center = null, radius = 0) {
+    const position = normalizePosition(center);
+    if (!position) {
+      return [];
+    }
+
+    const normalizedRadius = Math.max(0, Math.trunc(Number(radius) || 0));
+    const positions = [];
+    for (let dx = -normalizedRadius; dx <= normalizedRadius; dx += 1) {
+      for (let dy = -normalizedRadius; dy <= normalizedRadius; dy += 1) {
+        positions.push({
+          x: position.x + dx,
+          y: position.y + dy,
+          z: position.z,
+        });
+      }
+    }
+    return positions;
+  }
+
+  getAoeCastTileKeys(snapshot = this.lastSnapshot) {
+    const tiles = [
+      ...(Array.isArray(snapshot?.safeAoeTiles) ? snapshot.safeAoeTiles : []),
+      ...(Array.isArray(snapshot?.aoeCastTiles) ? snapshot.aoeCastTiles : []),
+    ];
+    return new Set(
+      tiles
+        .map((tile) => this.getPositionKey(tile))
+        .filter(Boolean),
+    );
+  }
+
+  isAoeCastTileAllowedByExplicitSafety(snapshot = this.lastSnapshot, position = null, rule = {}) {
+    const safeTileKeys = this.getAoeCastTileKeys(snapshot);
+    if (!safeTileKeys.size) {
+      return rule?.requireSafeTile === true ? false : true;
+    }
+    const key = this.getPositionKey(position);
+    return Boolean(key && safeTileKeys.has(key));
+  }
+
+  getAoeRawTargets(snapshot = this.lastSnapshot, rule = {}) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const seen = new Set();
+    const targets = [];
+    const append = (entry = null) => {
+      if (!entry?.position) return;
+      if (this.isEscapeEntry(entry)) return;
+      if (!this.isEntryWithinCombatWindow(entry, playerPosition)) return;
+      if (!this.isEntryReachableForCombat(entry)) return;
+
+      const id = entry?.id == null ? "" : String(entry.id).trim();
+      const key = id || `${this.getNameKey(entry?.name)}:${this.getPositionKey(entry.position)}`;
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      targets.push(entry);
+    };
+
+    append(snapshot?.currentTarget || null);
+    (Array.isArray(snapshot?.candidates) ? snapshot.candidates : []).forEach(append);
+    (Array.isArray(snapshot?.allMatches) ? snapshot.allMatches : []).forEach(append);
+    (Array.isArray(snapshot?.visibleCreatures) ? snapshot.visibleCreatures : []).forEach(append);
+
+    const maxTargetDistance = Number(rule?.maxTargetDistance);
+    return this.sortTargetCandidates(targets, playerPosition, snapshot)
+      .filter((entry) => {
+        const distance = this.getEntryDistance(entry, playerPosition);
+        return !Number.isFinite(maxTargetDistance) || maxTargetDistance <= 0 || distance <= maxTargetDistance;
+      });
+  }
+
+  getAoeTargetsAround(center = null, targets = [], radius = 0) {
+    const position = normalizePosition(center);
+    if (!position) {
+      return [];
+    }
+
+    const normalizedRadius = Math.max(0, Math.trunc(Number(radius) || 0));
+    return targets.filter((entry) => (
+      entry?.position
+      && Number(entry.position.z) === Number(position.z)
+      && this.getPositionDistance(position, entry.position) <= normalizedRadius
+    ));
+  }
+
+  hasAoePlayerCollision(snapshot = this.lastSnapshot, center = null, radius = 0) {
+    const position = normalizePosition(center);
+    if (!position) {
+      return false;
+    }
+    const normalizedRadius = Math.max(0, Math.trunc(Number(radius) || 0));
+    return (Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : [])
+      .some((player) => (
+        player?.position
+        && Number(player.position.z) === Number(position.z)
+        && this.getPositionDistance(position, player.position) <= normalizedRadius
+      ));
+  }
+
+  hasAoeNoAoeZoneCollision(rule = {}, center = null, radius = 0) {
+    const position = normalizePosition(center);
+    if (!position) {
+      return false;
+    }
+    const normalizedRadius = Math.max(0, Math.trunc(Number(radius) || 0));
+    return this.getAoeRuleNoAoeZones(rule).some((zone) => (
+      Number(zone.z) === Number(position.z)
+      && this.getPositionDistance(position, zone) <= normalizedRadius + Math.max(0, Math.trunc(Number(zone.radius) || 0))
+    ));
+  }
+
+  hasAoeRouteTileRuleCollision(snapshot = this.lastSnapshot, center = null, radius = 0) {
+    return this.getAoeAreaPositions(center, radius)
+      .some((position) => this.shouldAvoidPosition(snapshot, position));
+  }
+
+  getAoeLineOfSightBlockerCount(snapshot = this.lastSnapshot, center = null, targets = []) {
+    const playerPosition = snapshot?.playerPosition || null;
+    if (!playerPosition || !center) {
+      return 0;
+    }
+    return this.getScreenBlockerCountBetweenPositions(playerPosition, center, snapshot, {
+      excludeIds: targets.map((entry) => entry?.id).filter((id) => id != null),
+    });
+  }
+
+  chooseAoeSkipReason(skipCounts = {}, fallback = "count") {
+    const orderedReasons = [
+      "player",
+      "route tile rule",
+      "no safe tile",
+      "line-of-sight",
+      "no-aoe-zone",
+      "floor",
+      "target category",
+      "count",
+    ];
+    return orderedReasons.find((reason) => Number(skipCounts[reason]) > 0) || fallback;
+  }
+
+  solveAoeSpellRule(rule = {}, snapshot = this.lastSnapshot, {
+    moduleKey = "spellCaster",
+    ruleIndex = null,
+    now = this.getNow(),
+  } = {}) {
+    const normalizedRule = normalizeSpellCasterRule(rule, DEFAULT_SPELL_CASTER_RULE);
+    const radius = Math.max(0, Math.trunc(Number(normalizedRule.aoeRadius) || 0));
+    const minTargetCount = Math.max(1, Math.trunc(Number(normalizedRule.minTargetCount) || 1));
+    const playerPosition = snapshot?.playerPosition || null;
+
+    if (!snapshot?.ready) {
+      return { ok: false, reason: "snapshot" };
+    }
+    if (!normalizedRule.enabled) {
+      return { ok: false, reason: "disabled" };
+    }
+    if (normalizedRule.requireStationary && (snapshot.isMoving || snapshot.pathfinderAutoWalking)) {
+      return { ok: false, reason: "movement" };
+    }
+
+    const lastActionAt = this.getLastModuleActionAt(moduleKey, ruleIndex);
+    const cooldownMs = Math.max(0, Math.trunc(Number(normalizedRule.cooldownMs) || 0));
+    if (cooldownMs > 0 && now - lastActionAt < cooldownMs) {
+      return {
+        ok: false,
+        reason: "cooldown",
+        cooldownMs,
+        cooldownRemainingMs: Math.max(0, cooldownMs - (now - lastActionAt)),
+      };
+    }
+
+    const manaPercent = Number(snapshot?.playerStats?.manaPercent ?? 0);
+    if (manaPercent < Number(normalizedRule.minManaPercent)) {
+      return { ok: false, reason: "mana", manaPercent, minManaPercent: normalizedRule.minManaPercent };
+    }
+
+    const rawTargets = this.getAoeRawTargets(snapshot, normalizedRule);
+    if (!rawTargets.length) {
+      return { ok: false, reason: "count", targetCount: 0, minTargetCount };
+    }
+
+    const ownedTargets = rawTargets.filter((entry) => !this.isEntryBlockedBySharedSpawn(entry, snapshot));
+    if (!ownedTargets.length) {
+      return { ok: false, reason: "target ownership", targetCount: 0, minTargetCount };
+    }
+
+    const categoryTargets = ownedTargets.filter((entry) => this.matchesAoeTargetCategories(entry, normalizedRule));
+    if (!categoryTargets.length) {
+      return { ok: false, reason: "target category", targetCount: 0, minTargetCount };
+    }
+
+    const sameFloorTargets = categoryTargets.filter((entry) => (
+      playerPosition
+      && entry?.position
+      && Number(entry.position.z) === Number(playerPosition.z)
+    ));
+    if (!sameFloorTargets.length) {
+      return { ok: false, reason: "floor", targetCount: 0, minTargetCount };
+    }
+
+    const plans = [];
+    const skipCounts = {};
+    const noteSkip = (reason) => {
+      skipCounts[reason] = Math.max(0, Math.trunc(Number(skipCounts[reason]) || 0)) + 1;
+    };
+
+    for (const target of sameFloorTargets) {
+      const center = normalizePosition(target.position);
+      if (!center) {
+        continue;
+      }
+
+      const affectedTargets = this.getAoeTargetsAround(center, sameFloorTargets, radius);
+      if (affectedTargets.length < minTargetCount) {
+        noteSkip("count");
+        continue;
+      }
+      if (!this.isAoeCastTileAllowedByExplicitSafety(snapshot, center, normalizedRule)) {
+        noteSkip("no safe tile");
+        continue;
+      }
+      if (this.hasAoeRouteTileRuleCollision(snapshot, center, radius)) {
+        noteSkip("route tile rule");
+        continue;
+      }
+      if (this.hasAoeNoAoeZoneCollision(normalizedRule, center, radius)) {
+        noteSkip("no-aoe-zone");
+        continue;
+      }
+      if (normalizedRule.playerSafe !== false && this.hasAoePlayerCollision(snapshot, center, radius)) {
+        noteSkip("player");
+        continue;
+      }
+      if (normalizedRule.requireLineOfSight !== false) {
+        const blockerCount = this.getAoeLineOfSightBlockerCount(snapshot, center, affectedTargets);
+        if (blockerCount > 0) {
+          noteSkip("line-of-sight");
+          continue;
+        }
+      }
+
+      plans.push({
+        castPosition: center,
+        target,
+        targets: affectedTargets,
+        targetCount: affectedTargets.length,
+        radius,
+        playerDistance: this.getPositionDistance(playerPosition, center),
+      });
+    }
+
+    if (!plans.length) {
+      return {
+        ok: false,
+        reason: this.chooseAoeSkipReason(skipCounts),
+        targetCount: 0,
+        minTargetCount,
+        skipCounts,
+      };
+    }
+
+    plans.sort((left, right) => (
+      right.targetCount - left.targetCount
+      || left.playerDistance - right.playerDistance
+      || this.getPositionKey(left.castPosition).localeCompare(this.getPositionKey(right.castPosition))
+    ));
+
+    const best = plans[0];
+    return {
+      ok: true,
+      reason: "cast",
+      castPosition: best.castPosition,
+      targetCount: best.targetCount,
+      minTargetCount,
+      radius,
+      targets: best.targets,
+      targetIds: best.targets.map((entry) => entry?.id).filter((id) => id != null),
+      targetNames: best.targets.map((entry) => String(entry?.name || "").trim()).filter(Boolean),
+    };
+  }
+
   matchesSpellPattern(rule, target, snapshot) {
     const pattern = normalizeEnum(rule?.pattern, SPELL_CASTER_PATTERNS, DEFAULT_SPELL_CASTER_RULE.pattern);
     const distance = this.getEntryDistance(target, snapshot?.playerPosition);
@@ -26055,6 +27425,8 @@ export class MinibiaTargetBot {
         return diagonal;
       case "pack":
         return candidateCount >= Math.max(2, Number(rule?.minTargetCount) || 2);
+      case "aoe":
+        return this.solveAoeSpellRule(rule, snapshot).ok;
       case "any":
       default:
         return true;
@@ -27104,33 +28476,70 @@ export class MinibiaTargetBot {
     if (this.isFollowTrainFollower(snapshot) && !this.canUseFollowTrainCombatActions(snapshot)) return null;
     const manaPercent = snapshot.playerStats?.manaPercent ?? 0;
     const target = this.getFocusTarget(snapshot);
+    const aoePlans = new Map();
 
     return this.chooseOrderedRule({
       snapshot,
       moduleKey: "spellCaster",
       enabled: this.options.spellCasterEnabled,
       rules: this.options.spellCasterRules,
-      matches: (rule) => {
+      matches: (rule, ruleIndex) => {
         if (vocationProfile && !isVocationSpellAvailable(vocationProfile, rule.words)) return false;
         if (rule.requireStationary && (snapshot.isMoving || snapshot.pathfinderAutoWalking)) return false;
+        if (manaPercent < rule.minManaPercent) return false;
+
+        if (this.isAoeSpellRule(rule)) {
+          const aoePlan = this.solveAoeSpellRule(rule, snapshot, {
+            moduleKey: "spellCaster",
+            ruleIndex,
+          });
+          if (aoePlan.ok) {
+            aoePlans.set(ruleIndex, aoePlan);
+          }
+          return aoePlan.ok;
+        }
+
         if (rule.requireTarget && !target) return false;
         if (!target) return false;
-        if (manaPercent < rule.minManaPercent) return false;
 
         const distance = this.getEntryDistance(target, snapshot.playerPosition);
         if (Number(rule.maxTargetDistance) > 0 && distance > Number(rule.maxTargetDistance)) return false;
         if ((snapshot.candidates?.length || 0) < (Number(rule.minTargetCount) || 1)) return false;
         return this.matchesSpellPattern(rule, target, snapshot);
       },
-      buildAction: (rule, ruleIndex) => ({
-        type: "attack-spell",
-        moduleKey: "spellCaster",
-        ruleIndex,
-        words: rule.words,
-        hotkey: rule.hotkey,
-        label: rule.label,
-        target,
-      }),
+      buildAction: (rule, ruleIndex) => {
+        const aoePlan = aoePlans.get(ruleIndex) || null;
+        const runeName = String(rule.runeName || rule.itemName || "").trim();
+        if (aoePlan && (runeName || rule.itemId != null) && !rule.words) {
+          return {
+            type: "useItemOnTile",
+            moduleKey: "spellCaster",
+            ruleIndex,
+            itemId: rule.itemId ?? null,
+            name: runeName,
+            category: "rune",
+            label: rule.label || runeName,
+            position: aoePlan.castPosition,
+            targetPosition: aoePlan.castPosition,
+            target: "tile",
+            aoe: aoePlan,
+            castPosition: aoePlan.castPosition,
+            targetCount: aoePlan.targetCount,
+          };
+        }
+        return {
+          type: "attack-spell",
+          moduleKey: "spellCaster",
+          ruleIndex,
+          words: rule.words,
+          hotkey: rule.hotkey,
+          label: rule.label,
+          target: aoePlan?.target || target,
+          aoe: aoePlan,
+          castPosition: aoePlan?.castPosition || null,
+          targetCount: aoePlan?.targetCount ?? null,
+        };
+      },
     });
   }
 
@@ -29620,7 +31029,7 @@ export class MinibiaTargetBot {
             ? "retreat"
             : "approach";
 
-      return {
+      const action = {
         type: "distance-keeper",
         moduleKey: orderedRule.moduleKey,
         ruleIndex: orderedRule.ruleIndex,
@@ -29633,6 +31042,8 @@ export class MinibiaTargetBot {
         nextDistance: best.nextDistance,
         reason,
       };
+      action.movementIntent = this.normalizeMovementIntentFromAction(action, snapshot);
+      return action;
     }
 
     return null;
@@ -30405,6 +31816,7 @@ export class MinibiaTargetBot {
     }
     if (!this.isRouteResetActive() && !this.options.autowalkEnabled) return null;
     if (!this.isRouteResetActive() && this.isCavebotPaused()) return null;
+    if (!this.isRouteResetActive() && this.isRoutePausedByProtector(snapshot)) return null;
     const followTrainAssignment = this.getFollowTrainAssignment(snapshot);
     if (!this.isRouteResetActive() && followTrainAssignment?.selfIndex > 0) return null;
     if (!this.options.waypoints.length) return null;
@@ -34079,6 +35491,8 @@ export class MinibiaTargetBot {
         }
       }
 
+      this.refreshProtectorStatus(snapshot, { allowActions: true });
+
       const noGoEscapeAction = this.chooseNoGoZoneEscape(snapshot);
       if (noGoEscapeAction) {
         if (snapshot.pathfinderAutoWalking || snapshot.isMoving) {
@@ -34425,7 +35839,9 @@ export class MinibiaTargetBot {
       if (!healingPriorityActive) {
         const spellAction = this.chooseSpellCaster(snapshot, vocationProfile);
         if (spellAction) {
-          const spellResult = await this.castWords(spellAction);
+          const spellResult = spellAction.type === "attack-spell"
+            ? await this.castWords(spellAction)
+            : await executePlannedAction(this, spellAction);
           this.recordDecision({
             owner: "spellCaster",
             action: spellAction,
@@ -34528,6 +35944,9 @@ export class MinibiaTargetBot {
     this.startedAt = this.getNow();
     this.routeComplete = false;
     this.resetRouteTelemetry({ resetLapCount: true });
+    this.protectorAcknowledgedKeys = new Set();
+    this.protectorLoggedKeys = new Set();
+    this.lastProtectorSnapshot = null;
     this.clearRouteStationaryState();
     this.clearActiveBankingConversation();
     this.clearReconnectState();
@@ -34542,6 +35961,15 @@ export class MinibiaTargetBot {
     this.running = false;
     this.startedAt = 0;
     this.resetRouteTelemetry();
+    this.protectorState = {
+      active: false,
+      activeAlarms: [],
+      pausedModules: [],
+      acknowledgementRequired: false,
+      acknowledged: false,
+      resumePolicy: "manual",
+      updatedAt: this.getNow(),
+    };
     this.clearRouteStationaryState();
     this.clearActiveBankingConversation();
     this.clearReconnectState();

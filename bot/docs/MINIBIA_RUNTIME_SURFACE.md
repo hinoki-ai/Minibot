@@ -204,6 +204,12 @@ Positions normalize to:
 }
 ```
 
+AoE spell solving uses the same creature entry fields plus `visiblePlayers[]`,
+`reachableForCombat`, `withinCombatWindow`, target categories when available,
+and optional `safeAoeTiles[]` or `aoeCastTiles[]` arrays. When explicit AoE
+cast-tile arrays are present, `requireSafeTile` rules must choose from those
+tiles; route no-go and avoid tile rules still apply independently.
+
 ### Hotbar Slots
 
 `inventory.hotbar.slots[]` use:

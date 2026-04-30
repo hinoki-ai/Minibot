@@ -9,6 +9,7 @@ import {
   protocol,
   screen,
   session as electronSession,
+  dialog,
 } from "electron";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -62,8 +63,10 @@ import {
   deleteAccount,
   buildCharacterKey,
   deleteRouteProfile,
+  exportRouteProfilePack,
   claimCharacter,
   describeRouteProfile,
+  loadRouteProfilePackPreview,
   listAccounts,
   listCharacterConfigs,
   loadConfig,
@@ -641,6 +644,7 @@ function createSession(instance) {
     restoredSessionRecord: null,
     saveChain: Promise.resolve(),
     promotedProfileConfig: null,
+    pendingRoutePackImport: null,
     lastClaimHeartbeatAt: 0,
     lastStaleRecoveryAt: 0,
     staleRecoveryInFlight: false,
@@ -1045,6 +1049,23 @@ function serializePlayerStats(playerStats) {
   };
 }
 
+function serializeRouteTelemetry(routeTelemetry) {
+  if (!routeTelemetry) return null;
+
+  return {
+    lapCount: Number.isFinite(Number(routeTelemetry.lapCount)) ? Math.max(0, Math.trunc(Number(routeTelemetry.lapCount))) : 0,
+    killCount: Number.isFinite(Number(routeTelemetry.killCount)) ? Math.max(0, Math.trunc(Number(routeTelemetry.killCount))) : 0,
+    lootGoldValue: Number.isFinite(Number(routeTelemetry.lootGoldValue)) ? Math.max(0, Math.trunc(Number(routeTelemetry.lootGoldValue))) : 0,
+    lootLine: routeTelemetry.lootLine ? String(routeTelemetry.lootLine) : "",
+    lootSignature: routeTelemetry.lootSignature ? String(routeTelemetry.lootSignature) : "",
+    stuck: routeTelemetry.stuck === true,
+    stuckWaypointIndex: Number.isFinite(Number(routeTelemetry.stuckWaypointIndex))
+      ? Math.max(0, Math.trunc(Number(routeTelemetry.stuckWaypointIndex)))
+      : null,
+    stuckReason: routeTelemetry.stuckReason ? String(routeTelemetry.stuckReason) : "",
+  };
+}
+
 function serializePosition(position) {
   if (!position) return null;
 
@@ -1258,6 +1279,10 @@ function serializeSnapshot(snapshot) {
     confidence: snapshot.confidence && typeof snapshot.confidence === "object" ? snapshot.confidence : null,
     decisionTrace: snapshot.decisionTrace && typeof snapshot.decisionTrace === "object" ? snapshot.decisionTrace : null,
     routeState: snapshot.routeState && typeof snapshot.routeState === "object" ? snapshot.routeState : null,
+    huntLedger: snapshot.huntLedger && typeof snapshot.huntLedger === "object" ? snapshot.huntLedger : null,
+    targetScoring: snapshot.targetScoring && typeof snapshot.targetScoring === "object" ? snapshot.targetScoring : null,
+    protectorStatus: snapshot.protectorStatus && typeof snapshot.protectorStatus === "object" ? snapshot.protectorStatus : null,
+    runtimeDiagnostics: snapshot.runtimeDiagnostics && typeof snapshot.runtimeDiagnostics === "object" ? snapshot.runtimeDiagnostics : null,
     playerName: snapshot.playerName || "",
     playerPosition: serializePosition(snapshot.playerPosition),
     playerStats: serializePlayerStats(snapshot.playerStats),
@@ -1321,6 +1346,28 @@ function serializeRouteProfile(config, routeProfile = null) {
   return {
     ...description,
     exists: fs.existsSync(description.path),
+  };
+}
+
+function serializeRoutePackImportPreview(session = getActiveSession()) {
+  const preview = session?.pendingRoutePackImport?.preview || null;
+  if (!preview) {
+    return null;
+  }
+
+  return {
+    schema: preview.schema,
+    schemaVersion: preview.schemaVersion,
+    sourcePath: preview.sourcePath,
+    sourceName: preview.sourceName,
+    legacy: preview.legacy === true,
+    importedSchemaVersion: preview.importedSchemaVersion,
+    readOnly: preview.readOnly === true,
+    migrationWarnings: Array.isArray(preview.migrationWarnings) ? [...preview.migrationWarnings] : [],
+    packName: preview.packName,
+    summary: preview.summary || {},
+    validation: preview.validation || null,
+    diff: preview.diff || { changed: false, changeCount: 0, changes: [] },
   };
 }
 
@@ -1510,6 +1557,7 @@ function serializeSession(session) {
   const routeResetStatus = session.bot.getRouteResetStatus();
   const snapshotAgeMs = session.bot.getSnapshotAgeMs?.();
   const followTrainStatus = session.bot.getFollowTrainStatus?.(snapshot) || null;
+  const routeTelemetry = session.bot.refreshRouteTelemetry?.(snapshot) || null;
   const stale = Boolean(
     session.bot.running
     && Number.isFinite(snapshotAgeMs)
@@ -1527,6 +1575,15 @@ function serializeSession(session) {
     label: getSessionLabel(session) || session.binding.displayName,
     playerPosition: snapshot?.playerPosition || session.instance?.playerPosition || null,
     playerStats: serializePlayerStats(snapshot?.playerStats),
+    supplies: Array.isArray(snapshot?.inventory?.supplies)
+      ? snapshot.inventory.supplies.map((entry) => ({
+        category: entry?.category ? String(entry.category) : "",
+        itemId: Number.isFinite(Number(entry?.itemId ?? entry?.id)) ? Number(entry.itemId ?? entry.id) : null,
+        name: resolveMinibiaItemName(entry) || "",
+        count: Number.isFinite(Number(entry?.count)) ? Math.max(0, Math.trunc(Number(entry.count))) : 0,
+      }))
+      : [],
+    routeTelemetry: serializeRouteTelemetry(routeTelemetry),
     visiblePlayerNames: Array.isArray(snapshot?.visiblePlayerNames) ? [...snapshot.visiblePlayerNames] : [],
     visiblePlayers: Array.isArray(snapshot?.visiblePlayers)
       ? snapshot.visiblePlayers.map(serializeCreatureSummary).filter(Boolean)
@@ -1548,6 +1605,10 @@ function serializeSession(session) {
     routeComplete: session.bot.routeComplete || false,
     routeState: session.bot.getRouteStateTelemetry?.(snapshot) || null,
     decisionTrace: session.bot.getDecisionTrace?.() || null,
+    huntLedger: session.bot.getHuntLedger?.() || snapshot?.huntLedger || null,
+    targetScoring: session.bot.getTargetScoreReport?.() || snapshot?.targetScoring || null,
+    protectorStatus: session.bot.getProtectorStatus?.() || snapshot?.protectorStatus || null,
+    runtimeDiagnostics: session.bot.getRuntimeDiagnostics?.() || snapshot?.runtimeDiagnostics || null,
     routeResetActive: routeResetStatus.active,
     routeResetPhase: routeResetStatus.phase,
     routeResetTargetIndex: routeResetStatus.targetIndex,
@@ -1623,6 +1684,7 @@ function serializeState() {
     options: activeSession?.config || normalizeOptions(defaultConfig || {}),
     routeProfile: activeSession ? serializeRouteProfile(activeSession.config, activeSession.routeProfile) : null,
     routeValidation: activeSession ? getSessionRouteValidation(activeSession) : null,
+    routePackImportPreview: serializeRoutePackImportPreview(activeSession),
     routeLibrary: serializeRouteLibrary(),
     accounts: serializeAccountLibrary(),
     trainerCharacters: serializeTrainerCharacterLibrary(),
@@ -2880,14 +2942,36 @@ async function maybeRecordWaypoint(session, snapshot) {
     return false;
   }
 
-  const waypoint = buildAutoWaypoint(position, waypoints.length);
+  const nextWaypoints = [...waypoints];
+  let waypoint = buildAutoWaypoint(position, waypoints.length);
+  const zDelta = lastWaypoint ? Math.trunc(Number(position.z) - Number(lastWaypoint.z)) : 0;
+  let inferredTransition = "";
+  if (lastWaypoint && Math.abs(zDelta) === 1) {
+    inferredTransition = zDelta < 0 ? "stairs-up" : "stairs-down";
+    const previousType = normalizeWaypointType(lastWaypoint.type);
+    if (previousType === "walk" || previousType === "node" || previousType === "safe-zone") {
+      nextWaypoints[nextWaypoints.length - 1] = {
+        ...lastWaypoint,
+        type: inferredTransition,
+      };
+    }
+    waypoint = {
+      ...waypoint,
+      label: `Landing ${formatGeneratedWaypointLabel(waypoints.length)}`,
+    };
+  }
   const nextConfig = {
     ...session.config,
-    waypoints: [...waypoints, waypoint],
+    waypoints: [...nextWaypoints, waypoint],
   };
 
   await persistSessionConfig(session, nextConfig);
-  pushSessionLog(session, `Recorded waypoint ${waypoint.label}: ${waypoint.x},${waypoint.y},${waypoint.z}`);
+  pushSessionLog(
+    session,
+    inferredTransition
+      ? `Recorded ${inferredTransition} landing ${waypoint.x},${waypoint.y},${waypoint.z}`
+      : `Recorded waypoint ${waypoint.label}: ${waypoint.x},${waypoint.y},${waypoint.z}`,
+  );
   sendEvent("route-recorded", { sessionId: session.id, waypoint, total: nextConfig.waypoints.length });
   return true;
 }
@@ -3511,6 +3595,7 @@ async function persistSessionConfig(sessionOrId, nextConfig, { emitState = true,
   session.config = normalizeOptions(nextConfig);
   session.configLoaded = true;
   session.bot.setOptions(session.config);
+  session.pendingRoutePackImport = null;
 
   const snapshot = session.config;
   session.saveChain = session.saveChain
@@ -3708,6 +3793,22 @@ function installSessionListeners(session) {
 
     if (event.type === "rookiller-disconnect") {
       void closeLiveSession(session).catch((error) => {
+        pushSessionLog(session, error.message);
+        sendEvent("error", { sessionId: session.id, error: { message: error.message } });
+      });
+    }
+
+    if (event.type === "protector-paused") {
+      void persistSessionConfig(session, {
+        ...session.config,
+        cavebotPaused: event.payload?.cavebotPaused === true || session.bot.options?.cavebotPaused === true,
+        stopAggroHold: event.payload?.stopAggroHold === true || session.bot.options?.stopAggroHold === true,
+      }, { emitState: false }).then(async () => {
+        if (event.payload?.stopAggroHold === true) {
+          await session.bot.clearAggro().catch(() => { });
+        }
+        scheduleLiveStatePatch();
+      }).catch((error) => {
         pushSessionLog(session, error.message);
         sendEvent("error", { sessionId: session.id, error: { message: error.message } });
       });
@@ -4235,6 +4336,36 @@ handleTrusted("bb:toggle-cavebot-pause", async (_event, sessionId = null) => {
   return serializeState();
 });
 
+handleTrusted("bb:acknowledge-protector", async (_event, sessionId = null, options = {}) => {
+  const session = resolveSessionReference(sessionId) || requireActiveSession();
+  if (!session.instance?.claimedBySelf && session.instance?.claimed) {
+    throw new Error("That character is already linked to another Minibot window.");
+  }
+
+  await ensureSessionConfig(session);
+  const resume = options?.resume !== false;
+  const status = session.bot.acknowledgeProtectorAlarms({ resume });
+  if (resume) {
+    await persistSessionConfig(session, {
+      ...session.config,
+      cavebotPaused: false,
+      stopAggroHold: false,
+    }, { emitState: false });
+    pushSessionLog(session, "Protector acknowledged; route and targeting resume controls are clear.");
+  } else {
+    pushSessionLog(session, "Protector acknowledged.");
+  }
+
+  await refreshSession(session).catch((error) => {
+    pushSessionLog(session, error.message);
+  });
+  sendEvent("state", { sessionId: session.id, scope: "protector" });
+  return {
+    ...serializeState(),
+    protectorStatus: status,
+  };
+});
+
 handleTrusted("bb:stop-all-bots", async () => {
   const targetSessions = [...sessions.values()].filter(canSyncSession);
   if (!targetSessions.length) {
@@ -4419,6 +4550,131 @@ handleTrusted("bb:load-route", async (_event, name) => {
     session,
     `Loaded cavebot ${routeProfile.name} (${routeOptions.waypoints.length} waypoint${routeOptions.waypoints.length === 1 ? "" : "s"})`,
   );
+  return serializeState();
+});
+
+handleTrusted("bb:export-route-pack", async (_event, name = "") => {
+  const session = requireActiveSession();
+  await ensureSessionConfig(session);
+
+  const requestedName = String(name || "").trim();
+  const activeRouteName = String(session.config.cavebotName || "").trim();
+  let exportConfig = session.config;
+  if (requestedName && requestedName !== activeRouteName) {
+    const routeProfile = await loadRouteProfile(requestedName);
+    if (!routeProfile?.options) {
+      throw new Error("Selected route could not be exported.");
+    }
+    exportConfig = routeProfile.options;
+  }
+
+  const routeName = String(exportConfig.cavebotName || requestedName || activeRouteName || "route-pack").trim() || "route-pack";
+  const defaultPath = path.join(
+    app.getPath("documents"),
+    `${routeName.replace(/[<>:"/\\|?*\u0000-\u001f]+/g, "-")}.minibot-route-pack.json`,
+  );
+  const saveDialogOptions = {
+    title: "Export Minibot Route Pack",
+    defaultPath,
+    filters: [
+      { name: "Minibot Route Pack", extensions: ["json"] },
+    ],
+  };
+  const saveResult = mainWindow
+    ? await dialog.showSaveDialog(mainWindow, saveDialogOptions)
+    : await dialog.showSaveDialog(saveDialogOptions);
+
+  if (saveResult.canceled || !saveResult.filePath) {
+    return serializeState();
+  }
+
+  const exportResult = await exportRouteProfilePack(exportConfig, {
+    filePath: saveResult.filePath,
+  });
+  pushSessionLog(session, `Exported route pack ${exportResult.fileName}`);
+  sendEvent("state", { sessionId: session.id });
+  return serializeState();
+});
+
+handleTrusted("bb:preview-route-pack-import", async () => {
+  const session = requireActiveSession();
+  await ensureSessionConfig(session);
+
+  const openDialogOptions = {
+    title: "Import Minibot Route Pack",
+    properties: ["openFile"],
+    filters: [
+      { name: "Minibot Route Pack", extensions: ["json"] },
+    ],
+  };
+  const openResult = mainWindow
+    ? await dialog.showOpenDialog(mainWindow, openDialogOptions)
+    : await dialog.showOpenDialog(openDialogOptions);
+
+  if (openResult.canceled || !openResult.filePaths?.[0]) {
+    return serializeState();
+  }
+
+  const preview = await loadRouteProfilePackPreview(openResult.filePaths[0], {
+    currentConfig: session.config,
+    fallbackName: session.config.cavebotName || "imported-route",
+  });
+  session.pendingRoutePackImport = {
+    filePath: openResult.filePaths[0],
+    preview,
+  };
+
+  const issueCount = Number(preview.validation?.summary?.errorCount || 0)
+    + Number(preview.validation?.summary?.warningCount || 0);
+  pushSessionLog(
+    session,
+    `Previewed route pack ${preview.packName || path.basename(openResult.filePaths[0])}: ${preview.diff.changeCount} change${preview.diff.changeCount === 1 ? "" : "s"}, ${issueCount} validation issue${issueCount === 1 ? "" : "s"}.`,
+  );
+  sendEvent("state", { sessionId: session.id });
+  return serializeState();
+});
+
+handleTrusted("bb:cancel-route-pack-import", async () => {
+  const session = requireActiveSession();
+  session.pendingRoutePackImport = null;
+  sendEvent("state", { sessionId: session.id });
+  return serializeState();
+});
+
+handleTrusted("bb:apply-route-pack-import", async () => {
+  const session = requireActiveSession();
+  await ensureSessionConfig(session);
+
+  const pendingImport = session.pendingRoutePackImport;
+  const preview = pendingImport?.preview || null;
+  if (!preview?.options) {
+    throw new Error("Preview a route pack before importing it.");
+  }
+  if (preview.readOnly) {
+    throw new Error("This route pack was created by a newer schema and is read-only in this build.");
+  }
+
+  const localOnlyConfig = {
+    creatureLedger: session.config.creatureLedger,
+    monsterArchive: session.config.monsterArchive,
+    playerArchive: session.config.playerArchive,
+    npcArchive: session.config.npcArchive,
+    cavebotPaused: session.config.cavebotPaused,
+    stopAggroHold: session.config.stopAggroHold,
+  };
+  const nextOptions = preview.options;
+  session.pendingRoutePackImport = null;
+  await persistSessionConfig(session, {
+    ...session.config,
+    ...nextOptions,
+    ...localOnlyConfig,
+  }, {
+    routeRenameFrom: null,
+  });
+
+  session.bot.resetRoute(0);
+  session.bot.setOverlayFocusIndex(nextOptions.waypoints?.length ? 0 : null);
+  pushSessionLog(session, `Imported route pack ${preview.packName} (${nextOptions.waypoints?.length || 0} waypoint${nextOptions.waypoints?.length === 1 ? "" : "s"})`);
   return serializeState();
 });
 

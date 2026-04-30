@@ -138,6 +138,183 @@ test("route and targeter skip instead of guessing when required snapshot familie
   assert.equal(trace.records.some((record) => record.owner === "targeter" && record.reason === "snapshot creatures unknown"), true);
 });
 
+function createAoeTarget(id, x, y, extra = {}) {
+  return {
+    id,
+    name: "Dragon",
+    category: "beast",
+    position: { x, y, z: 8 },
+    dx: x - 100,
+    dy: y - 100,
+    dz: 0,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+    ...extra,
+  };
+}
+
+function createAoeSnapshot(overrides = {}) {
+  const targets = overrides.targets || [
+    createAoeTarget(10, 102, 100),
+    createAoeTarget(11, 102, 101),
+    createAoeTarget(12, 103, 100),
+  ];
+  return {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    playerStats: {
+      healthPercent: 100,
+      manaPercent: 90,
+    },
+    currentTarget: targets[0],
+    candidates: targets,
+    visibleCreatures: targets,
+    visiblePlayers: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    ...overrides,
+  };
+}
+
+test("spell caster AoE solver chooses a safe cast tile and explains the cast", () => {
+  const bot = createBot({
+    spellCasterEnabled: true,
+    sharedSpawnMode: "attack-all",
+    spellCasterRules: [
+      {
+        enabled: true,
+        words: "exevo gran mas flam",
+        pattern: "aoe",
+        aoeRadius: 1,
+        targetCategories: ["beast"],
+        minManaPercent: 20,
+        minTargetCount: 3,
+        maxTargetDistance: 6,
+        cooldownMs: 0,
+      },
+    ],
+  });
+
+  const action = bot.chooseSpellCaster(createAoeSnapshot());
+
+  assert.equal(action?.type, "attack-spell");
+  assert.equal(action?.aoe?.reason, "cast");
+  assert.deepEqual(action?.castPosition, { x: 102, y: 100, z: 8 });
+  assert.equal(action?.targetCount, 3);
+});
+
+test("spell caster AoE solver can emit a rune tile action", () => {
+  const bot = createBot({
+    spellCasterEnabled: true,
+    sharedSpawnMode: "attack-all",
+    spellCasterRules: [
+      {
+        enabled: true,
+        runeName: "Great Fireball Rune",
+        pattern: "aoe",
+        aoeRadius: 1,
+        targetCategories: ["beast"],
+        minManaPercent: 20,
+        minTargetCount: 3,
+        maxTargetDistance: 6,
+        cooldownMs: 0,
+      },
+    ],
+  });
+
+  const action = bot.chooseSpellCaster(createAoeSnapshot());
+
+  assert.equal(action?.type, "useItemOnTile");
+  assert.equal(action?.name, "Great Fireball Rune");
+  assert.deepEqual(action?.position, { x: 102, y: 100, z: 8 });
+  assert.equal(action?.aoe?.reason, "cast");
+});
+
+test("AoE solver explains player-safe, count, cooldown, route-rule, and safe-tile skips", () => {
+  const baseRule = {
+    enabled: true,
+    words: "exevo gran mas flam",
+    pattern: "aoe",
+    aoeRadius: 1,
+    targetCategories: ["beast"],
+    minManaPercent: 20,
+    minTargetCount: 3,
+    maxTargetDistance: 6,
+    cooldownMs: 0,
+  };
+
+  const playerSafeBot = createBot({ sharedSpawnMode: "attack-all" });
+  assert.equal(
+    playerSafeBot.solveAoeSpellRule(baseRule, createAoeSnapshot({
+      visiblePlayers: [{ id: 90, name: "Visitor", position: { x: 102, y: 101, z: 8 } }],
+    })).reason,
+    "player",
+  );
+
+  const countBot = createBot({ sharedSpawnMode: "attack-all" });
+  assert.equal(
+    countBot.solveAoeSpellRule(baseRule, createAoeSnapshot({
+      targets: [createAoeTarget(10, 102, 100)],
+    })).reason,
+    "count",
+  );
+
+  const cooldownBot = createBot({ sharedSpawnMode: "attack-all" });
+  cooldownBot.getNow = () => 1_500;
+  cooldownBot.markModuleAction("spellCaster", 0, 1_000);
+  assert.equal(
+    cooldownBot.solveAoeSpellRule({ ...baseRule, cooldownMs: 1_000 }, createAoeSnapshot(), { ruleIndex: 0 }).reason,
+    "cooldown",
+  );
+
+  const routeRuleBot = createBot({
+    sharedSpawnMode: "attack-all",
+    tileRules: [{ x: 102, y: 100, z: 8, policy: "avoid", trigger: "approach" }],
+  });
+  assert.equal(routeRuleBot.solveAoeSpellRule(baseRule, createAoeSnapshot()).reason, "route tile rule");
+
+  const safeTileBot = createBot({ sharedSpawnMode: "attack-all" });
+  assert.equal(
+    safeTileBot.solveAoeSpellRule({ ...baseRule, requireSafeTile: true }, createAoeSnapshot()).reason,
+    "no safe tile",
+  );
+});
+
+test("AoE solver respects target ownership and line of sight", () => {
+  const rule = {
+    enabled: true,
+    words: "adori gran flam",
+    pattern: "aoe",
+    aoeRadius: 0,
+    targetCategories: ["beast"],
+    minManaPercent: 20,
+    minTargetCount: 1,
+    maxTargetDistance: 6,
+    cooldownMs: 0,
+  };
+
+  const ownershipBot = createBot({ sharedSpawnMode: "respect-others" });
+  assert.equal(
+    ownershipBot.solveAoeSpellRule(rule, createAoeSnapshot({
+      targets: [createAoeTarget(10, 102, 100)],
+      visiblePlayers: [{ id: 90, name: "Visitor", position: { x: 102, y: 101, z: 8 } }],
+    })).reason,
+    "target ownership",
+  );
+
+  const lineOfSightBot = createBot({ sharedSpawnMode: "attack-all" });
+  assert.equal(
+    lineOfSightBot.solveAoeSpellRule(rule, createAoeSnapshot({
+      targets: [createAoeTarget(10, 103, 100)],
+      visibleCreatures: [
+        createAoeTarget(10, 103, 100),
+        createAoeTarget(11, 101, 100, { name: "Stone Golem", category: "blocker" }),
+      ],
+    })).reason,
+    "line-of-sight",
+  );
+});
+
 test("friend healer rules require party confidence without suppressing self-heal planning", () => {
   const bot = createBot({
     healerEnabled: true,

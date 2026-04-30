@@ -15,6 +15,10 @@ function normalizeLookup(value = "") {
   return normalizeText(value).toLowerCase();
 }
 
+function uniqueList(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
 function normalizeInteger(value) {
   if (value == null || value === "") {
     return null;
@@ -109,4 +113,75 @@ export function resolveMinibiaItemName(item = {}) {
 
 export function resolveMinibiaItemSlotType(item = {}) {
   return resolveMinibiaItemInfo(item).slotType;
+}
+
+export function classifyMinibiaTileDiagnostic(item = {}) {
+  const info = resolveMinibiaItemInfo(item);
+  const name = normalizeLookup([
+    info.name,
+    item?.tileName,
+    item?.description,
+    item?.category,
+    item?.slotType,
+    item?.weaponType,
+    item?.type?.name,
+    item?.itemType?.name,
+    item?.properties?.name,
+    item?.properties?.description,
+  ].filter(Boolean).join(" "));
+  const categories = [];
+  const reasons = [];
+  const add = (category, reason) => {
+    categories.push(category);
+    reasons.push(reason);
+  };
+
+  if (/\b(?:fire|energy|poison|venom|electric)\b.*\b(?:field|wall|bomb)\b|\b(?:field|wall|bomb)\b.*\b(?:fire|energy|poison|venom|electric)\b/.test(name)) {
+    add("field", "elemental field or field rune name");
+  }
+  if (/\b(?:mushroom|ham|meat|fish|bread|cheese|cookie|egg|carrot|blueberry|food)\b/.test(name)) {
+    add("food", "food-like item name");
+  }
+  if (/\b(?:chair|table|stool|bench|trough|locker|drawer|crate|box|barrel|chest|counter)\b/.test(name)) {
+    add("walkable-furniture", "furniture/container object name");
+  }
+  if (/\b(?:hole|pitfall|trapdoor|manhole|sewer grate)\b/.test(name)) {
+    add("hole", "hole or trapdoor name");
+  }
+  if (/\b(?:stairs?|stairway|ramp)\b/.test(name)) {
+    add("stair", "stair or ramp name");
+  }
+  if (/\bladder\b/.test(name)) {
+    add("ladder", "ladder name");
+  }
+  if (/\b(?:trap(?!door)|snare|spike|mine|pressure ?plate)\b/.test(name)) {
+    add("trap", "trap-like object name");
+  }
+  if (/\b(?:wall|fence|door|gate|pillar|rock|boulder|tree|debris|rubble|statue|anvil|forge)\b/.test(name)) {
+    add("obstacle", "blocking object name");
+  }
+
+  const floorChange = Boolean(
+    item?.floorchange
+    || item?.floorChange
+    || item?.properties?.floorchange
+    || item?.properties?.floorChange
+    || item?.properties?.floorChangeDown
+    || item?.properties?.floorChangeUp
+  );
+  if (floorChange && !categories.some((entry) => ["hole", "stair", "ladder"].includes(entry))) {
+    add("floor-change", "runtime floor-change flag");
+  }
+  if (item?.walkable === false || item?.isWalkable === false || item?.properties?.walkable === false) {
+    add("blocked", "runtime walkable flag is false");
+  }
+
+  return {
+    itemId: info.itemId,
+    name: info.name,
+    categories: uniqueList(categories),
+    reasons: uniqueList(reasons),
+    blocked: categories.includes("obstacle") || categories.includes("trap") || categories.includes("blocked"),
+    floorChange: floorChange || categories.some((entry) => ["hole", "stair", "ladder", "floor-change"].includes(entry)),
+  };
 }

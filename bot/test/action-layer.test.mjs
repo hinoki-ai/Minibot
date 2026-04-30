@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MinibiaTargetBot } from "../lib/bot-core.mjs";
-import { executeAction } from "../lib/action-router.mjs";
+import {
+  evaluateActionBlockCondition,
+  executeAction,
+  executeActionBlock,
+  validateActionBlock,
+} from "../lib/action-router.mjs";
 import { probeActionCapabilities } from "../lib/capability-probe.mjs";
 
 function evaluatePageExpression(expression, {
@@ -487,4 +492,123 @@ test("executeAction routes daily task and progression workflow entry points", as
   assert.equal(workflowResult.ok, true);
   assert.equal(workflowResult.details.actionType, "progressionWorkflow");
   assert.equal(workflowResult.details.workflowLength, 1);
+});
+
+test("executeActionBlock validates and runs deposit sell refill primitives", async () => {
+  const calls = [];
+  const bot = {
+    lastSnapshot: {
+      ready: true,
+      inventory: {
+        items: [
+          { id: 3031, name: "Gold Coin", count: 120 },
+          { id: 237, name: "Strong Mana Potion", count: 5 },
+        ],
+      },
+    },
+    async sayNpcKeyword(action) {
+      calls.push(["npc", action.keyword]);
+      return { ok: true, keyword: action.keyword };
+    },
+    async sellAllOfItem(action) {
+      calls.push(["sell-all", action.name]);
+      return { ok: true, name: action.name };
+    },
+    async buyItem(action) {
+      calls.push(["buy", action.name, action.amount]);
+      return { ok: true, name: action.name, amount: action.amount };
+    },
+  };
+  const block = {
+    steps: [
+      { type: "deposit", amount: "all" },
+      { type: "shopSell", name: "Plate Armor", sellAll: true },
+      {
+        type: "branchIf",
+        condition: {
+          field: "inventory.strong mana potion",
+          op: "lt",
+          value: 20,
+        },
+        then: [
+          { type: "shopBuy", name: "Strong Mana Potion", amount: 15 },
+        ],
+      },
+    ],
+  };
+
+  assert.equal(validateActionBlock(block).ok, true);
+  const result = await executeActionBlock(bot, block);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.completed, true);
+  assert.deepEqual(calls, [
+    ["npc", "deposit all"],
+    ["sell-all", "Plate Armor"],
+    ["buy", "Strong Mana Potion", 15],
+  ]);
+});
+
+test("executeActionBlock pauses failed blocks with step index and reason", async () => {
+  const paused = [];
+  const bot = {
+    async buyItem() {
+      return { ok: false, reason: "trade row missing" };
+    },
+    pauseCavebotForRouteFailure(reason, details) {
+      paused.push({ reason, details });
+      return { ok: false, paused: true, reason, ...details };
+    },
+  };
+
+  const result = await executeActionBlock(bot, {
+    steps: [
+      { type: "shopBuy", name: "Great Fireball Rune", amount: 10 },
+    ],
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.paused, true);
+  assert.equal(result.stepIndex, 0);
+  assert.equal(result.reason, "trade row missing");
+  assert.deepEqual(paused, [
+    {
+      reason: "trade row missing",
+      details: {
+        stepIndex: 0,
+        actionType: "shopBuy",
+        actionBlock: true,
+      },
+    },
+  ]);
+});
+
+test("evaluateActionBlockCondition reads stable runtime fields", () => {
+  const bot = {
+    routeIndex: 7,
+    lastDecisionTrace: {
+      current: {
+        owner: "spellCaster",
+      },
+    },
+    getPositionKey(position) {
+      return `${position.x},${position.y},${position.z}`;
+    },
+  };
+  const snapshot = {
+    playerStats: {
+      healthPercent: 72,
+      manaPercent: 45,
+    },
+    playerPosition: { x: 100, y: 200, z: 7 },
+    visiblePlayers: [{ name: "Visitor" }],
+    visibleNpcs: [{ name: "Sandra" }],
+    recentMessages: [{ text: "You deposited 100 gold." }],
+  };
+
+  assert.equal(evaluateActionBlockCondition({ field: "hpPercent", op: "gte", value: 70 }, { bot, snapshot }), true);
+  assert.equal(evaluateActionBlockCondition({ field: "nearby.players", op: "eq", value: 1 }, { bot, snapshot }), true);
+  assert.equal(evaluateActionBlockCondition({ field: "route.index", op: "eq", value: 7 }, { bot, snapshot }), true);
+  assert.equal(evaluateActionBlockCondition({ field: "recentMessages", op: "contains", value: "deposited" }, { bot, snapshot }), true);
+  assert.equal(evaluateActionBlockCondition({ field: "activeOwner", op: "eq", value: "spellCaster" }, { bot, snapshot }), true);
 });

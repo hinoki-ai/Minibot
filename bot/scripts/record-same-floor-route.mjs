@@ -15,6 +15,7 @@ import {
   listRouteProfiles,
   loadConfig,
   saveConfig,
+  validateRouteConfig,
 } from "../lib/config-store.mjs";
 
 const DEFAULT_CHARACTER_NAME = "Spells Of Regret";
@@ -258,6 +259,248 @@ function discoverTiles(scan, discovered, unsafeTiles) {
   return added;
 }
 
+function normalizeText(value = "") {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeIntentKind(value = "") {
+  const key = normalizeText(value).toLowerCase();
+  if (key === "npc" || key === "npc-open" || key === "travel") return "npc-action";
+  if (key === "trade") return "shop";
+  if (key === "corpse" || key === "loot") return "corpse-pause";
+  if (key === "shovel") return "shovel-hole";
+  if (key === "tool") return "use-item";
+  return key;
+}
+
+function inferIntentPosition(raw = {}, fallbackPosition = null) {
+  return clonePosition(
+    raw.position
+    || raw.targetPosition
+    || raw.sourcePosition
+    || raw.corpsePosition
+    || raw.playerPosition
+    || fallbackPosition,
+  );
+}
+
+function normalizeRecorderIntentHint(raw = {}, fallbackPosition = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const kind = normalizeIntentKind(raw.kind || raw.type || raw.action || "");
+  if (!kind) return null;
+
+  const position = inferIntentPosition(raw, fallbackPosition);
+  const normalized = {
+    kind,
+    reason: normalizeText(raw.reason || raw.message || ""),
+    confidence: normalizeText(raw.confidence || "inferred") || "inferred",
+  };
+  if (position) normalized.position = position;
+
+  for (const key of ["npcName", "keyword", "shopKeyword", "city", "destination", "tool", "itemName", "tileName", "progressionAction"]) {
+    const text = normalizeText(raw[key]);
+    if (text) normalized[key] = text;
+  }
+
+  return normalized;
+}
+
+function getRecorderIntentKey(intent = {}) {
+  return [
+    intent.kind || "",
+    positionKey(intent.position || {}),
+    normalizeText(intent.npcName || "").toLowerCase(),
+    normalizeText(intent.keyword || intent.shopKeyword || intent.city || intent.destination || intent.tool || intent.itemName || intent.tileName || "").toLowerCase(),
+  ].join("|");
+}
+
+export function mergeRecorderIntentHints(existing = [], next = []) {
+  const merged = [];
+  const seen = new Set();
+  for (const intent of [...(Array.isArray(existing) ? existing : []), ...(Array.isArray(next) ? next : [])]) {
+    const normalized = normalizeRecorderIntentHint(intent);
+    if (!normalized) continue;
+    const key = getRecorderIntentKey(normalized);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(normalized);
+  }
+  return merged;
+}
+
+function collectOpenContainers(snapshot = {}) {
+  return [
+    ...(Array.isArray(snapshot?.openContainers) ? snapshot.openContainers : []),
+    ...(Array.isArray(snapshot?.containers) ? snapshot.containers : []),
+    ...(Array.isArray(snapshot?.inventory?.openContainers) ? snapshot.inventory.openContainers : []),
+    ...(Array.isArray(snapshot?.loot?.openContainers) ? snapshot.loot.openContainers : []),
+  ];
+}
+
+function hasBankingText(value = "") {
+  return /\b(?:bank|balance|deposit|withdraw|transfer)\b/i.test(value);
+}
+
+function hasTravelText(value = "") {
+  return /\b(?:travel|sail|passage|city|town|temple|destination|yes)\b/i.test(value);
+}
+
+function classifyFloorIntent(tile = {}) {
+  const text = [
+    tile.tileName,
+    tile.name,
+    tile.tileFloorchange,
+    ...(Array.isArray(tile.items) ? tile.items.map((item) => `${item?.name || ""} ${item?.floorchange || ""}`) : []),
+  ].join(" ");
+
+  if (/\b(?:rope spot|hole|pit|pitfall)\b/i.test(text)) {
+    return { kind: "rope", tool: "rope" };
+  }
+  if (/\b(?:shovel|loose stone pile|sand hole|mound)\b/i.test(text)) {
+    return { kind: "shovel-hole", tool: "shovel" };
+  }
+  if (/\bladder\b/i.test(text)) {
+    return { kind: "ladder" };
+  }
+  if (/\bup\b/i.test(text)) {
+    return { kind: "stairs-up" };
+  }
+  if (/\bdown\b/i.test(text)) {
+    return { kind: "stairs-down" };
+  }
+  if (/\bstairs?\b/i.test(text)) {
+    return { kind: "stairs-down" };
+  }
+  return null;
+}
+
+export function buildRecorderIntentHintsFromSnapshot(snapshot = {}, scan = null) {
+  const playerPosition = clonePosition(snapshot?.playerPosition || scan?.playerPosition);
+  const hints = [];
+  const add = (hint) => {
+    const normalized = normalizeRecorderIntentHint(hint, playerPosition);
+    if (normalized) hints.push(normalized);
+  };
+
+  const dialogue = snapshot?.dialogue && typeof snapshot.dialogue === "object" ? snapshot.dialogue : null;
+  if (dialogue?.open || dialogue?.npcName || Array.isArray(dialogue?.options)) {
+    const npcName = normalizeText(dialogue.npcName);
+    const optionText = [
+      dialogue.prompt,
+      ...(Array.isArray(dialogue.options) ? dialogue.options.map((option) => option?.text || option?.label || option) : []),
+      ...(Array.isArray(dialogue.messages) ? dialogue.messages.map((message) => message?.text || message) : []),
+    ].join(" ");
+    if (hasBankingText(optionText)) {
+      add({ kind: "bank", npcName, reason: "bank dialogue visible", confidence: "inferred" });
+    } else if (dialogue.travelState?.open || hasTravelText(optionText)) {
+      add({ kind: "npc-action", npcName, progressionAction: "travel", reason: "travel dialogue visible", confidence: "inferred" });
+    } else {
+      add({ kind: "npc-action", npcName, progressionAction: "open-dialogue", reason: "npc dialogue visible", confidence: "inferred" });
+    }
+  }
+
+  const trade = snapshot?.trade || snapshot?.shop || snapshot?.npcTrade;
+  if (trade?.open || trade?.visible || trade?.npcName || trade?.shopName) {
+    add({
+      kind: "shop",
+      npcName: normalizeText(trade.npcName || trade.shopName),
+      shopKeyword: normalizeText(trade.keyword || trade.shopKeyword || "trade"),
+      reason: "shop or trade window visible",
+      confidence: "inferred",
+    });
+  }
+
+  const visibleNpcs = [
+    ...(Array.isArray(snapshot?.visibleNpcs) ? snapshot.visibleNpcs : []),
+    ...(Array.isArray(snapshot?.npcs) ? snapshot.npcs : []),
+  ];
+  for (const npc of visibleNpcs) {
+    const npcPosition = clonePosition(npc?.position);
+    if (!npcPosition || !playerPosition || chebyshevDistance(npcPosition, playerPosition) > 2) continue;
+    add({
+      kind: "npc-action",
+      position: npcPosition,
+      npcName: normalizeText(npc?.name),
+      progressionAction: "open-dialogue",
+      reason: "nearby npc while recording",
+      confidence: "low",
+    });
+  }
+
+  for (const container of collectOpenContainers(snapshot)) {
+    const name = normalizeText(container?.name || container?.label || container?.title);
+    if (!/\b(?:dead|corpse|remains|slain|body|carcass|cadaver)\b/i.test(name)) continue;
+    add({
+      kind: "corpse-pause",
+      position: inferIntentPosition(container, playerPosition),
+      itemName: name,
+      reason: "corpse container open while recording",
+      confidence: "inferred",
+    });
+  }
+
+  for (const corpse of Array.isArray(snapshot?.lootableCorpses) ? snapshot.lootableCorpses : []) {
+    add({
+      kind: "corpse-pause",
+      position: corpse.position,
+      itemName: normalizeText(corpse.name),
+      reason: "lootable corpse visible while recording",
+      confidence: "low",
+    });
+  }
+
+  const floorTiles = [
+    ...(Array.isArray(scan?.tiles) ? scan.tiles.filter((tile) => tile?.unsafe) : []),
+    ...(Array.isArray(scan?.unsafeTiles) ? scan.unsafeTiles : []),
+    ...(Array.isArray(snapshot?.tiles) ? snapshot.tiles.filter((tile) => tile?.unsafe) : []),
+  ];
+  for (const tile of floorTiles) {
+    const floorIntent = classifyFloorIntent(tile);
+    if (!floorIntent) continue;
+    add({
+      ...floorIntent,
+      position: tile,
+      tileName: normalizeText(tile.tileName || tile.name),
+      reason: "floor-change or tool tile visible while recording",
+      confidence: "inferred",
+    });
+  }
+
+  return mergeRecorderIntentHints([], hints);
+}
+
+export function attachRecorderIntentHintsToWaypoints(waypoints = [], hints = [], { maxDistance = 2 } = {}) {
+  const normalizedWaypoints = (Array.isArray(waypoints) ? waypoints : [])
+    .map((waypoint) => ({ ...waypoint }));
+  const normalizedHints = mergeRecorderIntentHints([], hints);
+  if (!normalizedWaypoints.length || !normalizedHints.length) {
+    return normalizedWaypoints;
+  }
+
+  for (const hint of normalizedHints) {
+    if (!hint.position) continue;
+    let bestIndex = -1;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    normalizedWaypoints.forEach((waypoint, index) => {
+      const distance = chebyshevDistance(waypoint, hint.position);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    });
+    if (bestIndex < 0 || bestDistance > maxDistance) continue;
+
+    const waypoint = normalizedWaypoints[bestIndex];
+    const existing = Array.isArray(waypoint.recorderIntents) ? waypoint.recorderIntents : [];
+    waypoint.recorderIntents = mergeRecorderIntentHints(existing, [{
+      ...hint,
+      waypointDistance: bestDistance,
+    }]);
+  }
+
+  return normalizedWaypoints;
+}
+
 function getStepDirection(from, to) {
   return {
     dx: Math.sign(Number(to?.x) - Number(from?.x)),
@@ -340,6 +583,101 @@ export function buildRouteWaypoints(pathPositions, recordStep = DEFAULT_ROUTE_SP
     type: "walk",
     label: formatGeneratedWaypointLabel(index),
   }));
+}
+
+export function buildRecordedRouteDiagnostics({
+  routeName = "",
+  waypoints = [],
+  unsafeTiles = new Map(),
+  traversalAnalysis = null,
+  completed = false,
+  routeSaveReason = "",
+  intentHints = [],
+} = {}) {
+  const normalizedUnsafeTiles = unsafeTiles instanceof Map
+    ? [...unsafeTiles.values()]
+    : Array.isArray(unsafeTiles)
+      ? unsafeTiles
+      : [];
+  const warnings = [];
+  const addWarning = (code, message, detail = {}) => {
+    warnings.push({
+      code,
+      message,
+      ...detail,
+    });
+  };
+
+  if (!completed) {
+    addWarning("recording-incomplete", routeSaveReason || "Recorder did not prove a complete operational loop.");
+  }
+  if (normalizedUnsafeTiles.length) {
+    addWarning(
+      "floor-change-tiles-excluded",
+      `${normalizedUnsafeTiles.length} visible floor-change or unsafe tile${normalizedUnsafeTiles.length === 1 ? "" : "s"} were excluded from the same-floor recording.`,
+      {
+        count: normalizedUnsafeTiles.length,
+        positions: normalizedUnsafeTiles
+          .slice(0, 12)
+          .map((tile) => ({ x: tile.x, y: tile.y, z: tile.z, name: tile.tileName || "" })),
+      },
+    );
+  }
+  if (traversalAnalysis?.unreachableGraphTileKeys?.length) {
+    addWarning(
+      "disconnected-visible-safe-tiles",
+      `${traversalAnalysis.unreachableGraphTileKeys.length} visible safe tile${traversalAnalysis.unreachableGraphTileKeys.length === 1 ? "" : "s"} were disconnected from the operational route graph.`,
+      {
+        count: traversalAnalysis.unreachableGraphTileKeys.length,
+        tileKeys: traversalAnalysis.unreachableGraphTileKeys.slice(0, 20),
+      },
+    );
+  }
+  if (traversalAnalysis?.missingOperationalTileKeys?.length) {
+    addWarning(
+      "missing-operational-tiles",
+      `${traversalAnalysis.missingOperationalTileKeys.length} reachable operational tile${traversalAnalysis.missingOperationalTileKeys.length === 1 ? "" : "s"} were not covered by the traversal.`,
+      {
+        count: traversalAnalysis.missingOperationalTileKeys.length,
+        tileKeys: traversalAnalysis.missingOperationalTileKeys.slice(0, 20),
+      },
+    );
+  }
+  const normalizedIntentHints = mergeRecorderIntentHints([], intentHints);
+  if (normalizedIntentHints.length) {
+    const kinds = Array.from(new Set(normalizedIntentHints.map((intent) => intent.kind))).sort();
+    addWarning(
+      "recorder-intent-hints",
+      `${normalizedIntentHints.length} structured recorder intent hint${normalizedIntentHints.length === 1 ? "" : "s"} were attached to the route knowledge.`,
+      {
+        count: normalizedIntentHints.length,
+        kinds,
+      },
+    );
+  }
+
+  const routeConfig = {
+    cavebotName: routeName || "recorded-route",
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypoints,
+  };
+  const validation = validateRouteConfig(routeConfig, {
+    sourceName: routeName || "recorded-route",
+    rawConfig: routeConfig,
+  });
+
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    routeName,
+    waypointCount: waypoints.length,
+    completed,
+    routeSaveReason,
+    warnings,
+    intentHints: normalizedIntentHints,
+    validation,
+  };
 }
 
 function getStableEdgeKey(left, right) {
@@ -494,6 +832,8 @@ function buildKnowledgePayload({
   operationalTraversal,
   waypoints,
   traversalAnalysis,
+  diagnostics,
+  recorderIntentHints = [],
 }) {
   return {
     characterName,
@@ -519,6 +859,8 @@ function buildKnowledgePayload({
     disconnectedVisibleSafeTileCount: traversalAnalysis.unreachableGraphTileKeys.length,
     unreachableGraphTileKeys: traversalAnalysis.unreachableGraphTileKeys,
     waypointCount: waypoints.length,
+    diagnostics,
+    recorderIntentHints: mergeRecorderIntentHints([], recorderIntentHints),
     discoveredSafeTiles: [...discovered.values()].sort((left, right) => (
       left.z - right.z || left.y - right.y || left.x - right.x
     )),
@@ -947,6 +1289,10 @@ async function main() {
     const visited = new Set();
     const failedTargets = new Map();
     const pathPositions = [clonePosition(initialSnapshot.playerPosition || initialScan.playerPosition)];
+    let recorderIntentHints = mergeRecorderIntentHints(
+      [],
+      buildRecorderIntentHintsFromSnapshot(initialSnapshot, initialScan),
+    );
     let stagnantCycles = 0;
     discoverTiles(initialScan, discovered, unsafeTiles);
 
@@ -980,6 +1326,10 @@ async function main() {
         const scan = await bot.cdp.evaluate(buildVisibleFloorExpression());
         if (scan?.ok) {
           const added = discoverTiles(scan, discovered, unsafeTiles);
+          recorderIntentHints = mergeRecorderIntentHints(
+            recorderIntentHints,
+            buildRecorderIntentHintsFromSnapshot(bot.lastSnapshot || {}, scan),
+          );
           if (added > 0) {
             stagnantCycles = 0;
             log(`Discovered ${added} additional safe tiles while idle.`, options);
@@ -1022,6 +1372,10 @@ async function main() {
       const postScan = await bot.cdp.evaluate(buildVisibleFloorExpression()).catch(() => null);
       if (postScan?.ok) {
         const added = discoverTiles(postScan, discovered, unsafeTiles);
+        recorderIntentHints = mergeRecorderIntentHints(
+          recorderIntentHints,
+          buildRecorderIntentHintsFromSnapshot(bot.lastSnapshot || {}, postScan),
+        );
         if (added > 0) {
           log(`Discovered ${added} new safe tiles after reaching ${targetKey}`, options);
         }
@@ -1043,6 +1397,10 @@ async function main() {
     }
 
     const endSnapshot = await bot.refresh({ emitSnapshot: false });
+    recorderIntentHints = mergeRecorderIntentHints(
+      recorderIntentHints,
+      buildRecorderIntentHintsFromSnapshot(endSnapshot, null),
+    );
     let finalPosition = clonePosition(endSnapshot.playerPosition);
 
     if (!interruptedBy && !samePosition(finalPosition, startPosition)) {
@@ -1065,15 +1423,22 @@ async function main() {
         log(`Return to start ended with ${returnResult.reason}`, options);
       } else {
         finalPosition = clonePosition(returnResult.currentPosition);
+        recorderIntentHints = mergeRecorderIntentHints(
+          recorderIntentHints,
+          buildRecorderIntentHintsFromSnapshot(bot.lastSnapshot || {}, null),
+        );
       }
     }
 
     const terminalLeafKeys = computeTerminalLeafKeys(discovered, startPosition);
     const traversalAnalysis = analyzeOperationalTraversal(startPosition, discovered, terminalLeafKeys);
     const operationalTraversal = traversalAnalysis.traversal.filter((position) => Number(position?.z) === startFloor);
-    const waypoints = buildRouteWaypoints(
-      operationalTraversal,
-      DEFAULT_ROUTE_SPACING,
+    const waypoints = attachRecorderIntentHintsToWaypoints(
+      buildRouteWaypoints(
+        operationalTraversal,
+        DEFAULT_ROUTE_SPACING,
+      ),
+      recorderIntentHints,
     );
 
     const completed = !interruptedBy
@@ -1095,6 +1460,15 @@ async function main() {
           : waypoints.length < 2
             ? "fewer than two operational waypoints"
             : "recorder ended before a complete loop was proven";
+    const diagnostics = buildRecordedRouteDiagnostics({
+      routeName,
+      waypoints,
+      unsafeTiles,
+      traversalAnalysis,
+      completed,
+      routeSaveReason,
+      intentHints: recorderIntentHints,
+    });
 
     const knowledgePayload = buildKnowledgePayload({
       characterName: options.characterName,
@@ -1117,6 +1491,8 @@ async function main() {
       operationalTraversal,
       waypoints,
       traversalAnalysis,
+      diagnostics,
+      recorderIntentHints,
     });
     await saveKnowledgePayload(knowledgePath, knowledgePayload);
 
@@ -1152,7 +1528,10 @@ async function main() {
     if (knowledgePath) {
       log(`Saved route knowledge to ${knowledgePath}`, options);
     }
-    log(`Discovered ${discovered.size} safe tiles and ignored ${unsafeTiles.size} unsafe tiles on floor ${startFloor}`, options);
+      log(`Discovered ${discovered.size} safe tiles and ignored ${unsafeTiles.size} unsafe tiles on floor ${startFloor}`, options);
+    if (diagnostics.validation?.summary?.warningCount || diagnostics.warnings.length) {
+      log(`Recorder diagnostics: ${diagnostics.validation?.summary?.warningCount || 0} validation warning(s), ${diagnostics.warnings.length} recorder warning(s)`, options);
+    }
     log(`Profile ${profileKey} now points to "${routeName}"`, options);
   } finally {
     process.removeListener("SIGINT", onInterrupt);

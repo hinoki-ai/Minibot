@@ -11,6 +11,7 @@ const routeLibrarySelect = document.getElementById("route-library-select");
 const routeLibraryMeta = document.getElementById("route-library-meta");
 const routeLibraryQuickSelect = document.getElementById("route-library-quick-select");
 const routeLibraryQuickMeta = document.getElementById("route-library-quick-meta");
+const routePackPreview = document.getElementById("route-pack-preview");
 const accountSelect = document.getElementById("account-select");
 const accountMeta = document.getElementById("account-meta");
 const accountIdField = document.getElementById("account-id");
@@ -212,6 +213,7 @@ const cavebotPauseOpenButton = document.getElementById("quick-open-cavebot-pause
 const cavebotMasterStopSummary = document.getElementById("summary-cavebot-master-stop");
 const cavebotMasterStopDetail = document.getElementById("summary-cavebot-master-stop-detail");
 const compactCavebotMasterStopSummary = document.getElementById("compact-cavebot-master-stop");
+const partyFollowSummaryHelpers = globalThis.MinibotPartyFollowSummary || {};
 
 const quickButtons = {
   autowalk: document.getElementById("quick-toggle-autowalk"),
@@ -292,6 +294,10 @@ const actionButtons = {
   newBlankRoute: document.getElementById("new-blank-route"),
   loadRoute: document.getElementById("load-route"),
   loadRouteQuick: document.getElementById("load-route-quick"),
+  importRoutePack: document.getElementById("import-route-pack"),
+  exportRoutePack: document.getElementById("export-route-pack"),
+  applyRoutePackImport: document.getElementById("apply-route-pack-import"),
+  cancelRoutePackImport: document.getElementById("cancel-route-pack-import"),
   moveWaypointUp: document.getElementById("move-waypoint-up"),
   moveWaypointDown: document.getElementById("move-waypoint-down"),
   moveTileRuleUp: document.getElementById("move-tile-rule-up"),
@@ -1155,6 +1161,48 @@ const MODULE_RULE_SCHEMAS = {
         placeholder: "God Minibia\nTroublemaker",
         help: "One name per line or comma-separated. Exact names only.",
       },
+      {
+        key: "alarmsProtectorEnabled",
+        label: "Protector",
+        type: "checkbox",
+        help: "Promotes runtime alarms into route or targeter pauses when the selected actions are enabled.",
+      },
+      {
+        key: "alarmsLowHealthPercent",
+        label: "Low HP %",
+        type: "number",
+        help: "Runtime protector alarm threshold for critical health.",
+      },
+      {
+        key: "alarmsLowManaPercent",
+        label: "Low MP %",
+        type: "number",
+        help: "Runtime protector alarm threshold for low mana.",
+      },
+      {
+        key: "alarmsLowSupplyCount",
+        label: "Low supplies",
+        type: "number",
+        help: "Warn when the lowest potion, rune, or ammo stack reaches this count.",
+      },
+      {
+        key: "alarmsPauseRoute",
+        label: "Pause route",
+        type: "checkbox",
+        help: "Protector alarms pause route movement while healing and utility modules remain live.",
+      },
+      {
+        key: "alarmsStopTargeter",
+        label: "Stop targeter",
+        type: "checkbox",
+        help: "Protector alarms hold new targeting until acknowledged or resumed.",
+      },
+      {
+        key: "alarmsRequireAcknowledgement",
+        label: "Require ack",
+        type: "checkbox",
+        help: "Keep protector pauses active until the operator acknowledges them.",
+      },
     ],
   },
   reconnect: {
@@ -1840,6 +1888,13 @@ const MODULE_RULE_FIELD_LABELS = {
   alarmsBlacklistRadiusSqm: "Blacklist range sqm",
   alarmsBlacklistFloorRange: "Blacklist floors",
   alarmsBlacklistNames: "Blacklist names",
+  alarmsProtectorEnabled: "Protector",
+  alarmsLowHealthPercent: "Low HP %",
+  alarmsLowManaPercent: "Low MP %",
+  alarmsLowSupplyCount: "Low supplies",
+  alarmsPauseRoute: "Pause route",
+  alarmsStopTargeter: "Stop targeter",
+  alarmsRequireAcknowledgement: "Require ack",
   reconnectRetryDelayMs: "Retry delay ms",
   reconnectMaxAttempts: "Attempt limit",
   ringAutoReplaceItemName: "Replacement ring",
@@ -4467,6 +4522,10 @@ function formatFollowTrainRoleLabel(role = "", { pilot = false } = {}) {
 }
 
 function formatFollowTrainStateLabel(status = null) {
+  if (typeof partyFollowSummaryHelpers.formatFollowTrainStateLabel === "function") {
+    return partyFollowSummaryHelpers.formatFollowTrainStateLabel(status);
+  }
+
   if (status?.pilot) return "Pilot";
   const stateKey = String(status?.currentState || "").trim().toUpperCase();
   switch (stateKey) {
@@ -4871,6 +4930,7 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
   ensureFollowTrainAutoChainDraft(modulesState);
   const { characterEntries, playerEntries } = buildFollowTrainSourceEntries(modulesState);
   const { chain, aggressiveCount, passiveCount } = buildFollowTrainRoleMetrics(modulesState);
+  const sharedSummary = getPartySharedSummary(state, modulesState);
   const manualField = getModuleOptionFieldSpec("partyFollow", "partyFollowManualPlayers");
   const distanceField = getModuleOptionFieldSpec("partyFollow", "partyFollowDistance");
   const combatModeField = getModuleOptionFieldSpec("partyFollow", "partyFollowCombatMode");
@@ -4933,10 +4993,28 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
     aggressiveCount ? "attack" : "neutral",
   )}
             ${renderFollowTrainMetricCard(
-    "Passive",
-    String(passiveCount),
-    "Hold line for sio or support",
-    passiveCount ? "support" : "neutral",
+            "Passive",
+            String(passiveCount),
+            "Hold line for sio or support",
+            passiveCount ? "support" : "neutral",
+  )}
+            ${renderFollowTrainMetricCard(
+    "Team HP",
+    sharedSummary.health.headline,
+    sharedSummary.health.detail,
+    sharedSummary.health.criticalNames?.length ? "attack" : "support",
+  )}
+            ${renderFollowTrainMetricCard(
+    "Supplies",
+    sharedSummary.supply.headline,
+    sharedSummary.supply.detail,
+    sharedSummary.supply.hasCounts ? "route" : "neutral",
+  )}
+            ${renderFollowTrainMetricCard(
+    "Loot",
+    sharedSummary.loot.headline,
+    sharedSummary.loot.detail,
+    sharedSummary.loot.hasLoot ? "pilot" : "neutral",
   )}
           </div>
           <div class="follow-train-workspace">
@@ -4949,7 +5027,10 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
             <div class="follow-train-status-card">
               <span>Current Chain</span>
               <strong>${escapeHtml(formatFollowTrainHeadline(chain))}</strong>
-              <small>${escapeHtml(formatFollowTrainDetail(chain, modulesState?.partyFollowDistance))}</small>
+              <small>${escapeHtml([
+    formatFollowTrainDetail(chain, modulesState?.partyFollowDistance),
+    sharedSummary.inline,
+  ].filter(Boolean).join(" / "))}</small>
             </div>
             ${distanceField ? renderModuleOptionField("partyFollow", distanceField, modulesState?.partyFollowDistance) : ""}
             ${combatModeField ? renderModuleOptionField("partyFollow", combatModeField, modulesState?.partyFollowCombatMode) : ""}
@@ -5874,6 +5955,7 @@ function getSessionAlertFlags(session) {
     .filter((entry) => isSessionVisiblePlayerSkulled(entry))
     .map((entry) => entry.name);
   const playerAlarmState = getSessionPlayerAlarmState(session, alarmSettings);
+  const protectorActive = session?.protectorStatus?.active === true && session?.protectorStatus?.acknowledged !== true;
   const hostilePlayers = normalizeMonsterNames([
     ...playersTargetingSelf,
     ...staffPlayers,
@@ -5895,7 +5977,7 @@ function getSessionAlertFlags(session) {
     ? "death"
     : hasHostilePlayers
       ? "hostile"
-      : (stale || lowHealth || hasPlayers)
+      : (protectorActive || stale || lowHealth || hasPlayers)
         ? "emergency"
         : null;
   const audioAlertKind = dead
@@ -5904,7 +5986,7 @@ function getSessionAlertFlags(session) {
       ? hostileAudioKind
       : playerAlarmState.audibleKind
         ? playerAlarmState.audibleKind
-        : (stale || lowHealth)
+        : (protectorActive || stale || lowHealth)
           ? "emergency"
           : null;
 
@@ -5922,6 +6004,7 @@ function getSessionAlertFlags(session) {
     skulledPlayers,
     blacklistedPlayers: playerAlarmState.blacklistedPlayers,
     hostilePlayers,
+    protectorActive,
     alertKind,
     audioAlertKind,
     emergency: Boolean(alertKind),
@@ -6434,6 +6517,10 @@ function formatTextListSummary(value, {
 }
 
 function formatFollowTrainHeadline(value) {
+  if (typeof partyFollowSummaryHelpers.formatFollowTrainHeadline === "function") {
+    return partyFollowSummaryHelpers.formatFollowTrainHeadline(value);
+  }
+
   const chain = normalizeTextListSummary(value);
   if (!chain.length) {
     return "No chain";
@@ -6447,6 +6534,10 @@ function formatFollowTrainHeadline(value) {
 }
 
 function formatFollowTrainDetail(value, spacing = 0) {
+  if (typeof partyFollowSummaryHelpers.formatFollowTrainDetail === "function") {
+    return partyFollowSummaryHelpers.formatFollowTrainDetail(value, spacing);
+  }
+
   const chain = normalizeTextListSummary(value);
   const gap = Math.max(0, Math.trunc(Number(spacing) || 0));
 
@@ -6455,6 +6546,44 @@ function formatFollowTrainDetail(value, spacing = 0) {
   }
 
   return `Pilot ${chain[0]} / gap ${gap} sqm`;
+}
+
+function getPartySharedSummary(sourceState = state, options = sourceState?.options || {}) {
+  if (typeof partyFollowSummaryHelpers.buildPartySharedSummary === "function") {
+    return partyFollowSummaryHelpers.buildPartySharedSummary({
+      state: sourceState,
+      options,
+    });
+  }
+
+  return {
+    chain: normalizeTextListSummary(options?.partyFollowMembers),
+    members: [],
+    liveCount: 0,
+    runningCount: 0,
+    expectedCount: 0,
+    health: {
+      averagePercent: null,
+      minimumPercent: null,
+      criticalNames: [],
+      headline: "HP unknown",
+      detail: "No live chain members",
+      inline: "",
+    },
+    supply: {
+      hasCounts: false,
+      headline: "Unknown",
+      detail: "No shared supply counts",
+      inline: "",
+    },
+    loot: {
+      hasLoot: false,
+      headline: "No loot",
+      detail: "No shared loot yet",
+      inline: "",
+    },
+    inline: "",
+  };
 }
 
 function getResolvedTrainerPartnerName(modulesState = ensureModulesDraft(), sourceState = state) {
@@ -7804,6 +7933,14 @@ function formatModuleCurrentLine(moduleKey, rules = [], modulesState = null) {
         if (settings.blacklist.enabled) {
           segments.push(`Blacklist ${formatAlarmScope(settings.blacklist.radiusSqm, settings.blacklist.floorRange)} / ${settings.blacklist.names.length} name${settings.blacklist.names.length === 1 ? "" : "s"}`);
         }
+        if (sourceState?.alarmsProtectorEnabled) {
+          const protectorActions = [
+            sourceState.alarmsPauseRoute ? "pause route" : "",
+            sourceState.alarmsStopTargeter ? "stop targeter" : "",
+            sourceState.alarmsRequireAcknowledgement ? "ack" : "",
+          ].filter(Boolean);
+          segments.push(`Protector ${protectorActions.length ? protectorActions.join(" + ") : "monitor"}`);
+        }
 
         return segments.length
           ? segments.join(" | ")
@@ -8068,6 +8205,13 @@ function cloneModuleOptions(options = {}) {
     alarmsBlacklistNames: cloneValue(options.alarmsBlacklistNames || []),
     alarmsBlacklistRadiusSqm: Number(options.alarmsBlacklistRadiusSqm) || 0,
     alarmsBlacklistFloorRange: Number(options.alarmsBlacklistFloorRange) || 0,
+    alarmsProtectorEnabled: Boolean(options.alarmsProtectorEnabled),
+    alarmsLowHealthPercent: Number(options.alarmsLowHealthPercent) || 0,
+    alarmsLowManaPercent: Number(options.alarmsLowManaPercent) || 0,
+    alarmsLowSupplyCount: Number(options.alarmsLowSupplyCount) || 0,
+    alarmsPauseRoute: Boolean(options.alarmsPauseRoute),
+    alarmsStopTargeter: Boolean(options.alarmsStopTargeter),
+    alarmsRequireAcknowledgement: Boolean(options.alarmsRequireAcknowledgement),
     reconnectEnabled: Boolean(options.reconnectEnabled),
     reconnectRetryDelayMs: Number(options.reconnectRetryDelayMs) || 0,
     reconnectMaxAttempts: Number(options.reconnectMaxAttempts) || 0,
@@ -10129,6 +10273,7 @@ function getTargetingEffectiveState(options = state?.options || {}, sourceState 
 
 function getPartyFollowEffectiveState(options = state?.options || {}, sourceState = state) {
   const followContext = getFollowTrainRuntimeContext(sourceState, options);
+  const sharedSummary = getPartySharedSummary(sourceState, options);
   const enabled = Boolean(options?.partyFollowEnabled);
   const shortLabel = !enabled
     ? "Off"
@@ -10148,7 +10293,7 @@ function getPartyFollowEffectiveState(options = state?.options || {}, sourceStat
       : "Off",
     shortLabel,
     detail: enabled
-      ? `${formatFollowTrainDetail(options?.partyFollowMembers, options?.partyFollowDistance)}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
+      ? `${formatFollowTrainDetail(options?.partyFollowMembers, options?.partyFollowDistance)}${sharedSummary.inline ? ` / ${sharedSummary.inline}` : ""}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
       : "No follow chain active",
   };
 }
@@ -11645,6 +11790,52 @@ function renderRouteValidation(validation = getActiveRouteValidation()) {
   routeValidationSummary.textContent = text;
   routeValidationSummary.title = text;
   routeValidationSummary.dataset.tone = getRouteValidationTone(validation) || "clear";
+}
+
+function renderRoutePackImportPreview(preview = state?.routePackImportPreview || null) {
+  if (!routePackPreview) {
+    return;
+  }
+
+  const hasPreview = Boolean(preview);
+  routePackPreview.hidden = !hasPreview;
+  if (actionButtons.applyRoutePackImport) {
+    actionButtons.applyRoutePackImport.hidden = !hasPreview;
+    actionButtons.applyRoutePackImport.disabled = preview?.readOnly === true;
+  }
+  if (actionButtons.cancelRoutePackImport) {
+    actionButtons.cancelRoutePackImport.hidden = !hasPreview;
+  }
+  if (!hasPreview) {
+    routePackPreview.textContent = "";
+    routePackPreview.title = "";
+    return;
+  }
+
+  const validation = preview.validation || null;
+  const { errorCount, warningCount } = getRouteValidationIssueCounts(validation);
+  const summary = preview.summary || {};
+  const diff = preview.diff || {};
+  const warnings = Array.isArray(preview.migrationWarnings) ? preview.migrationWarnings : [];
+  const firstChanges = Array.isArray(diff.changes) ? diff.changes.slice(0, 4) : [];
+  const status = preview.readOnly
+    ? "read-only"
+    : errorCount
+      ? `${errorCount} validation error${errorCount === 1 ? "" : "s"}`
+      : warningCount
+        ? `${warningCount} validation warning${warningCount === 1 ? "" : "s"}`
+        : "validation clear";
+  const parts = [
+    `<strong>${escapeHtml(preview.packName || "Route pack")}</strong>`,
+    `${Number(summary.waypointCount) || 0} wp`,
+    `${Number(summary.tileRuleCount) || 0} rules`,
+    `${Number(diff.changeCount) || 0} change${Number(diff.changeCount) === 1 ? "" : "s"}`,
+    status,
+    ...warnings.slice(0, 2).map((entry) => escapeHtml(entry)),
+    ...firstChanges.map((entry) => `${escapeHtml(entry.scope || "options")}.${escapeHtml(entry.key || "")}: ${escapeHtml(entry.before || "-")} -> ${escapeHtml(entry.after || "-")}`),
+  ];
+  routePackPreview.innerHTML = parts.filter(Boolean).join(" / ");
+  routePackPreview.title = routePackPreview.textContent || "";
 }
 
 function getDashboardRenderKey(
@@ -14678,6 +14869,7 @@ function getBotTabsRenderKey(sessions = state?.sessions || [], activeId = String
       alertFlags.visiblePlayers.join(","),
       alertFlags.playersTargetingSelf.join(","),
       alertFlags.skulledPlayers.join(","),
+      alertFlags.protectorActive ? 1 : 0,
     ].join(":");
   }).join("|")}`;
 }
@@ -14760,6 +14952,8 @@ function renderBotTabs() {
               ? `Skulled players visible: ${alertFlags.skulledPlayers.join(", ")}`
               : alertFlags.stale
                 ? "session updates stalled"
+                : alertFlags.protectorActive
+                  ? "protector alarm active"
                 : alertFlags.lowHealth
                   ? `critical health below ${SESSION_EMERGENCY_HEALTH_PERCENT}%`
                   : alertFlags.hasPlayers
@@ -15375,6 +15569,7 @@ function renderSummarySheets() {
   const reconnectRuntime = getReconnectRuntimeStatus(options);
   const trainerState = getModuleEffectiveState("trainer", options, state);
   const followContext = getFollowTrainRuntimeContext(state, options);
+  const sharedPartySummary = getPartySharedSummary(state, options);
   setTextContent(
     summaryFields.trainer,
     trainerState.state === "blocked"
@@ -15425,7 +15620,7 @@ function renderSummarySheets() {
   setTextContent(
     summaryFields.partyFollowDetail,
     options.partyFollowEnabled
-      ? `${formatFollowTrainDetail(partyFollowMembers, options.partyFollowDistance)}${followTrainStatus?.active || followTrainStatus?.pilot
+      ? `${formatFollowTrainDetail(partyFollowMembers, options.partyFollowDistance)}${sharedPartySummary.inline ? ` / ${sharedPartySummary.inline}` : ""}${followTrainStatus?.active || followTrainStatus?.pilot
         ? ` / ${formatFollowTrainStateLabel(followTrainStatus)}${followTrainStatus?.leaderName ? ` -> ${followTrainStatus.leaderName}` : ""}`
         : ""}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
       : "No follow chain active",
@@ -16665,6 +16860,7 @@ function renderAutowalk({ liveOnly = false } = {}) {
     renderAvoidFieldControls(preserveRouteDraft ? getAvoidFieldDraft(options) : options);
     renderRouteFileInfo(state.routeProfile);
     renderRouteValidation();
+    renderRoutePackImportPreview();
     renderRouteLibrary();
   }
 
@@ -17057,6 +17253,94 @@ function getActiveDecisionTrace() {
     || null;
 }
 
+function getActiveRuntimeReport(key = "") {
+  const activeSession = (state?.sessions || []).find((session) => (
+    String(session.id || "") === String(state?.activeSessionId || "")
+  )) || null;
+  return activeSession?.[key]
+    || state?.snapshot?.[key]
+    || null;
+}
+
+function formatGoldValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "-";
+  return `${Math.round(parsed)} gp`;
+}
+
+function renderHuntLedgerMetrics() {
+  const ledger = getActiveRuntimeReport("huntLedger");
+  if (!ledger) return "";
+
+  const capacity = ledger.capacityDecision || {};
+  return `
+    <div class="runtime-metric">
+      <span>Hunt Ledger</span>
+      <strong>${escapeHtml(`${Math.max(0, Number(ledger.kills) || 0)} kills`)}</strong>
+      <small>${escapeHtml(`${formatGoldValue(ledger.lootGoldValue)} loot / ${formatGoldValue(ledger.profitPerHour)} profit h`)}</small>
+    </div>
+    <div class="runtime-metric">
+      <span>Loot Rules</span>
+      <strong>${escapeHtml(capacity.action || "continue")}</strong>
+      <small>${escapeHtml(capacity.reason || `${Math.max(0, Number(ledger.unknownValueItems?.length) || 0)} unknown values`)}</small>
+    </div>
+  `;
+}
+
+function renderTargetScoreMetrics() {
+  const scoring = getActiveRuntimeReport("targetScoring");
+  const candidates = Array.isArray(scoring?.candidates) ? scoring.candidates.slice(0, 3) : [];
+  if (!candidates.length) return "";
+
+  return `
+    <div class="runtime-metric">
+      <span>Target Scores</span>
+      <strong>${escapeHtml(scoring.selectedTargetName || candidates[0]?.name || "No target")}</strong>
+      <small>${escapeHtml(candidates.map((entry) => `${entry.name} ${Math.round(Number(entry.score) || 0)}`).join(" / "))}</small>
+    </div>
+    <div class="runtime-metric">
+      <span>Stance Intent</span>
+      <strong>${escapeHtml(scoring.selectedMovementIntent || candidates[0]?.movementIntent || "hold")}</strong>
+      <small>${escapeHtml(candidates[0]?.skippedReasons?.length ? `Top skip: ${candidates[0].skippedReasons.join(", ")}` : "Top rows are scored from profile, danger, HP, distance, reachability, ownership, and route role")}</small>
+    </div>
+  `;
+}
+
+function renderProtectorMetrics() {
+  const protector = getActiveRuntimeReport("protectorStatus");
+  if (!protector?.active) return "";
+
+  const alarms = Array.isArray(protector.activeAlarms) ? protector.activeAlarms : [];
+  const headline = alarms[0]?.type || "alarm";
+  const detail = alarms.map((alarm) => alarm.reason || alarm.target || alarm.type).filter(Boolean).slice(0, 3).join(" / ");
+  const canAck = protector.acknowledgementRequired || protector.pausedModules?.length;
+  return `
+    <div class="runtime-metric protector-runtime-metric">
+      <span>Protector</span>
+      <strong>${escapeHtml(protector.acknowledged ? "Acknowledged" : headline)}</strong>
+      <small>${escapeHtml(detail || "active")}</small>
+      ${canAck ? '<button type="button" class="btn mini" data-protector-ack>Acknowledge</button>' : ""}
+    </div>
+  `;
+}
+
+function renderRuntimeDiagnosticsMetrics() {
+  const report = getActiveRuntimeReport("runtimeDiagnostics");
+  const diagnostics = Array.isArray(report?.diagnostics) ? report.diagnostics.slice(0, 3) : [];
+  if (!diagnostics.length) return "";
+
+  const strongest = diagnostics.find((entry) => entry.severity === "error")
+    || diagnostics.find((entry) => entry.severity === "warning")
+    || diagnostics[0];
+  return `
+    <div class="runtime-metric">
+      <span>Diagnostics</span>
+      <strong>${escapeHtml(humanizeIdentifier(strongest?.code || strongest?.severity || "notice"))}</strong>
+      <small>${escapeHtml(diagnostics.map((entry) => entry.message || entry.code).filter(Boolean).join(" / "))}</small>
+    </div>
+  `;
+}
+
 function formatDecisionOwner(owner = "") {
   const text = humanizeIdentifier(owner || "runtime");
   return text ? toSentenceCase(text) : "Runtime";
@@ -17104,6 +17388,10 @@ function renderDecisionTrace() {
     current,
     blocker,
     records: records.map((record) => [record.owner, record.state, record.reason, record.action?.type, record.action?.label]),
+    ledger: getActiveRuntimeReport("huntLedger"),
+    scoring: getActiveRuntimeReport("targetScoring"),
+    protector: getActiveRuntimeReport("protectorStatus"),
+    diagnostics: getActiveRuntimeReport("runtimeDiagnostics"),
   });
 
   if (decisionTraceRenderedKey === renderKey) {
@@ -17138,6 +17426,10 @@ function renderDecisionTrace() {
       <small>${escapeHtml(formatDecisionRecord(blocker, "No active blocker"))}</small>
     </div>
     ${rows}
+    ${renderProtectorMetrics()}
+    ${renderRuntimeDiagnosticsMetrics()}
+    ${renderHuntLedgerMetrics()}
+    ${renderTargetScoreMetrics()}
   `;
   decisionTraceRenderedKey = renderKey;
 }
@@ -17800,6 +18092,13 @@ function modulesPayload() {
     alarmsBlacklistNames: normalizeTextListSummary(draft.alarmsBlacklistNames).join("\n"),
     alarmsBlacklistRadiusSqm: draft.alarmsBlacklistRadiusSqm,
     alarmsBlacklistFloorRange: draft.alarmsBlacklistFloorRange,
+    alarmsProtectorEnabled: draft.alarmsProtectorEnabled,
+    alarmsLowHealthPercent: draft.alarmsLowHealthPercent,
+    alarmsLowManaPercent: draft.alarmsLowManaPercent,
+    alarmsLowSupplyCount: draft.alarmsLowSupplyCount,
+    alarmsPauseRoute: draft.alarmsPauseRoute,
+    alarmsStopTargeter: draft.alarmsStopTargeter,
+    alarmsRequireAcknowledgement: draft.alarmsRequireAcknowledgement,
     reconnectEnabled: draft.reconnectEnabled,
     reconnectRetryDelayMs: draft.reconnectRetryDelayMs,
     reconnectMaxAttempts: draft.reconnectMaxAttempts,
@@ -18374,6 +18673,19 @@ proxyClickButtons.forEach((button) => {
     }
 
     target.click();
+  });
+});
+
+document.addEventListener("click", async (event) => {
+  const ackButton = event.target?.closest?.("[data-protector-ack]");
+  if (!ackButton) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  const nextState = await runAction(() => window.bbApi.acknowledgeProtector(state?.activeSessionId || null, { resume: true }), {
+    buttons: ackButton,
+    successMessage: "Protector acknowledged",
+    errorMessage: "Unable to acknowledge protector",
   });
 });
 
@@ -19836,6 +20148,59 @@ actionButtons.loadRouteQuick?.addEventListener("click", async () => {
     await waitForFeedbackCloseDelay();
     closeModalIfActive("routeLibraryPicker", { preserveDangerAction: true });
   }
+});
+
+actionButtons.exportRoutePack?.addEventListener("click", async () => {
+  if (!isStateReady() || !isDeskBound()) return;
+
+  const routeName = getSelectedRouteLibraryName() || getCurrentRouteName();
+  await runAction(() => window.bbApi.exportRoutePack(routeName), {
+    buttons: actionButtons.exportRoutePack,
+    successMessage: routeName ? `Exported ${routeName}` : "Route pack export complete",
+    errorMessage: "Unable to export route pack",
+  });
+});
+
+actionButtons.importRoutePack?.addEventListener("click", async () => {
+  if (!isStateReady() || !isDeskBound()) return;
+
+  const nextState = await runAction(() => window.bbApi.previewRoutePackImport(), {
+    buttons: actionButtons.importRoutePack,
+    successMessage: "Route pack preview ready",
+    errorMessage: "Unable to preview route pack",
+  });
+  if (nextState?.routePackImportPreview) {
+    renderRoutePackImportPreview(nextState.routePackImportPreview);
+  }
+});
+
+actionButtons.applyRoutePackImport?.addEventListener("click", async () => {
+  if (!isStateReady() || !isDeskBound()) return;
+
+  clearPendingDangerAction();
+  clearRouteUndoState();
+  clearMarkedWaypoints();
+  const nextState = await runAction(() => window.bbApi.applyRoutePackImport(), {
+    buttons: actionButtons.applyRoutePackImport,
+    successMessage: "Route pack imported",
+    errorMessage: "Unable to import route pack",
+  });
+  if (nextState) {
+    selectedWaypointIndex = 0;
+    selectedTileRuleIndex = 0;
+    resetAutowalkDraft({ routeLibrary: true });
+    await syncOverlayFocus();
+  }
+});
+
+actionButtons.cancelRoutePackImport?.addEventListener("click", async () => {
+  if (!isStateReady() || !isDeskBound()) return;
+
+  await runAction(() => window.bbApi.cancelRoutePackImport(), {
+    buttons: actionButtons.cancelRoutePackImport,
+    successMessage: "Route pack import canceled",
+    errorMessage: "Unable to cancel route pack import",
+  });
 });
 
 actionButtons.deleteRoute.addEventListener("click", async () => {
