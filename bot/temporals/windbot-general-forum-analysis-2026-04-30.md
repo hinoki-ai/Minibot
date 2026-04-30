@@ -15,8 +15,10 @@ or failure modes rather than converted into features.
 
 ## Source Quality
 
-- The General board has about 1,971 threads. The durable signal is in sticky
-  threads and older high-view threads.
+- The General board crawl deduped to 1,976 thread ids on 2026-04-30, with
+  1,960 non-spam threads and 16 spam/adult-ad threads detected by title/preview
+  text. The forum's own pagination reports about 1,971 results, so minor count
+  drift is likely from sticky duplication and current spam churn.
 - Recent General activity is polluted by spam threads dated March-April 2026,
   so learning should prioritize stickies, sorted-by-views results, Tutorials,
   Scripting, Cavebot Scripts, Support, Announcements, and Releases.
@@ -24,6 +26,42 @@ or failure modes rather than converted into features.
   servers. The 2017 announcement and release posts repeatedly moved the product
   toward OpenTibia/private-server compatibility after BattlEye-style client
   changes.
+
+## Deep Crawl Pass
+
+This pass was research-only. No Minibot runtime behavior, route schema, module
+contract, UI, or roadmap item should be changed from these findings until a
+separate implementation request is made.
+
+- General index: pages 1-99 crawled and deduped by thread id.
+- Botting risks/deletions: all 172 pages crawled, 1,716 posts seen, 3 spam
+  posts detected.
+- Official Navigation Server: all 15 pages crawled, 146 posts.
+- Navigation Server v1.0.1: all 14 pages crawled, 136 posts.
+- Walkable/Food/Field IDs: all 6 pages crawled, 55 posts.
+- Future releases/BattlEye announcement: all 21 pages crawled, 209 posts.
+- WindBot 2.8.30 release: all 13 pages crawled, 126 posts.
+- iBot converter: all 12 pages crawled, 112 posts.
+
+The 172-page botting-risk thread is not only a first-post safety warning. Across
+the full thread it repeatedly covers deletion reports, mass reporting,
+detectability claims, modified clients/MC, preview-world/manual-check concerns,
+account/character rotation behavior, spawn/place risk, premium/license myths,
+PvP/war side context, and long-tail support claims. This stays research
+knowledge, not a Minibot feature source.
+
+Top non-spam General threads by deduped view count:
+
+- `1317` Discussion: Botting Risks, Tips and Deletions - 1,734,787 views.
+- `31` Official WindBot Navigation Server - 337,312 views.
+- `114530` Invitation for Beta Testing - WindBot for Client 11 - 300,322 views.
+- `108409` Navigation Server v1.0.1 - 282,663 views.
+- `2056` Full iBot -> WindBot Converter - 220,137 views.
+- `1086` Walkable, Food and Field IDs - 217,702 views.
+- `139506` wind bot ots? - 100,962 views.
+- `130044` WindBOT for Taleon/TibiaBR Server - 95,125 views.
+- `7` Ask me about Windbot! - 85,530 views.
+- `129538` Bypassing BattlEye by using Linux - 66,882 views.
 
 ## Knowledge Capture Policy
 

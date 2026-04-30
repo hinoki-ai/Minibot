@@ -129,9 +129,28 @@ No open P0 items remain in this queue after the 2026-04-30 completion pass.
 Future work that expands bot power should start from P1 or be added here only
 if it blocks safe operation.
 
-## P1
+## Frozen
 
-1. Build refill, banking, shopping, and travel into one resumable loop.
+These items are intentionally frozen by operator direction on 2026-04-30. Do
+not resume them unless they are explicitly unfrozen.
+
+1. Refill, banking, shopping, and travel orchestration.
+   - Scope frozen: the full resumable hunt -> low supply/cap/gold ->
+     bank/sell/buy/travel -> return-to-hunt loop.
+   - Existing runtime support may stay in place, but do not expand this into a
+     larger product workflow while frozen.
+
+2. Daily-task automation.
+   - Scope frozen: task discovery, task acceptance/turn-in policy, route
+     handoff, and reward handling.
+
+3. Trainer, runemaking, and resource-gated utility hardening.
+   - Scope frozen: trainer partner-productization, standalone utility-mode
+     expansion, runemaking policy work, and enchanting-like utility flows.
+
+Frozen context retained for later:
+
+- Refill/bank/shop/travel:
    - Current modules can plan refill requests, visible trade actions, banking
      conversations, and NPC actions. Missing work is orchestration.
    - Started: runtime can now branch from a hunt waypoint into a hidden
@@ -154,8 +173,26 @@ if it blocks safe operation.
      `lib/bot-core.mjs`, `desktop/renderer.js`, `docs/MODULES.md`,
      `docs/OPERATIONS.md`, `test/refill.test.mjs`, `test/shopper.test.mjs`,
      `test/banking.test.mjs`.
+- Daily tasks:
+   - The normalized snapshot exposes task state.
+   - Missing work is task discovery, task acceptance/turn-in policy, route
+     handoff, and reward handling.
+- Trainer/runemaking:
+   - Trainer should keep partner detection, regrouping, low-HP escape, food,
+     reconnect, and anti-idle as separate owned decisions with visible reasons.
+   - Rune maker should stop clearly when mana, soul/resource state, blank runes,
+     target state, movement state, or unsafe conditions are not satisfied.
+   - Enchanting-like utilities should stay disabled unless vendored Minibia data
+     declares the supported action and resource contract.
+   - Acceptance: trainer can run without a selected route, and rune maker reports
+     the exact missing resource or safety gate instead of silently idling.
+   - Primary files: `lib/bot-core.mjs`, `lib/vocation-pack.mjs`,
+     `desktop/renderer.js`, `docs/MODULES.md`,
+     `test/bot-core.test.mjs`, `test/runtime-modules.test.mjs`.
 
-2. Add hunt ledger and loot/economy reporting.
+## P1
+
+1. Add hunt ledger and loot/economy reporting.
    - Track XP/hour, kills/hour, loot/hour, profit/hour, supply burn, rare drops,
      deaths, pauses, stucks, route loops, refill cycles, unknown-value items,
      and protected-item decisions.
@@ -169,7 +206,7 @@ if it blocks safe operation.
      `docs/UI_UX.md`, `test/looter.test.mjs`,
      `test/loot-economics.test.mjs`.
 
-3. Add transparent target scoring and stance unification.
+2. Add transparent target scoring and stance unification.
    - Compute target scores from target profile order, danger, HP, distance,
      reachability, target count, ownership/shared-spawn policy, route role, and
      current target stickiness.
@@ -182,7 +219,7 @@ if it blocks safe operation.
      `lib/hunt-presets.mjs`, `docs/MODULES.md`, `docs/UI_UX.md`,
      `test/bot-core.test.mjs`, `test/hunt-presets.test.mjs`.
 
-4. Expand alarms into a real protector system.
+3. Expand alarms into a real protector system.
    - Add alarm types for low HP/MP, low supplies, no capacity, private message,
      disconnect, death, route stuck, no progress, stale target, rare loot, high
      incoming damage, and full backpack.
@@ -198,7 +235,7 @@ if it blocks safe operation.
      `docs/MODULES.md`, `docs/UI_UX.md`,
      `test/bot-core.test.mjs`, `test/desktop-renderer.test.mjs`.
 
-5. Add route profile packs with validation-first import/export.
+4. Add route profile packs with validation-first import/export.
    - A pack should include route, targeting, sustain, loot, refill, banking,
      alarms, party, options, notes, schema version, and compatibility metadata.
    - Import must show a diff and validation report before replacing current
@@ -210,7 +247,7 @@ if it blocks safe operation.
      `docs/OPERATIONS.md`, `docs/UI_UX.md`, `test/config-store.test.mjs`,
      `test/desktop-renderer.test.mjs`.
 
-6. Upgrade route recorder after validation exists.
+5. Upgrade route recorder after validation exists.
    - Record walk nodes, floor changes, tool use, NPC open/travel/shop/bank
      hints, corpse pauses, safe-zone points, and route annotations.
    - The recorder should prefer useful route intent over raw noisy position
@@ -227,6 +264,41 @@ if it blocks safe operation.
    - Primary files: `scripts/record-same-floor-route.mjs`,
      `lib/bot-core.mjs`, `desktop/renderer.js`,
      `test/record-same-floor-route.test.mjs`.
+
+6. Apply historical forum learnings as Minibot-native diagnostics and editors.
+   - Use the forum research as pattern input only. Do not copy WindBot behavior,
+     binaries, bypasses, official-server workflows, PvP abuse tools, or unsafe
+     scripts.
+   - Route quality: strengthen typed waypoint intent, label loops,
+     floor-change landing anchors, helper/recovery points, route annotations,
+     and validation-before-run feedback.
+   - Navigation: expose leader/follower role, floor/position sync, route
+     spacing, assist target, support status, shared supply/status summaries, and
+     clear why-stopped telemetry for local multi-session Minibia control.
+   - Targeting: show candidate monsters, score/reason breakdowns, skipped
+     reasons, shared-spawn policy, distance window, stance intent, and the owner
+     that blocked or selected the target.
+   - Item and tile metadata: expand walkable furniture, fields, food, obstacle,
+     trap, stair/ladder/hole, and blocked-tile diagnostics so stuck recovery can
+     say which object or tile rule caused the decision.
+   - Support hardening: turn repeated failure classes into validation and
+     operator messages: unsupported client/runtime, looting stuck, depot/deposit
+     naming mismatch, targeting not firing, backpack/window state loss, NPC
+     dialogue failure, and route/profile compatibility mismatch.
+   - Route packs and UI: make complete hunt profiles importable with route,
+     targeting, sustain, loot, navigation/follow roles, notes, schema version,
+     compatibility metadata, diff preview, validation report, and structured
+     controls instead of raw JSON/script editing.
+   - Acceptance: a route/profile author can load or import a hunt profile,
+     understand every route/navigation/targeting blocker from visible reasons,
+     diagnose common setup failures without reading logs, and start only after
+     validation warnings are acknowledged.
+   - Primary files: `lib/route-validation.mjs`, `lib/bot-core.mjs`,
+     `lib/config-store.mjs`, `lib/minibia-item-metadata.mjs`,
+     `desktop/renderer.js`, `docs/MODULES.md`, `docs/UI_UX.md`,
+     `docs/OPERATIONS.md`, `test/route-validation.test.mjs`,
+     `test/bot-core.test.mjs`, `test/config-store.test.mjs`,
+     `test/desktop-renderer.test.mjs`.
 
 ## P2
 
@@ -266,25 +338,7 @@ if it blocks safe operation.
      `docs/MODULES.md`, `docs/UI_UX.md`,
      `test/runtime-modules.test.mjs`, `test/desktop-renderer.test.mjs`.
 
-4. Add daily-task automation only after progression orchestration is stable.
-   - The normalized snapshot exposes task state.
-   - Missing work is task discovery, task acceptance/turn-in policy, route
-     handoff, and reward handling.
-
-5. Harden training, runemaking, and resource-gated utility modes.
-   - Trainer should keep partner detection, regrouping, low-HP escape, food,
-     reconnect, and anti-idle as separate owned decisions with visible reasons.
-   - Rune maker should stop clearly when mana, soul/resource state, blank runes,
-     target state, movement state, or unsafe conditions are not satisfied.
-   - Enchanting-like utilities should stay disabled unless vendored Minibia data
-     declares the supported action and resource contract.
-   - Acceptance: trainer can run without a selected route, and rune maker reports
-     the exact missing resource or safety gate instead of silently idling.
-   - Primary files: `lib/bot-core.mjs`, `lib/vocation-pack.mjs`,
-     `desktop/renderer.js`, `docs/MODULES.md`,
-     `test/bot-core.test.mjs`, `test/runtime-modules.test.mjs`.
-
-6. Refactor the renderer monolith after P0 ownership and validation are stable.
+4. Refactor the renderer monolith after P0 ownership and validation are stable.
    - `desktop/renderer.js` is about 19k lines and currently owns dashboard,
      modal rendering, drafts, compact view, route tools, Hunt Studio, module
      schema, event wiring, and feedback state.

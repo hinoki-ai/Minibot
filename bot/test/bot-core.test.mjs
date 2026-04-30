@@ -14526,6 +14526,50 @@ test("chooseRouteAction glides to the farthest safe reachable waypoint on a plai
   assert.equal(action?.glideTargetIndex, 3);
 });
 
+test("chooseRouteAction extends route glide across the connected reachable viewport", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    waypoints: Array.from({ length: 10 }, (_, index) => ({
+      x: 101 + index,
+      y: 100,
+      z: 8,
+      type: "walk",
+    })),
+  });
+  const reachableTiles = Array.from({ length: 11 }, (_, index) => ({
+    x: 100 + index,
+    y: 100,
+    z: 8,
+  }));
+  const originalGetConnectedTileNavigation = bot.getConnectedTileNavigation.bind(bot);
+  let connectedTileNavigationCalls = 0;
+  bot.getConnectedTileNavigation = (...args) => {
+    connectedTileNavigationCalls += 1;
+    return originalGetConnectedTileNavigation(...args);
+  };
+
+  bot.resetRoute(0);
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+    reachableTiles,
+  });
+
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.destination, bot.options.waypoints[9]);
+  assert.equal(action?.walkReason, "glide");
+  assert.equal(action?.glideTargetIndex, 9);
+  assert.ok(connectedTileNavigationCalls <= 2);
+});
+
 test("chooseRouteAction does not glide through route automation waypoints", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,

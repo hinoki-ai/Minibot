@@ -592,6 +592,7 @@ const ROUTE_BLOCKED_WALK_MESSAGE_TTL_MS = 2_500;
 const ROUTE_BLOCKED_WALK_MESSAGE_STALL_MS = 250;
 const ROUTE_BLOCKED_WALK_DESTINATION_TTL_MS = 5_000;
 const ROUTE_GLIDE_LOOKAHEAD = 6;
+const ROUTE_GLIDE_REACHABLE_LOOKAHEAD = 12;
 const ROUTE_RESET_HOLD_LOG_MS = 30_000;
 const ROUTE_AWARENESS_TOUCH_DISTANCE = 1;
 const ROUTE_AWARENESS_TOUCH_TTL_MS = 12_000;
@@ -23981,7 +23982,7 @@ export class MinibiaTargetBot {
     }
 
     let current = this.routeIndex;
-    for (let steps = 0; steps < Math.min(ROUTE_GLIDE_LOOKAHEAD, this.options.waypoints.length); steps += 1) {
+    for (let steps = 0; steps < Math.min(ROUTE_GLIDE_REACHABLE_LOOKAHEAD, this.options.waypoints.length); steps += 1) {
       const nextIndex = this.getNaturalNextRouteIndex(current, { allowLoop: false });
       if (!Number.isInteger(nextIndex)) {
         return false;
@@ -23998,6 +23999,50 @@ export class MinibiaTargetBot {
     return false;
   }
 
+  getRouteGlideReachability(snapshot = this.lastSnapshot) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
+    const navigation = reachableTileMap.size && playerPosition
+      ? this.getConnectedTileNavigation(reachableTileMap, playerPosition)
+      : null;
+
+    return {
+      playerPosition,
+      reachableTileMap,
+      navigation,
+    };
+  }
+
+  getRouteGlideLookahead(snapshot = this.lastSnapshot, reachability = null) {
+    const playerPosition = reachability?.playerPosition || snapshot?.playerPosition || null;
+    const reachableTileMap = reachability?.reachableTileMap instanceof Map
+      ? reachability.reachableTileMap
+      : null;
+    if (!playerPosition || !reachableTileMap?.size) {
+      return ROUTE_GLIDE_LOOKAHEAD;
+    }
+
+    let reachableDistance = 0;
+    const connectedKeys = reachability?.navigation?.reachable instanceof Set
+      ? reachability.navigation.reachable
+      : null;
+    for (const tile of reachableTileMap.values()) {
+      const tileKey = this.getPositionKey(tile);
+      if (connectedKeys && (!tileKey || !connectedKeys.has(tileKey))) {
+        continue;
+      }
+      const distance = this.getPositionDistance(playerPosition, tile);
+      if (Number.isFinite(distance)) {
+        reachableDistance = Math.max(reachableDistance, distance);
+      }
+    }
+
+    return Math.min(
+      ROUTE_GLIDE_REACHABLE_LOOKAHEAD,
+      Math.max(ROUTE_GLIDE_LOOKAHEAD, Math.trunc(reachableDistance)),
+    );
+  }
+
   hasSameFloorWaitTileRule(snapshot = this.lastSnapshot) {
     const playerZ = Number(snapshot?.playerPosition?.z);
     if (!Number.isFinite(playerZ)) {
@@ -24008,8 +24053,8 @@ export class MinibiaTargetBot {
       .some((rule) => Math.trunc(Number(rule?.z)) === Math.trunc(playerZ));
   }
 
-  isRouteGlideCandidateReachable(snapshot, candidate) {
-    const playerPosition = snapshot?.playerPosition || null;
+  isRouteGlideCandidateReachable(snapshot, candidate, reachability = null) {
+    const playerPosition = reachability?.playerPosition || snapshot?.playerPosition || null;
     const candidateKey = this.getPositionKey(candidate);
     if (!playerPosition || !candidateKey || Number(playerPosition.z) !== Number(candidate?.z)) {
       return false;
@@ -24022,9 +24067,12 @@ export class MinibiaTargetBot {
       return false;
     }
 
-    const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
+    const reachableTileMap = reachability?.reachableTileMap instanceof Map
+      ? reachability.reachableTileMap
+      : this.getDistanceKeeperTileMap(snapshot);
     if (reachableTileMap.size) {
-      const navigation = this.getConnectedTileNavigation(reachableTileMap, playerPosition);
+      const navigation = reachability?.navigation
+        || this.getConnectedTileNavigation(reachableTileMap, playerPosition);
       return navigation.reachable.has(candidateKey);
     }
 
@@ -24059,7 +24107,9 @@ export class MinibiaTargetBot {
 
     let best = null;
     let currentIndex = index;
-    for (let step = 0; step < Math.min(ROUTE_GLIDE_LOOKAHEAD, this.options.waypoints.length - 1); step += 1) {
+    const reachability = this.getRouteGlideReachability(snapshot);
+    const lookahead = this.getRouteGlideLookahead(snapshot, reachability);
+    for (let step = 0; step < Math.min(lookahead, this.options.waypoints.length - 1); step += 1) {
       const nextIndex = this.getNaturalNextRouteIndex(currentIndex, { allowLoop: false });
       if (!Number.isInteger(nextIndex) || nextIndex === currentIndex) {
         break;
@@ -24076,7 +24126,7 @@ export class MinibiaTargetBot {
         || !Number.isFinite(candidateDistance)
         || candidateDistance <= currentDistance
         || this.shouldConstrainRouteDestinationToSafeStep(snapshot, { destination: candidate, waypoint })
-        || !this.isRouteGlideCandidateReachable(snapshot, candidate)) {
+        || !this.isRouteGlideCandidateReachable(snapshot, candidate, reachability)) {
         break;
       }
 
