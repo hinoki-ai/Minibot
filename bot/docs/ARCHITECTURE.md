@@ -17,7 +17,8 @@ At a high level:
 3. it binds a selected page into a Minibot session
 4. it evaluates game-facing expressions inside that page
 5. it runs targeting, movement, sustain, looting, banking, and utility decisions locally in Node
-6. it persists config, claim, route, and route-spacing data under the user home directory
+6. it exposes a local external-control socket for trusted automation agents
+7. it persists config, claim, route, and route-spacing data under the user home directory
 
 The core runtime lives in [`lib/bot-core.mjs`](../lib/bot-core.mjs). The desktop app is a control shell around that runtime.
 
@@ -39,6 +40,18 @@ The core runtime lives in [`lib/bot-core.mjs`](../lib/bot-core.mjs). The desktop
 - [`desktop/linux-integration.mjs`](../desktop/linux-integration.mjs): Linux desktop entry and icon resolution
 
 The desktop app is the canonical control surface. It supports multiple live characters at once and keeps them isolated in separate session tabs.
+
+### External Control Socket
+
+The Electron main process also owns a local NDJSON socket for trusted automation agents. It is part of the desktop layer, not a replacement runtime: socket commands resolve the same in-memory sessions, claim checks, config persistence, and shared action router used by the desk.
+
+- [`lib/external-control-socket.mjs`](../lib/external-control-socket.mjs): local TCP or Unix-socket transport, auth handshake, request framing, event subscription, and discovery-file writing
+- default transport: `127.0.0.1:17373`, falling back to an ephemeral local port when that default is busy
+- discovery file: `control-socket.json` in the active Minibot config directory
+- optional auth: `MINIBOT_CONTROL_TOKEN`
+- raw CDP passthrough is available for trusted local agents and can be disabled with `MINIBOT_CONTROL_ALLOW_RAW_CDP=0`
+
+The socket accepts direct commands such as state reads, session selection, start/stop, cavebot pause, option updates, route edits, action execution, action-block execution, selected bot methods, and raw CDP send/evaluate calls. Subscribed clients receive the same `bb:event` envelopes as the renderer.
 
 ### Bot Runtime Layer
 
@@ -183,6 +196,7 @@ Minibot combines these persistence layers:
 - per-character overrides: `~/.config/minibot/characters/<profileKey>.json`
 - claim files: `~/.config/minibot/claims/<profileKey>.json`
 - route spacing leases: `~/.config/minibot/route-spacing/*`
+- external-control discovery: `~/.config/minibot/control-socket.json`
 - route profiles: `~/Minibot/cavebots/<routeName>.json`
 
 Route names are persisted as filenames. Keep them filesystem-safe so the same saved route works on Linux, Windows, and macOS.

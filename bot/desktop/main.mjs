@@ -43,6 +43,10 @@ import {
   trimMonsterNames,
 } from "../lib/bot-core.mjs";
 import {
+  executeAction as executeExternalAction,
+  executeActionBlock as executeExternalActionBlock,
+} from "../lib/action-router.mjs";
+import {
   buildManagedBrowserAppLaunchSpec,
   buildManagedBrowserLaunchSpec,
   extractCommandArgValue,
@@ -74,6 +78,7 @@ import {
   loadSessionState,
   loadRouteProfile,
   listRouteProfiles,
+  pickRouteProfileLocalOnlyState,
   ROUTE_SPACING_DIR,
   releaseCharacterClaim,
   saveAccount,
@@ -100,6 +105,7 @@ import {
   buildMinibiaPwaSessionUrl,
   buildPortableClientLaunchSpec,
 } from "../scripts/launch-portable-client.mjs";
+import { createExternalControlSocket } from "../lib/external-control-socket.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MAX_LOGS = 80;
@@ -198,6 +204,8 @@ let lastLivePatchLogRevision = -1;
 let managedBrowserLayoutAssignments = new Map();
 let sessionStateSaveChain = Promise.resolve();
 let trainerRosterAutoStartTriggered = false;
+let externalControlServer = null;
+let externalControlCommandChain = Promise.resolve();
 const desktopRuntimeTiming = {};
 
 const refreshingSessions = new Set();
@@ -894,6 +902,9 @@ function applySessionRuntimeLoad() {
   const orderedSessions = [...sessions.values()];
   const runningSessionCount = orderedSessions.filter((session) => session?.bot?.running).length;
   const activeId = String(activeSessionId || "");
+  const localPlayerNames = mergeMonsterNames(
+    orderedSessions.map((session) => getSessionCharacterName(session) || getSessionLabel(session)),
+  );
 
   orderedSessions.forEach((session, index) => {
     session?.bot?.setRuntimeLoad?.({
@@ -901,6 +912,7 @@ function applySessionRuntimeLoad() {
       sessionCount: Math.max(1, orderedSessions.length),
       sessionIndex: index,
       active: String(session.id || "") === activeId,
+      localPlayerNames,
     });
   });
 }
@@ -949,7 +961,10 @@ function assertTrustedIpcSender(event) {
   throw new Error("Blocked IPC from an untrusted renderer.");
 }
 
+const trustedIpcHandlers = new Map();
+
 function handleTrusted(channel, handler) {
+  trustedIpcHandlers.set(channel, handler);
   ipcMain.handle(channel, async (event, ...args) => {
     assertTrustedIpcSender(event);
     return handler(event, ...args);
@@ -1618,6 +1633,7 @@ function serializeSession(session) {
     antiIdleStatus: session.bot.getAntiIdleStatus?.() || null,
     alarmOptions: {
       alarmsEnabled: session.config?.alarmsEnabled,
+      alarmsSoundEnabled: session.config?.alarmsSoundEnabled,
       alarmsPlayerEnabled: session.config?.alarmsPlayerEnabled,
       alarmsPlayerRadiusSqm: session.config?.alarmsPlayerRadiusSqm,
       alarmsPlayerFloorRange: session.config?.alarmsPlayerFloorRange,
@@ -1699,6 +1715,7 @@ function serializeState() {
     alwaysOnTop: mainWindow ? mainWindow.isAlwaysOnTop() : activeAlwaysOnTop,
     viewMode: activeViewportMode,
     windowTitle: APP_NAME,
+    externalControl: externalControlServer?.getPublicInfo?.() || null,
     instances: availableInstances.map(serializeInstance),
   };
 }
@@ -1828,17 +1845,25 @@ function dispatchEvent(type, payload = {}, {
   state = null,
   statePatch = false,
 } = {}) {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const dispatchToWindow = Boolean(mainWindow && !mainWindow.isDestroyed());
+  const dispatchToExternalControl = Boolean(externalControlServer?.hasSubscribers?.());
+  if (!dispatchToWindow && !dispatchToExternalControl) return;
 
   const dispatchStartedAt = getMonotonicNowMs();
   const nextState = state || (statePatch ? serializeLiveState() : serializeState());
-  updateWindowTitle();
-  mainWindow.webContents.send("bb:event", {
+  const eventEnvelope = {
     type,
     payload: buildEventPayload(type, payload),
     state: nextState,
     statePatch,
-  });
+  };
+
+  updateWindowTitle();
+  if (dispatchToWindow) {
+    mainWindow.webContents.send("bb:event", eventEnvelope);
+  }
+  externalControlServer?.broadcast?.(eventEnvelope);
+
   if (Array.isArray(nextState?.logs)) {
     lastLivePatchLogSessionId = String(nextState.activeSessionId || "");
     lastLivePatchLogRevision = Number(nextState.logRevision) || 0;
@@ -3023,6 +3048,16 @@ async function refreshSession(sessionOrId, {
   }
 }
 
+function shouldArmAutowalkOnStart(config = {}) {
+  if (config?.autowalkEnabled === true || config?.routeRecording === true) {
+    return false;
+  }
+
+  const routeName = String(config?.cavebotName || "").trim();
+  const waypoints = Array.isArray(config?.waypoints) ? config.waypoints : [];
+  return Boolean(routeName && waypoints.length);
+}
+
 async function startSessionBot(sessionOrId, {
   emitState = true,
   ensureTrainerEnabled = false,
@@ -3048,6 +3083,9 @@ async function startSessionBot(sessionOrId, {
   if (session.config?.stopAggroHold) {
     startPatch.stopAggroHold = false;
   }
+  if (shouldArmAutowalkOnStart(session.config)) {
+    startPatch.autowalkEnabled = true;
+  }
   if (ensureTrainerEnabled && session.config?.trainerEnabled !== true) {
     startPatch.trainerEnabled = true;
   }
@@ -3061,6 +3099,7 @@ async function startSessionBot(sessionOrId, {
     const clearedStates = [
       startPatch.cavebotPaused === false ? "cavebot pause" : "",
       startPatch.stopAggroHold === false ? "aggro hold" : "",
+      startPatch.autowalkEnabled === true ? "autowalk" : "",
       startPatch.trainerEnabled === true ? "trainer module" : "",
     ].filter(Boolean);
     if (clearedStates.length) {
@@ -3868,6 +3907,469 @@ function applyViewportMode(mode = activeViewportMode) {
   return true;
 }
 
+function isPlainObject(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function normalizeExternalControlMethod(value = "") {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function getControlParam(params = {}, names = [], fallback = undefined) {
+  if (!isPlainObject(params)) {
+    return fallback;
+  }
+
+  for (const name of names) {
+    if (Object.prototype.hasOwnProperty.call(params, name)) {
+      return params[name];
+    }
+  }
+
+  return fallback;
+}
+
+function getControlSessionId(params = {}) {
+  return getControlParam(params, ["sessionId", "id", "session", "targetSessionId"], null);
+}
+
+function stripExternalControlKeys(params = {}) {
+  if (!isPlainObject(params)) {
+    return {};
+  }
+
+  const next = { ...params };
+  for (const key of [
+    "sessionId",
+    "targetSessionId",
+    "session",
+    "command",
+    "method",
+    "name",
+    "args",
+    "action",
+    "block",
+    "includeState",
+    "includeSnapshot",
+    "refresh",
+    "emitState",
+    "background",
+    "token",
+  ]) {
+    delete next[key];
+  }
+  return next;
+}
+
+const EXTERNAL_CONTROL_METHODS = Object.freeze([
+  "methods",
+  "state",
+  "refresh",
+  "sessions",
+  "newSession",
+  "startBot",
+  "stopBot",
+  "setBotRunning",
+  "selectSession",
+  "killSession",
+  "toggleRun",
+  "toggleCavebotPause",
+  "setCavebotPaused",
+  "stopAllBots",
+  "stopAggro",
+  "acknowledgeProtector",
+  "reconnectSession",
+  "updateOptions",
+  "saveAccount",
+  "deleteAccount",
+  "testAntiIdle",
+  "setSessionWaypointOverlays",
+  "loadRoute",
+  "deleteRoute",
+  "setAlwaysOnTop",
+  "setViewMode",
+  "setOverlayFocus",
+  "addCurrentWaypoint",
+  "insertCurrentWaypoint",
+  "updateWaypoint",
+  "removeWaypoint",
+  "moveWaypoint",
+  "addCurrentTileRule",
+  "updateTileRule",
+  "removeTileRule",
+  "moveTileRule",
+  "resetRoute",
+  "returnToStart",
+  "snapshot",
+  "action",
+  "actionBlock",
+  "bot",
+  "cdp.send",
+  "cdp.evaluate",
+]);
+
+const EXTERNAL_CONTROL_IPC_COMMANDS = new Map([
+  ["getstate", { channel: "bb:get-state", args: () => [] }],
+  ["state", { channel: "bb:get-state", args: () => [] }],
+  ["refresh", { channel: "bb:refresh", args: () => [] }],
+  ["newsession", { channel: "bb:new-session", args: () => [] }],
+  ["starttrainerroster", { channel: "bb:start-trainer-roster", args: (params) => [getControlParam(params, ["reference", "character", "name"], params)] }],
+  ["savetrainerduo", { channel: "bb:save-trainer-duo", args: (params) => [getControlParam(params, ["duo"], params)] }],
+  ["deletetrainerduo", { channel: "bb:delete-trainer-duo", args: (params) => [getControlParam(params, ["duo"], params)] }],
+  ["closewindow", { channel: "bb:close-window", args: () => [] }],
+  ["killsession", { channel: "bb:kill-session", args: (params) => [getControlSessionId(params)] }],
+  ["selectsession", { channel: "bb:select-session", args: (params) => [getControlSessionId(params)] }],
+  ["togglerun", { channel: "bb:toggle-run", args: (params) => [getControlSessionId(params)] }],
+  ["togglecavebotpause", { channel: "bb:toggle-cavebot-pause", args: (params) => [getControlSessionId(params)] }],
+  ["stopallbots", { channel: "bb:stop-all-bots", args: () => [] }],
+  ["stopaggro", { channel: "bb:stop-aggro", args: (params) => [getControlSessionId(params)] }],
+  ["acknowledgeprotector", { channel: "bb:acknowledge-protector", args: (params) => [getControlSessionId(params), getControlParam(params, ["options"], {})] }],
+  ["reconnectsession", { channel: "bb:reconnect-session", args: (params) => [getControlSessionId(params)] }],
+  ["updateoptions", { channel: "bb:update-options", args: (params) => [getControlParam(params, ["partial", "options", "patch"], params)] }],
+  ["setoptions", { channel: "bb:update-options", args: (params) => [getControlParam(params, ["partial", "options", "patch"], params)] }],
+  ["saveaccount", { channel: "bb:save-account", args: (params) => [getControlParam(params, ["account"], params)] }],
+  ["deleteaccount", { channel: "bb:delete-account", args: (params) => [getControlParam(params, ["accountId", "id"], params)] }],
+  ["testantiidle", { channel: "bb:test-anti-idle", args: (params) => [getControlParam(params, ["partial", "options", "patch"], params)] }],
+  ["setsessionwaypointoverlays", { channel: "bb:set-session-waypoint-overlays", args: (params) => [getControlParam(params, ["value", "enabled"], params)] }],
+  ["loadroute", { channel: "bb:load-route", args: (params) => [getControlParam(params, ["name", "routeName"], params)] }],
+  ["deleteroute", { channel: "bb:delete-route", args: (params) => [getControlParam(params, ["name", "routeName"], params)] }],
+  ["setalwaysontop", { channel: "bb:set-always-on-top", args: (params) => [getControlParam(params, ["value", "enabled"], params)] }],
+  ["setviewmode", { channel: "bb:set-view-mode", args: (params) => [getControlParam(params, ["mode", "value"], "desk")] }],
+  ["setoverlayfocus", { channel: "bb:set-overlay-focus", args: (params) => [getControlParam(params, ["index", "value"], null)] }],
+  ["addcurrentwaypoint", { channel: "bb:add-current-waypoint", args: (params) => [getControlParam(params, ["type", "waypointType"], "walk")] }],
+  ["insertcurrentwaypoint", { channel: "bb:insert-current-waypoint", args: (params) => [getControlParam(params, ["index", "beforeIndex"], 0), getControlParam(params, ["type", "waypointType"], "walk")] }],
+  ["updatewaypoint", { channel: "bb:update-waypoint", args: (params) => [getControlParam(params, ["index"], -1), getControlParam(params, ["patch"], stripExternalControlKeys(params))] }],
+  ["removewaypoint", { channel: "bb:remove-waypoint", args: (params) => [getControlParam(params, ["index"], -1)] }],
+  ["movewaypoint", { channel: "bb:move-waypoint", args: (params) => [getControlParam(params, ["index"], -1), getControlParam(params, ["delta"], 0)] }],
+  ["addcurrenttilerule", { channel: "bb:add-current-tile-rule", args: (params) => [getControlParam(params, ["policy"], "avoid")] }],
+  ["updatetilerule", { channel: "bb:update-tile-rule", args: (params) => [getControlParam(params, ["index"], -1), getControlParam(params, ["patch"], stripExternalControlKeys(params))] }],
+  ["removetilerule", { channel: "bb:remove-tile-rule", args: (params) => [getControlParam(params, ["index"], -1)] }],
+  ["movetilerule", { channel: "bb:move-tile-rule", args: (params) => [getControlParam(params, ["index"], -1), getControlParam(params, ["delta"], 0)] }],
+  ["resetroute", { channel: "bb:reset-route", args: (params) => [getControlParam(params, ["index", "routeIndex"], 0)] }],
+  ["returntostart", { channel: "bb:return-to-start", args: () => [] }],
+]);
+
+function buildExternalControlRuntimeInfo() {
+  return {
+    activeSessionId: activeSessionId || null,
+    sessionCount: sessions.size,
+    runningSessionCount: getRunningSessionCount(),
+    methods: EXTERNAL_CONTROL_METHODS,
+  };
+}
+
+async function invokeTrustedControlHandler(channel, args = []) {
+  const handler = trustedIpcHandlers.get(channel);
+  if (!handler) {
+    throw new Error(`External control command is not available for ${channel}.`);
+  }
+
+  return handler({ externalControl: true }, ...args);
+}
+
+async function attachExternalControlSession(params = {}) {
+  let session = resolveSessionReference(getControlSessionId(params));
+  if (!session) {
+    throw new Error("No live character tab selected.");
+  }
+
+  await ensureSessionConfig(session);
+  session = await attachSession(session);
+  return session;
+}
+
+async function refreshExternalControlSession(params = {}) {
+  const session = resolveSessionReference(getControlSessionId(params)) || requireActiveSession();
+  const snapshot = await refreshSession(session, {
+    emitSnapshot: getControlParam(params, ["emitSnapshot"], false) !== false,
+    background: getControlParam(params, ["background"], false) === true,
+  });
+  return {
+    sessionId: session.id,
+    snapshot: serializeSnapshot(snapshot),
+  };
+}
+
+async function startExternalControlBot(params = {}) {
+  const session = resolveSessionReference(getControlSessionId(params)) || requireActiveSession();
+  await startSessionBot(session, { emitState: true });
+  return serializeState();
+}
+
+async function stopExternalControlBot(params = {}) {
+  const session = resolveSessionReference(getControlSessionId(params)) || requireActiveSession();
+  if (session.bot.running) {
+    session.bot.stop();
+    applySessionRuntimeLoad();
+    queueSessionStateSave();
+    sendEvent("state", { sessionId: session.id, scope: "external-control-stop" });
+  }
+  return serializeState();
+}
+
+async function setExternalControlBotRunning(params = {}) {
+  const running = getControlParam(params, ["running", "value", "enabled"], true) === true;
+  return running ? startExternalControlBot(params) : stopExternalControlBot(params);
+}
+
+async function setExternalControlCavebotPaused(params = {}) {
+  const session = resolveSessionReference(getControlSessionId(params)) || requireActiveSession();
+  if (!session.instance?.claimedBySelf && session.instance?.claimed) {
+    throw new Error("That character is already linked to another Minibot window.");
+  }
+
+  await ensureSessionConfig(session);
+  const cavebotPaused = getControlParam(params, ["paused", "value", "enabled"], true) === true;
+  if (Boolean(session.config.cavebotPaused) !== cavebotPaused) {
+    await persistSessionConfig(session, {
+      ...session.config,
+      cavebotPaused,
+    }, { emitState: false });
+  }
+
+  if (cavebotPaused) {
+    pushSessionLog(session, "Cavebot paused by external control; healing and utility modules stay live.");
+    await session.bot.interruptAutoWalk().catch(() => { });
+    await session.bot.clearAggro().catch(() => { });
+  } else {
+    pushSessionLog(session, "Cavebot resumed by external control.");
+  }
+
+  await refreshSession(session).catch((error) => {
+    pushSessionLog(session, error.message);
+  });
+  sendEvent("state", { sessionId: session.id, scope: "external-control-cavebot-pause" });
+  return serializeState();
+}
+
+function getExternalControlActionPayload(params = {}) {
+  if (isPlainObject(params?.action)) {
+    return params.action;
+  }
+
+  return stripExternalControlKeys(params);
+}
+
+async function executeExternalControlAction(params = {}) {
+  const action = getExternalControlActionPayload(params);
+  if (!isPlainObject(action)) {
+    throw new Error("External action must be an object.");
+  }
+
+  let session = await attachExternalControlSession(params);
+  const snapshot = getControlParam(params, ["refresh"], true) === false
+    ? session.bot.lastSnapshot
+    : await refreshSession(session, { emitSnapshot: false });
+  session = resolveSessionReference(session) || session;
+  const result = await executeExternalAction(session.bot, {
+    ...action,
+    snapshot: action.snapshot || snapshot || session.bot.lastSnapshot || {},
+  });
+  pushSessionLog(
+    session,
+    `External action ${String(action.type || "action").trim()} ${result?.ok ? "succeeded" : `failed: ${result?.reason || "unknown error"}`}`,
+  );
+  sendEvent("state", { sessionId: session.id, scope: "external-control-action" });
+
+  return {
+    sessionId: session.id,
+    result,
+    ...(getControlParam(params, ["includeSnapshot"], false) ? { snapshot: serializeSnapshot(session.bot.lastSnapshot) } : {}),
+    ...(getControlParam(params, ["includeState"], false) ? { state: serializeState() } : {}),
+  };
+}
+
+function getExternalControlActionBlock(params = {}) {
+  if (isPlainObject(params?.block)) {
+    return params.block;
+  }
+  if (Array.isArray(params?.steps)) {
+    return {
+      ...stripExternalControlKeys(params),
+      steps: params.steps,
+    };
+  }
+  return stripExternalControlKeys(params);
+}
+
+async function executeExternalControlActionBlock(params = {}) {
+  const block = getExternalControlActionBlock(params);
+  if (!isPlainObject(block)) {
+    throw new Error("External action block must be an object.");
+  }
+
+  let session = await attachExternalControlSession(params);
+  const snapshot = getControlParam(params, ["refresh"], true) === false
+    ? session.bot.lastSnapshot
+    : await refreshSession(session, { emitSnapshot: false });
+  session = resolveSessionReference(session) || session;
+  const result = await executeExternalActionBlock(session.bot, block, {
+    snapshot: block.snapshot || snapshot || session.bot.lastSnapshot || {},
+    activeOwner: "external-control",
+  });
+  pushSessionLog(
+    session,
+    `External action block ${result?.ok ? "completed" : `failed: ${result?.reason || "unknown error"}`}`,
+  );
+  sendEvent("state", { sessionId: session.id, scope: "external-control-action-block" });
+
+  return {
+    sessionId: session.id,
+    result,
+    ...(getControlParam(params, ["includeSnapshot"], false) ? { snapshot: serializeSnapshot(session.bot.lastSnapshot) } : {}),
+    ...(getControlParam(params, ["includeState"], false) ? { state: serializeState() } : {}),
+  };
+}
+
+const EXTERNAL_CONTROL_BOT_COMMANDS = new Map([
+  ["refresh", async (_session, params) => refreshExternalControlSession(params)],
+  ["clearaggro", async (session) => session.bot.clearAggro()],
+  ["interruptautowalk", async (session) => session.bot.interruptAutoWalk()],
+  ["reconnectnow", async (session) => session.bot.reconnectNow()],
+  ["castwords", async (session, params) => session.bot.castWords(getControlParam(params, ["action"], stripExternalControlKeys(params)))],
+  ["usehotkey", async (session, params) => session.bot.useHotkey(getControlParam(params, ["action"], stripExternalControlKeys(params)))],
+  ["usehotbarslot", async (session, params) => session.bot.useHotbarSlot(getControlParam(params, ["action"], stripExternalControlKeys(params)))],
+  ["useitem", async (session, params) => session.bot.useItem(getControlParam(params, ["action"], stripExternalControlKeys(params)))],
+  ["opencontainer", async (session, params) => session.bot.openContainer(getControlParam(params, ["action"], stripExternalControlKeys(params)))],
+  ["executenativewalk", async (session, params) => session.bot.executeNativeWalk(getControlParam(params, ["destination", "position"], null))],
+  ["executekeyboardstep", async (session, params) => session.bot.executeKeyboardStep(getControlParam(params, ["destination", "position"], null))],
+  ["reposition", async (session, params) => session.bot.reposition(getControlParam(params, ["action"], stripExternalControlKeys(params)))],
+]);
+
+async function executeExternalControlBotCommand(params = {}) {
+  const command = normalizeExternalControlMethod(getControlParam(params, ["command", "method", "name"], ""));
+  if (!command) {
+    throw new Error("Bot command is required.");
+  }
+
+  const handler = EXTERNAL_CONTROL_BOT_COMMANDS.get(command);
+  if (!handler) {
+    throw new Error(`Unsupported bot command "${command}".`);
+  }
+
+  const session = await attachExternalControlSession(params);
+  const result = await handler(session, params);
+  pushSessionLog(session, `External bot command ${command} ${result?.ok === false ? `failed: ${result.reason || "unknown error"}` : "completed"}`);
+  sendEvent("state", { sessionId: session.id, scope: "external-control-bot-command" });
+  return {
+    sessionId: session.id,
+    result,
+  };
+}
+
+function assertExternalRawCdpAllowed() {
+  if (externalControlServer?.getPublicInfo?.()?.allowRawCdp === false) {
+    throw new Error("Raw CDP control is disabled by MINIBOT_CONTROL_ALLOW_RAW_CDP=0.");
+  }
+}
+
+async function executeExternalControlCdpSend(params = {}) {
+  assertExternalRawCdpAllowed();
+  const methodName = String(getControlParam(params, ["cdpMethod", "methodName", "method", "name", "command"], "") || "").trim();
+  if (!methodName) {
+    throw new Error("CDP method is required.");
+  }
+
+  const session = await attachExternalControlSession(params);
+  const cdpParams = getControlParam(params, ["params", "cdpParams"], {});
+  const timeoutMs = getControlParam(params, ["timeoutMs"], undefined);
+  const result = await session.bot.cdp.send(methodName, isPlainObject(cdpParams) ? cdpParams : {}, {
+    ...(Number.isFinite(Number(timeoutMs)) ? { timeoutMs: Number(timeoutMs) } : {}),
+  });
+  return {
+    sessionId: session.id,
+    result,
+  };
+}
+
+async function executeExternalControlCdpEvaluate(params = {}) {
+  assertExternalRawCdpAllowed();
+  const expression = String(getControlParam(params, ["expression", "source", "javascript", "code"], "") || "").trim();
+  if (!expression) {
+    throw new Error("CDP evaluation expression is required.");
+  }
+
+  const session = await attachExternalControlSession(params);
+  if (getControlParam(params, ["bringToFront"], false) === true) {
+    await session.bot.cdp.send("Page.bringToFront", {}).catch(() => { });
+  }
+
+  const result = await session.bot.cdp.evaluate(expression);
+  return {
+    sessionId: session.id,
+    result,
+  };
+}
+
+async function handleExternalControlRequest(method, params = {}) {
+  const normalizedMethod = normalizeExternalControlMethod(method);
+
+  if (normalizedMethod === "methods") {
+    return {
+      methods: EXTERNAL_CONTROL_METHODS,
+      aliases: {
+        state: "getState",
+        setOptions: "updateOptions",
+      },
+    };
+  }
+
+  if (normalizedMethod === "sessions") {
+    const state = serializeState();
+    return {
+      activeSessionId: state.activeSessionId,
+      sessions: state.sessions,
+      instances: state.instances,
+    };
+  }
+
+  if (normalizedMethod === "startbot") {
+    return startExternalControlBot(params);
+  }
+  if (normalizedMethod === "stopbot") {
+    return stopExternalControlBot(params);
+  }
+  if (normalizedMethod === "setbotrunning") {
+    return setExternalControlBotRunning(params);
+  }
+  if (normalizedMethod === "setcavebotpaused") {
+    return setExternalControlCavebotPaused(params);
+  }
+  if (normalizedMethod === "snapshot") {
+    return refreshExternalControlSession(params);
+  }
+  if (normalizedMethod === "action" || normalizedMethod === "executeaction") {
+    return executeExternalControlAction(params);
+  }
+  if (normalizedMethod === "actionblock" || normalizedMethod === "executeactionblock") {
+    return executeExternalControlActionBlock(params);
+  }
+  if (normalizedMethod === "bot" || normalizedMethod === "botcommand") {
+    return executeExternalControlBotCommand(params);
+  }
+  if (normalizedMethod === "cdpsend") {
+    return executeExternalControlCdpSend(params);
+  }
+  if (normalizedMethod === "cdpevaluate") {
+    return executeExternalControlCdpEvaluate(params);
+  }
+
+  const command = EXTERNAL_CONTROL_IPC_COMMANDS.get(normalizedMethod);
+  if (!command) {
+    throw new Error(`Unsupported external control method "${method}".`);
+  }
+
+  const args = Array.isArray(params) ? params : command.args(params);
+  return invokeTrustedControlHandler(command.channel, args);
+}
+
+function dispatchExternalControlRequest(method, params = {}, context = {}) {
+  externalControlCommandChain = externalControlCommandChain
+    .catch(() => null)
+    .then(() => handleExternalControlRequest(method, params, context));
+  return externalControlCommandChain;
+}
+
 function createWindow() {
   const icon = resolveAppIcon();
   const viewport = getViewport();
@@ -3986,6 +4488,13 @@ async function bootstrap() {
   await refreshRouteLibrary();
   await refreshAccountLibrary();
   await refreshTrainerCharacterLibrary();
+  externalControlServer = createExternalControlSocket({
+    dispatcher: dispatchExternalControlRequest,
+    configDir: RUNTIME_LAYOUT.configDir,
+    getRuntimeInfo: buildExternalControlRuntimeInfo,
+    logger: console,
+  });
+  await externalControlServer.start();
   createWindow();
 
   try {
@@ -4094,6 +4603,8 @@ app.on("window-all-closed", async () => {
   clearInterval(discoveryTimer);
   queueSessionStateSave();
   await flushSessionStateSave();
+  await externalControlServer?.stop?.().catch(() => null);
+  externalControlServer = null;
 
   await Promise.all(
     [...sessions.values()].map(async (session) => {
@@ -4527,14 +5038,7 @@ handleTrusted("bb:load-route", async (_event, name) => {
     throw new Error("Selected route could not be loaded.");
   }
 
-  const localOnlyConfig = {
-    creatureLedger: session.config.creatureLedger,
-    monsterArchive: session.config.monsterArchive,
-    playerArchive: session.config.playerArchive,
-    npcArchive: session.config.npcArchive,
-    cavebotPaused: session.config.cavebotPaused,
-    stopAggroHold: session.config.stopAggroHold,
-  };
+  const localOnlyConfig = pickRouteProfileLocalOnlyState(session.config);
 
   await persistSessionConfig(session, {
     ...session.config,
@@ -4654,14 +5158,7 @@ handleTrusted("bb:apply-route-pack-import", async () => {
     throw new Error("This route pack was created by a newer schema and is read-only in this build.");
   }
 
-  const localOnlyConfig = {
-    creatureLedger: session.config.creatureLedger,
-    monsterArchive: session.config.monsterArchive,
-    playerArchive: session.config.playerArchive,
-    npcArchive: session.config.npcArchive,
-    cavebotPaused: session.config.cavebotPaused,
-    stopAggroHold: session.config.stopAggroHold,
-  };
+  const localOnlyConfig = pickRouteProfileLocalOnlyState(session.config);
   const nextOptions = preview.options;
   session.pendingRoutePackImport = null;
   await persistSessionConfig(session, {

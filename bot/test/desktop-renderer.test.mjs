@@ -3696,7 +3696,7 @@ test("modal shell keeps polished spacing without compact-view runtime overrides"
   const modalBodyStyle = dom.window.getComputedStyle(modalBody);
   const modalActionsStyle = dom.window.getComputedStyle(modalActions);
 
-  assert.equal(modalLayerStyle.paddingTop, "8px");
+  assert.equal(modalLayerStyle.paddingTop, "12px");
   assert.equal(modalPanelStyle.paddingTop, "7px");
   assert.equal(modalPanelStyle.gap, "7px");
   assert.equal(modalHeadStyle.gap, "8px");
@@ -5243,7 +5243,7 @@ test("session alarm power suppresses hostile audio while keeping the tab warning
           },
           visiblePlayerNames: ["God Minibia"],
           alarmOptions: {
-            alarmsEnabled: false,
+            alarmsEnabled: true,
             alarmsStaffEnabled: true,
             alarmsStaffRadiusSqm: 9,
             alarmsStaffFloorRange: 1,
@@ -5278,6 +5278,85 @@ test("session alarm power suppresses hostile audio while keeping the tab warning
 
   const tab = document.querySelector('[data-session-select="page-1"]').closest(".bot-tab");
   assert.equal(tab.classList.contains("hostile-alert"), true);
+  assert.equal(tab.classList.contains("staff-alert"), true);
+  assert.equal(beepLog.filter((entry) => entry.type === "start").length, 0);
+});
+
+test("session alarm sound switch suppresses audio while keeping tab warnings visible", async () => {
+  const beepLog = [];
+
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        alarmsEnabled: true,
+        alarmsSoundEnabled: false,
+        alarmsStaffEnabled: true,
+        alarmsStaffRadiusSqm: 9,
+        alarmsStaffFloorRange: 1,
+      },
+      sessions: [
+        {
+          id: "page-1",
+          profileKey: "knight-alpha",
+          pageId: "page-1",
+          title: "Minibia",
+          url: "https://minibia.com/play",
+          characterName: "Knight Alpha",
+          displayName: "Knight Alpha",
+          label: "Knight Alpha",
+          playerPosition: { x: 100, y: 200, z: 7 },
+          playerStats: {
+            health: 870,
+            maxHealth: 1000,
+            mana: 320,
+            maxMana: 500,
+            healthPercent: 87,
+            manaPercent: 64,
+          },
+          visiblePlayers: [
+            {
+              id: 78,
+              name: "God Minibia",
+              position: { x: 102, y: 200, z: 7 },
+            },
+          ],
+          visiblePlayerNames: ["God Minibia"],
+          alarmOptions: {
+            alarmsEnabled: true,
+            alarmsSoundEnabled: false,
+            alarmsStaffEnabled: true,
+            alarmsStaffRadiusSqm: 9,
+            alarmsStaffFloorRange: 1,
+          },
+          running: false,
+          connected: true,
+          ready: true,
+          present: true,
+          claimed: false,
+          claimedBySelf: true,
+          available: true,
+          routeIndex: 1,
+          routeComplete: false,
+          overlayFocusIndex: 1,
+          routeName: "dararotworms",
+          page: {
+            id: "page-1",
+            title: "Minibia",
+            url: "https://minibia.com/play",
+          },
+        },
+      ],
+    }),
+    beforeEval(window) {
+      installFakeAudioContext(window, beepLog);
+    },
+  });
+  const { document } = desk;
+
+  await waitFor(430);
+  await flush(4);
+
+  const tab = document.querySelector('[data-session-select="page-1"]').closest(".bot-tab");
   assert.equal(tab.classList.contains("staff-alert"), true);
   assert.equal(beepLog.filter((entry) => entry.type === "start").length, 0);
 });
@@ -6284,6 +6363,53 @@ test("hunt workspace keeps player history visible even when nobody is nearby", a
   assert.match(document.getElementById("player-visible-note").textContent, /No players nearby\./);
   assert.match(document.getElementById("player-visible-list").textContent, /Knight Alpha/);
   assert.match(document.getElementById("player-visible-list").textContent, /Scout Beta/);
+});
+
+test("hunt workspace renders players and npcs as compact presence grids", async () => {
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        playerArchive: ["Zulu Knight", "Knight Alpha"],
+        npcArchive: ["Rashid"],
+      },
+      snapshot: {
+        visiblePlayerNames: ["Scout Beta", "Knight Alpha"],
+        visibleNpcNames: ["Yaman"],
+        visibleNpcs: [{ name: "Yaman" }],
+      },
+    }),
+  });
+  const { document } = desk;
+
+  document.getElementById("quick-open-targeting").click();
+  await flush();
+
+  assert.match(
+    stylesSource,
+    /\.player-archive,\s*\.npc-archive\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(112px,\s*1fr\)\);/,
+  );
+  assert.match(
+    stylesSource,
+    /\.presence-chip\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto;/,
+  );
+  assert.deepEqual(
+    [...document.querySelectorAll("#player-visible-list .presence-chip strong")].map((node) => node.textContent.trim()),
+    ["Knight Alpha", "Scout Beta", "Zulu Knight"],
+  );
+  assert.deepEqual(
+    [...document.querySelectorAll("#player-visible-list .presence-chip span")].map((node) => node.textContent.trim()),
+    ["Nearby", "Nearby", "Seen"],
+  );
+  assert.deepEqual(
+    [...document.querySelectorAll("#npc-visible-list .presence-chip strong")].map((node) => node.textContent.trim()),
+    ["Rashid", "Yaman"],
+  );
+  assert.deepEqual(
+    [...document.querySelectorAll("#npc-visible-list .presence-chip span")].map((node) => node.textContent.trim()),
+    ["Seen", "Nearby"],
+  );
+  assert.doesNotMatch(document.getElementById("player-visible-list").textContent, /Seen recently Player|Nearby now Player|Tracked player/i);
+  assert.doesNotMatch(document.getElementById("npc-visible-list").textContent, /Seen recently NPC|Nearby now NPC|Tracked NPC/i);
 });
 
 test("hunt workspace keeps registry entries alphabetical and target profiles in priority order", async () => {

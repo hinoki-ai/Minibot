@@ -5,6 +5,7 @@ artifacts/
 .codex
 .DS_Store
 cavebots/*.knowledge.json
+temporals/*-screenshots/
 
 # Portable/generated runtime state when working from bot/ as a repo root.
 storage/runtime/
@@ -14,4 +15,5 @@ storage/home/.config/Minibot/
 storage/home/.config/minibot/accounts/
 storage/home/.config/minibot/claims/
 storage/home/.config/minibot/route-spacing/
+storage/home/.config/minibot/control-socket.json
 storage/home/.config/minibot/session-state.json

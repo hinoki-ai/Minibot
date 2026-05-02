@@ -55,11 +55,20 @@
       "Fifty",
       "Akohde",
       "Grasson",
-      "Kenny"
+      "Kenny",
+      "Golden Helmet",
+      "Los Bandoleros",
+      "Lysy",
+      "Alf",
+      "Noname",
+      "minibia.com | 522: Connection timed out",
+      "Walkor"
     ],
     "npcs": []
   },
   "cavebotPaused": false,
+  "alarmsEnabled": true,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false
 }

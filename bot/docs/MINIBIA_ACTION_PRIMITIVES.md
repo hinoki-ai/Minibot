@@ -14,6 +14,9 @@ The rule is simple:
 ## Current Shared Action Surface
 
 The repo now has a real shared action surface exposed through [`lib/action-router.mjs`](../lib/action-router.mjs).
+The Electron external-control socket can execute the same action objects through
+its `action` and `actionBlock` methods, so trusted agents should use this shared
+surface instead of clicking the desktop UI.
 
 Current action types:
 

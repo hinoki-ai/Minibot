@@ -70,6 +70,8 @@ const ROUTE_PROFILE_LOCAL_ONLY_KEYS = new Set([
   "cavebotPaused",
   "stopAggroHold",
   "trainerPartnerName",
+  "alarmsEnabled",
+  "alarmsSoundEnabled",
 ]);
 const ROUTE_PROFILE_LEGACY_CHARACTER_KEYS = new Set([
   "trainerPartnerName",
@@ -192,7 +194,6 @@ const ROUTE_PROFILE_PACK_SECTION_KEYS = Object.freeze({
     "bankingRules",
   ],
   alarms: [
-    "alarmsEnabled",
     "alarmsPlayerEnabled",
     "alarmsPlayerRadiusSqm",
     "alarmsPlayerFloorRange",
@@ -513,6 +514,15 @@ function stripPackLocalOnlyKeys(payload = {}) {
     delete stripped[key];
   }
   return stripped;
+}
+
+export function pickRouteProfileLocalOnlyState(config = {}) {
+  const normalized = normalizeOptions(config);
+  const picked = {};
+  for (const key of ROUTE_PROFILE_LOCAL_ONLY_KEYS) {
+    picked[key] = cloneConfigValue(normalized[key]);
+  }
+  return picked;
 }
 
 function summarizeRouteProfilePackValue(value) {

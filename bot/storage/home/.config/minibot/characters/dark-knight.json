@@ -3,7 +3,21 @@
   "creatureLedger": {
     "monsters": [
       "Dragon",
-      "Scorpion"
+      "Scorpion",
+      "Snake",
+      "Rabbit",
+      "Hyaena",
+      "Bat",
+      "Elephant",
+      "Wasp",
+      "Flamingo",
+      "Skunk",
+      "Bug",
+      "Butterfly",
+      "Centipede",
+      "Cave Rat",
+      "Spider",
+      "Hydra"
     ],
     "players": [
       "Lord Larva",
@@ -97,11 +111,22 @@
       "Jiggi",
       "Deonde",
       "Agus",
-      "Katrine"
+      "Katrine",
+      "Birdi",
+      "Lust",
+      "Wujek",
+      "Gaal",
+      "Robalekk",
+      "Exiva",
+      "Jelly Jamm",
+      "Tyr",
+      "Comrade Crimson",
+      "Chronoq",
+      "Quiver"
     ],
     "npcs": []
   },
-  "cavebotPaused": false,
+  "cavebotPaused": true,
   "trainerPartnerName": "",
-  "stopAggroHold": false
+  "stopAggroHold": true
 }

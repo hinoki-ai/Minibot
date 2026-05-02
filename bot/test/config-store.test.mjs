@@ -113,6 +113,8 @@ test("saveConfig writes a full cavebot profile into the route file and hydrates 
     assert.deepEqual(characterRaw, {
       cavebotName: "rot-route",
       cavebotPaused: true,
+      alarmsEnabled: true,
+      alarmsSoundEnabled: true,
       trainerPartnerName: "Scout Beta",
       creatureLedger: {
         monsters: [],
@@ -151,6 +153,8 @@ test("saveConfig writes a full cavebot profile into the route file and hydrates 
     assert.equal(Object.hasOwn(routeRaw, "creatureLedger"), false);
     assert.equal(Object.hasOwn(routeRaw, "cavebotPaused"), false);
     assert.equal(Object.hasOwn(routeRaw, "stopAggroHold"), false);
+    assert.equal(Object.hasOwn(routeRaw, "alarmsEnabled"), false);
+    assert.equal(Object.hasOwn(routeRaw, "alarmsSoundEnabled"), false);
     assert.deepEqual(routeRaw.waypoints, [
       { x: 100, y: 200, z: 7, type: "walk", label: "Entry" },
       { x: 101, y: 201, z: 7, type: "shovel-hole", label: "Hole", radius: 2 },
@@ -383,6 +387,75 @@ test("trainer partner stays character-specific when multiple characters share on
 
     assert.equal(knightHydrated.trainerPartnerName, "Scout Beta");
     assert.equal(druidHydrated.trainerPartnerName, "Guide Gamma");
+  } finally {
+    if (previousHome == null) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+  }
+});
+
+test("alarm power and sound stay character-specific when multiple characters share one route", async () => {
+  const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minibot-config-alarm-local-"));
+  const previousHome = process.env.HOME;
+
+  try {
+    process.env.HOME = tempHome;
+
+    const moduleUrl = new URL(`../lib/config-store.mjs?alarm-local-test=${Date.now()}`, import.meta.url);
+    const {
+      CHARACTER_CONFIG_DIR,
+      PROFILE_DIR,
+      loadConfig,
+      saveConfig,
+    } = await import(moduleUrl.href);
+
+    const sharedRouteConfig = {
+      cavebotName: "shared-alarm-route",
+      alarmsBlacklistNames: ["Bad Actor"],
+      waypoints: [
+        { x: 100, y: 200, z: 7, label: "Start", type: "walk" },
+      ],
+    };
+
+    await saveConfig({
+      ...sharedRouteConfig,
+      alarmsEnabled: false,
+      alarmsSoundEnabled: false,
+    }, {
+      profileKey: "knight-alpha",
+    });
+
+    await saveConfig({
+      ...sharedRouteConfig,
+      alarmsEnabled: true,
+      alarmsSoundEnabled: true,
+    }, {
+      profileKey: "elder-druid",
+    });
+
+    const knightRaw = JSON.parse(await fs.readFile(path.join(CHARACTER_CONFIG_DIR, "knight-alpha.json"), "utf8"));
+    const druidRaw = JSON.parse(await fs.readFile(path.join(CHARACTER_CONFIG_DIR, "elder-druid.json"), "utf8"));
+    const routeRaw = JSON.parse(await fs.readFile(path.join(PROFILE_DIR, "shared-alarm-route.json"), "utf8"));
+
+    assert.equal(knightRaw.alarmsEnabled, false);
+    assert.equal(knightRaw.alarmsSoundEnabled, false);
+    assert.equal(druidRaw.alarmsEnabled, true);
+    assert.equal(druidRaw.alarmsSoundEnabled, true);
+    assert.equal(Object.hasOwn(routeRaw, "alarmsEnabled"), false);
+    assert.equal(Object.hasOwn(routeRaw, "alarmsSoundEnabled"), false);
+    assert.deepEqual(routeRaw.alarmsBlacklistNames, ["Bad Actor"]);
+
+    const knightHydrated = await loadConfig({ profileKey: "knight-alpha" });
+    const druidHydrated = await loadConfig({ profileKey: "elder-druid" });
+
+    assert.equal(knightHydrated.alarmsEnabled, false);
+    assert.equal(knightHydrated.alarmsSoundEnabled, false);
+    assert.equal(druidHydrated.alarmsEnabled, true);
+    assert.equal(druidHydrated.alarmsSoundEnabled, true);
+    assert.deepEqual(knightHydrated.alarmsBlacklistNames, ["Bad Actor"]);
+    assert.deepEqual(druidHydrated.alarmsBlacklistNames, ["Bad Actor"]);
   } finally {
     if (previousHome == null) {
       delete process.env.HOME;
@@ -741,6 +814,7 @@ test("route profile packs export grouped settings and preview validation-first i
       bankingEnabled: true,
       bankingRules: [{ enabled: true, npcName: "Asima", action: "deposit-all" }],
       alarmsEnabled: true,
+      alarmsSoundEnabled: false,
       alarmsBlacklistNames: ["Bad Actor"],
       partyFollowEnabled: true,
       partyFollowMembers: ["Scout Beta"],
@@ -766,7 +840,9 @@ test("route profile packs export grouped settings and preview validation-first i
     assert.equal(pack.loot.lootingEnabled, true);
     assert.equal(pack.refill.refillEnabled, true);
     assert.equal(pack.banking.bankingEnabled, true);
-    assert.equal(pack.alarms.alarmsEnabled, true);
+    assert.equal(Object.hasOwn(pack.alarms, "alarmsEnabled"), false);
+    assert.equal(Object.hasOwn(pack.alarms, "alarmsSoundEnabled"), false);
+    assert.deepEqual(pack.alarms.alarmsBlacklistNames, ["Bad Actor"]);
     assert.deepEqual(pack.party.partyFollowMembers, ["Scout Beta"]);
     assert.equal(Object.hasOwn(pack.options, "creatureLedger"), false);
     assert.equal(Object.hasOwn(pack.options, "cavebotPaused"), false);

@@ -1100,6 +1100,12 @@ const MODULE_RULE_SCHEMAS = {
     allowRules: false,
     moduleFields: [
       {
+        key: "alarmsSoundEnabled",
+        label: "Sound",
+        type: "checkbox",
+        help: "Master audio switch for alarm beeps. Visual tab warnings stay visible when sound is off.",
+      },
+      {
         key: "alarmsPlayerEnabled",
         label: "Player alarm",
         type: "checkbox",
@@ -1583,6 +1589,21 @@ const HEADLESS_SETTINGS_UI = Object.freeze({
   hideModalHead: true,
 });
 
+const COMPACT_MODULE_MODAL_KEYS = new Set([
+  "deathHeal",
+  "manaTrainer",
+  "spellCaster",
+  "distanceKeeper",
+  "autoLight",
+  "autoConvert",
+  "antiIdle",
+  "reconnect",
+  "trainer",
+  "ringAutoReplace",
+  "amuletAutoReplace",
+  "banking",
+]);
+
 const MODULE_RULE_UI = {
   deathHeal: {
     ...HEADLESS_SETTINGS_UI,
@@ -2057,7 +2078,7 @@ const WAYPOINT_TYPE_LABELS = {
 const WAYPOINT_TYPE_HELP = {
   walk: "Walk: default movement waypoint. Use this for normal SQM-to-SQM routing.",
   action: "Action: route control waypoint. Use Restart Route to loop back to waypoint 1, or Go To Waypoint to jump to an earlier checkpoint marker.",
-  node: "Node: classic cavebot checkpoint. Minibot currently walks it like a normal waypoint, but it stays tagged for route editing and future skip logic.",
+  node: "Node: classic cavebot checkpoint. Counts as reached anywhere in a 5x5 square centered on the marker unless this waypoint has a custom radius.",
   stand: "Stand: classic stop tile for stairs, doors, and teleports. Minibot keeps the marker type even when the movement target is the same SQM.",
   helper: "Helper: hidden recovery tile. Normal traversal skips it, but combat drift or blocked-route recovery can route through helper chains to rejoin the main loop.",
   "safe-zone": "Safe Zone: marks a defensive tile in the loop. Stored with the route and highlighted in the overlay.",
@@ -5594,10 +5615,12 @@ function normalizeAlarmRangeValue(value, fallback = 0) {
 
 function getAlarmSettings(source = state?.options || {}) {
   const alarmsEnabled = source?.alarmsEnabled !== false;
+  const soundEnabled = alarmsEnabled && source?.alarmsSoundEnabled !== false;
   const blacklistNames = normalizeMonsterNames(source?.alarmsBlacklistNames || []);
   const blacklistNameKeys = new Set(blacklistNames.map((name) => name.toLowerCase()));
   return {
     enabled: alarmsEnabled,
+    soundEnabled,
     player: {
       enabled: alarmsEnabled && source?.alarmsPlayerEnabled !== false,
       radiusSqm: normalizeAlarmRangeValue(source?.alarmsPlayerRadiusSqm, 8),
@@ -5621,11 +5644,17 @@ function getAlarmSettings(source = state?.options || {}) {
 function getSessionAlarmSettings(session) {
   const activeSessionId = String(state?.activeSessionId || "");
   const sessionId = String(session?.id || "");
-  const source = session?.alarmOptions && typeof session.alarmOptions === "object"
+  const sessionSource = session?.alarmOptions && typeof session.alarmOptions === "object"
     ? session.alarmOptions
-    : sessionId && sessionId === activeSessionId
+    : {};
+  const activeSource = sessionId && sessionId === activeSessionId
+    && state?.options
+    && typeof state.options === "object"
       ? state?.options || {}
-      : {};
+      : null;
+  const source = activeSource
+    ? { ...sessionSource, ...activeSource }
+    : sessionSource;
   return getAlarmSettings(source);
 }
 
@@ -5973,7 +6002,7 @@ function getSessionAlertFlags(session) {
     : (playersTargetingSelf.length || skulledPlayers.length || hasStaff)
       ? "staff"
       : null;
-  const audioEnabled = alarmSettings.enabled === true;
+  const audioEnabled = alarmSettings.soundEnabled === true;
   const alertKind = dead
     ? "death"
     : hasHostilePlayers
@@ -8201,6 +8230,7 @@ function cloneModuleOptions(options = {}) {
     antiIdleEnabled: Boolean(options.antiIdleEnabled),
     antiIdleIntervalMs: Number(options.antiIdleIntervalMs) || 0,
     alarmsEnabled: options.alarmsEnabled !== false,
+    alarmsSoundEnabled: options.alarmsSoundEnabled !== false,
     alarmsPlayerEnabled: options.alarmsPlayerEnabled !== false,
     alarmsPlayerRadiusSqm: Number(options.alarmsPlayerRadiusSqm) || 0,
     alarmsPlayerFloorRange: Number(options.alarmsPlayerFloorRange) || 0,
@@ -11583,8 +11613,15 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
     view.note.hidden = !noteText;
   }
   if (moduleModalPanel) {
+    const compactModal = COMPACT_MODULE_MODAL_KEYS.has(moduleKey);
+    const hasRuleList = schema.allowRules !== false && Boolean(schema.rulesKey);
     moduleModalPanel.dataset.activeModuleKey = moduleKey;
     moduleModalPanel.classList.toggle("module-modal-headless", hideModalHead);
+    moduleModalPanel.classList.toggle("module-modal-compact", compactModal);
+    moduleModalPanel.classList.toggle("module-modal-workspace", !compactModal);
+    moduleModalPanel.classList.toggle("module-modal-rule-only", compactModal && hasRuleList);
+    moduleModalPanel.classList.toggle("module-modal-settings-only", compactModal && !hasRuleList);
+    moduleModalPanel.classList.toggle("module-modal-empty-rules", compactModal && hasRuleList && !rules.length);
   }
   if (moduleModalHead) {
     moduleModalHead.hidden = hideModalHead;
@@ -16380,17 +16417,15 @@ function renderPresenceRows(entries = [], {
         classes.push("history");
       }
       const status = entry.visible
-        ? "Nearby now"
+        ? "Nearby"
         : entry.archived
-          ? "Seen recently"
-          : kind === "npc"
-            ? "Tracked NPC"
-            : "Tracked player";
+          ? "Seen"
+          : "Tracked";
       const label = kind === "npc" ? "NPC" : "Player";
       return `
-        <div class="${classes.join(" ")}" draggable="true" data-creature-registry-name="${escapeHtml(entry.name)}" data-creature-registry-kind="${escapeHtml(kind)}">
+        <div class="${classes.join(" ")}" draggable="true" data-creature-registry-name="${escapeHtml(entry.name)}" data-creature-registry-kind="${escapeHtml(kind)}" title="${escapeHtml(`${entry.name} / ${status} ${label}`)}">
           <strong>${escapeHtml(entry.name)}</strong>
-          <span>${escapeHtml(status)} ${escapeHtml(label)}</span>
+          <span>${escapeHtml(status)}</span>
         </div>
       `;
     })

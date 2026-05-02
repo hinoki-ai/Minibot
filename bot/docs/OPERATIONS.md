@@ -99,6 +99,53 @@ Do not omit the always-active flags when manually launched windows may sit behin
 
 If you use a non-default page or port, update Minibot config or pass custom flags to the CLI runner.
 
+## External Agent Control
+
+When the Electron desktop app is running, Minibot starts a local NDJSON control socket for trusted local agents. The socket lets agents operate the real in-memory bot sessions directly instead of driving the renderer as a fake user.
+
+Default discovery file:
+
+```bash
+cat ~/.config/minibot/control-socket.json
+```
+
+In portable mode, the same file is under `bot/storage/home/.config/minibot/control-socket.json`.
+
+Default transport is `127.0.0.1:17373`. If that default port is busy, Minibot binds an ephemeral local port and writes the actual address to the discovery file.
+
+Useful environment flags:
+
+- `MINIBOT_CONTROL_SOCKET=0`: disable the socket
+- `MINIBOT_CONTROL_PORT=17373`: set a TCP port
+- `MINIBOT_CONTROL_HOST=127.0.0.1`: set the TCP host
+- `MINIBOT_CONTROL_SOCKET_PATH=/path/to/minibot.sock`: use a Unix socket path instead of TCP
+- `MINIBOT_CONTROL_TOKEN=...`: require auth or a per-request token
+- `MINIBOT_CONTROL_ALLOW_RAW_CDP=0`: disable raw `cdp.send` and `cdp.evaluate`
+
+Protocol shape:
+
+```json
+{"id":1,"method":"state"}
+{"id":2,"method":"selectSession","params":{"sessionId":"..."}}
+{"id":3,"method":"startBot","params":{"sessionId":"..."}}
+{"id":4,"method":"action","params":{"sessionId":"...","action":{"type":"useHotkey","hotkey":"F1"}}}
+{"id":5,"method":"actionBlock","params":{"steps":[{"type":"say","words":"hi"},{"type":"wait","durationMs":500}]}}
+```
+
+Each line is one JSON request. Responses are one JSON line with `id`, `ok`, and either `result` or `error`. Use `subscribe` to receive renderer-style `bb:event` envelopes:
+
+```json
+{"id":6,"method":"subscribe"}
+```
+
+When a token is configured, authenticate once:
+
+```json
+{"id":1,"method":"auth","token":"..."}
+```
+
+or include `token` on each request.
+
 ## Desktop Workflow
 
 The desk header exposes the session strip plus `New Session`, `Close Session`, `Scan All Tabs`, `Close Client`, `New Route`, `Saved Files`, `Accounts`, `Route Panel`, `Hunt Studio`, `Compact View`, `Desk Pinned`, and `Presets`.
@@ -450,6 +497,7 @@ Minibot writes runtime data outside the repository:
 - per-character config: `~/.config/minibot/characters/<profileKey>.json`
 - claim files: `~/.config/minibot/claims/<profileKey>.json`
 - route spacing leases: `~/.config/minibot/route-spacing/*`
+- external-control discovery: `~/.config/minibot/control-socket.json`
 - route pack exports: chosen by the operator, with default working storage under `~/.config/minibot/route-packs`
 - route profiles: `~/Minibot/cavebots/<routeName>.json`
 

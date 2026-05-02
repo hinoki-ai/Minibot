@@ -31,6 +31,9 @@ UI, action surface, module rule shape, or persistence schema.
 ## Product Invariants
 
 - The Electron desktop app is the canonical interface.
+- The external-control socket is a local agent interface owned by the Electron
+  main process; it must reuse live sessions, claims, persistence, and shared
+  action dispatch rather than becoming a separate bot runtime.
 - The direct CLI runner is a narrow secondary target-only surface.
 - Minibot controls a live browser page through Chrome DevTools Protocol. It
   does not embed, emulate, or replace the Minibia client.
@@ -97,6 +100,10 @@ Current waypoint types:
 - `shovel-hole`
 
 Current waypoint actions are `restart` and `goto`.
+
+`node` waypoints default to radius `2`, meaning the checkpoint is reached from
+any SQM in the 5x5 square centered on the marker. A waypoint-local `radius`
+overrides that default.
 
 `avoid` and `danger-zone` waypoints are hard no-go markers. They are skipped
 as route spine entries and their coordinates are forbidden for route movement
@@ -178,6 +185,10 @@ Do not document backlog-only route fields as current runtime schema.
 - Route recovery must not relatch to a repeated crossing coordinate unless
   recent route continuity, local adjacency, or bridge touches disambiguate the
   intended index.
+- A recent accepted route glide is explicit progress evidence for its plain
+  walk/node/safe-zone segment. If live snapshots reach or closely pass an
+  intermediate glide waypoint, recovery advances past that intermediate point
+  instead of forcing the character to walk back over skipped SQMs.
 - When a stale route index is on the wrong floor after a floor change, route
   recovery first tries to relatch to a plausible same-floor waypoint using the
   normal route disambiguation gates, then falls back to a stair, ladder, or tool
@@ -185,6 +196,20 @@ Do not document backlog-only route fields as current runtime schema.
 - Floor-change waypoints only count as reached after landing on their expected
   destination floor; overshooting farther in the same z direction must not
   advance the route.
+- Visible floor-transition hazards, including stairs, ramps, ladders, and holes,
+  are one unified 3x3 danger area centered on the transition SQM. Route movement
+  should only switch to cautious visible steps when the player or destination is
+  near that bounded area; combat movement must not choose tiles inside it, except
+  for the explicit one-step escape used to leave the center transition SQM.
 - Multi-character route spacing should prefer a peer's live route position when
   it is near the waypoint spine, falling back to stored spacing indices only
   when live position is unavailable or implausible.
+- Multi-character loop spacing targets a large loose gap, not a perfect split.
+  For two sessions on the same looping cavebot, one session should park long
+  enough to avoid overlap and crowding, then release before the peer reaches the
+  exact opposite half. If both sessions are tied on the same waypoint, only the
+  higher-priority lease opens the split and the other waits.
+- A route-spacing hold should act like soft repulsion, not a long hard stall:
+  when the local gap is still cramped and a previous route tile is visibly
+  reachable, the held session may click a bounded backward route step, then let
+  normal route spacing resume.

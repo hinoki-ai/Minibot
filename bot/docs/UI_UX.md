@@ -193,7 +193,7 @@ Current ownership split:
 - Module rules run top to bottom and the UI must communicate that ordering.
 - Module cards may expose power toggles, but rule editing stays in the shared module modal unless the feature belongs to targeting or route surfaces.
 - Full and compact module cards must mirror the same effective state. The
-  Alarms card, in particular, mirrors `alarmsEnabled` and shows player
+  Alarms card, in particular, mirrors the session-local `alarmsEnabled` and shows player
   proximity alarms as armed or off in both layouts. When protector controls are
   enabled, the Alarms card must also summarize whether route pause, targeter
   stop, and acknowledgement are armed.

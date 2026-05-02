@@ -96,6 +96,7 @@ function makeEvent(type, severity, reason, {
 export function buildProtectorAlarmPlan(snapshot = {}, options = {}, {
   now = Date.now(),
   decisionTrace = null,
+  ignoredPlayerKeys = [],
 } = {}) {
   const enabled = options.alarmsEnabled !== false;
   const protectorEnabled = options.alarmsProtectorEnabled === true;
@@ -106,10 +107,14 @@ export function buildProtectorAlarmPlan(snapshot = {}, options = {}, {
   const capacity = normalizeNumber(playerStats.capacity ?? playerStats.cap, Number.POSITIVE_INFINITY);
   const events = [];
   const basePauseActions = [];
+  const criticalControlActions = [];
 
   if (protectorEnabled && options.alarmsPauseRoute === true) basePauseActions.push("pause-route");
   if (protectorEnabled && (options.alarmsPauseTargeter === true || options.alarmsStopTargeter === true)) basePauseActions.push("stop-targeter");
   if (protectorEnabled && options.alarmsRequireAcknowledgement === true) basePauseActions.push("require-acknowledgement");
+  if (protectorEnabled) {
+    criticalControlActions.push(...basePauseActions);
+  }
 
   const append = (event) => {
     if (!enabled && event.type !== "death" && event.type !== "disconnect") {
@@ -123,13 +128,13 @@ export function buildProtectorAlarmPlan(snapshot = {}, options = {}, {
 
   if (snapshot?.ready === false || snapshot?.connection?.connected === false) {
     append(makeEvent("disconnect", "critical", snapshot?.reason || "session disconnected", {
-      actions: ["sound", "desktop-notification", "log", "pause-route", "stop-targeter", "require-acknowledgement"],
+      actions: ["sound", "desktop-notification", "log", ...criticalControlActions],
     }));
   }
 
   if (snapshot?.reason === "dead" || snapshot?.connection?.playerIsDead === true || snapshot?.connection?.deathModalVisible === true) {
     append(makeEvent("death", "critical", "character death detected", {
-      actions: ["sound", "desktop-notification", "log", "pause-route", "stop-targeter", "require-acknowledgement"],
+      actions: ["sound", "desktop-notification", "log", ...criticalControlActions],
     }));
   }
 
@@ -188,11 +193,20 @@ export function buildProtectorAlarmPlan(snapshot = {}, options = {}, {
     }));
   }
 
+  const ignoredPlayers = new Set(
+    [
+      snapshot?.playerName,
+      ...(Array.isArray(ignoredPlayerKeys) ? ignoredPlayerKeys : []),
+      ...normalizeList(options.alarmsIgnoredPlayerNames),
+    ]
+      .map(normalizeKey)
+      .filter(Boolean),
+  );
   const blacklist = new Set(normalizeList(options.alarmsBlacklistNames).map(normalizeKey));
   const visiblePlayers = Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : [];
   for (const player of visiblePlayers) {
     const name = normalizeText(player?.name);
-    if (!name || normalizeKey(name) === normalizeKey(snapshot?.playerName)) {
+    if (!name || ignoredPlayers.has(normalizeKey(name))) {
       continue;
     }
     const distance = getDistance(playerPosition, player?.position);

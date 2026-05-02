@@ -1,0 +1,34 @@
+{
+  "cavebotName": "RookRats",
+  "creatureLedger": {
+    "monsters": [
+      "Rat",
+      "Troll",
+      "Cave Rat",
+      "Bug",
+      "Spider",
+      "Alpha Rat",
+      "Dog",
+      "Wolf",
+      "Bear"
+    ],
+    "players": [
+      "Zlocimir Wielkoportf",
+      "Czarnobrat",
+      "Baby",
+      "Andrzej Swierzb",
+      "Sd Me Daddy",
+      "Dady",
+      "Care Crimen",
+      "Treloso",
+      "Yuby",
+      "Smokd",
+      "Kulag",
+      "the guard"
+    ],
+    "npcs": []
+  },
+  "cavebotPaused": true,
+  "trainerPartnerName": "",
+  "stopAggroHold": true
+}

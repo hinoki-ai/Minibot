@@ -656,7 +656,7 @@
   "autowalkEnabled": true,
   "autowalkLoop": true,
   "routeStrictClear": false,
-  "routeFollowExactWaypoints": true,
+  "routeFollowExactWaypoints": false,
   "routeRecording": false,
   "routeRecordStep": 3,
   "showWaypointOverlay": true,
@@ -665,7 +665,7 @@
   "sustainEnabled": true,
   "sustainCooldownMs": 900,
   "preferHotbarConsumables": true,
-  "ammoEnabled": true,
+  "ammoEnabled": false,
   "ammoRestockEnabled": true,
   "ammoReloadEnabled": true,
   "ammoPreferredNames": [],
@@ -676,6 +676,21 @@
   "ammoRequireNoTargets": false,
   "ammoRequireStationary": false,
   "refillEnabled": false,
+  "refillPlan": {
+    "desiredCounts": {},
+    "minimumHuntCounts": {},
+    "buyCaps": {},
+    "reserveGold": 0,
+    "protectedItems": [],
+    "sellItems": [],
+    "npcNames": [],
+    "shopKeywords": [],
+    "city": "",
+    "travelDestinations": [],
+    "depotBranch": "",
+    "returnWaypoint": "",
+    "items": []
+  },
   "refillSellRequests": [],
   "refillAutoSellEnabled": false,
   "refillAutoSellMinFreeSlots": 2,
@@ -688,11 +703,14 @@
   "refillShopDialogueMaxAttempts": 3,
   "refillPauseOnFailure": true,
   "lootingEnabled": true,
+  "huntLedgerEnabled": true,
   "lootWhitelist": [],
   "lootBlacklist": [],
   "lootPreferredContainers": [
     "Backpack"
   ],
+  "lootRareDropNames": [],
+  "lootRareDropValue": 1000,
   "corpseReturnEnabled": true,
   "walkRepathMs": 1200,
   "reconnectEnabled": false,
@@ -700,9 +718,9 @@
   "reconnectMaxAttempts": 0,
   "avoidElementalFields": true,
   "avoidFieldCategories": {
-    "fire": false,
-    "energy": false,
-    "poison": false,
+    "fire": true,
+    "energy": true,
+    "poison": true,
     "holes": true,
     "stairsLadders": true,
     "teleports": true,
@@ -744,7 +762,6 @@
   "convertCooldownMs": 4000,
   "antiIdleEnabled": false,
   "antiIdleIntervalMs": 60000,
-  "alarmsEnabled": true,
   "alarmsPlayerEnabled": true,
   "alarmsPlayerRadiusSqm": 8,
   "alarmsPlayerFloorRange": 0,
@@ -755,6 +772,32 @@
   "alarmsBlacklistNames": [],
   "alarmsBlacklistRadiusSqm": 9,
   "alarmsBlacklistFloorRange": 1,
+  "alarmsProtectorEnabled": false,
+  "alarmsPauseRoute": false,
+  "alarmsPauseTargeter": false,
+  "alarmsStopTargeter": false,
+  "alarmsRequireAcknowledgement": false,
+  "alarmsPauseModules": [],
+  "alarmsLowHpPercent": 25,
+  "alarmsLowHealthPercent": 25,
+  "alarmsLowMpPercent": 10,
+  "alarmsLowManaPercent": 10,
+  "alarmsLowSupplyCount": 0,
+  "alarmsNoCapacityAt": 0,
+  "alarmsFullBackpackFreeSlots": 0,
+  "alarmsHighIncomingDamagePerSecond": 120,
+  "alarmsNoCapacityEnabled": true,
+  "alarmsPrivateMessageEnabled": true,
+  "alarmsDisconnectEnabled": true,
+  "alarmsDeathEnabled": true,
+  "alarmsRouteStuckEnabled": true,
+  "alarmsNoProgressMs": 60000,
+  "alarmsStaleTargetMs": 15000,
+  "alarmsRareLootEnabled": true,
+  "alarmsFullBackpackEnabled": true,
+  "alarmsHighIncomingDamagePercent": 35,
+  "alarmsLogEnabled": true,
+  "alarmsDesktopNotificationEnabled": false,
   "trainerEnabled": false,
   "trainerConfigured": false,
   "trainerReconnectEnabled": true,
@@ -804,6 +847,8 @@
   "runeMakerRules": [],
   "spellCasterEnabled": false,
   "spellCasterRules": [],
+  "aoeSolverEnabled": false,
+  "aoeSolverRules": [],
   "distanceKeeperEnabled": false,
   "distanceKeeperRules": [],
   "rookillerEnabled": false,
@@ -945,960 +990,537 @@
       "x": 32163,
       "y": 32425,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 001"
-    },
-    {
-      "x": 32160,
-      "y": 32427,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 002"
+      "type": "node",
+      "label": "Waypoint 001",
+      "radius": 2
     },
     {
       "x": 32157,
       "y": 32428,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 003"
-    },
-    {
-      "x": 32154,
-      "y": 32428,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 004"
+      "type": "node",
+      "label": "Waypoint 002",
+      "radius": 2
     },
     {
       "x": 32150,
       "y": 32429,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 005"
-    },
-    {
-      "x": 32147,
-      "y": 32431,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 006"
+      "type": "node",
+      "label": "Waypoint 003",
+      "radius": 2
     },
     {
       "x": 32144,
       "y": 32432,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 007"
-    },
-    {
-      "x": 32141,
-      "y": 32432,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 008"
+      "type": "node",
+      "label": "Waypoint 004",
+      "radius": 2
     },
     {
       "x": 32138,
       "y": 32432,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 009"
-    },
-    {
-      "x": 32135,
-      "y": 32430,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 010"
+      "type": "node",
+      "label": "Waypoint 005",
+      "radius": 2
     },
     {
       "x": 32132,
       "y": 32429,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 011"
-    },
-    {
-      "x": 32130,
-      "y": 32426,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 012"
+      "type": "node",
+      "label": "Waypoint 006",
+      "radius": 2
     },
     {
       "x": 32128,
       "y": 32423,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 013"
-    },
-    {
-      "x": 32128,
-      "y": 32420,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 014"
+      "type": "node",
+      "label": "Waypoint 007",
+      "radius": 2
     },
     {
       "x": 32131,
       "y": 32418,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 015"
-    },
-    {
-      "x": 32132,
-      "y": 32415,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 016"
+      "type": "node",
+      "label": "Waypoint 008",
+      "radius": 2
     },
     {
       "x": 32132,
       "y": 32412,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 017"
-    },
-    {
-      "x": 32132,
-      "y": 32409,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 018"
+      "type": "node",
+      "label": "Waypoint 009",
+      "radius": 2
     },
     {
       "x": 32132,
       "y": 32406,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 019"
-    },
-    {
-      "x": 32132,
-      "y": 32403,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 020"
+      "type": "node",
+      "label": "Waypoint 010",
+      "radius": 2
     },
     {
       "x": 32130,
       "y": 32400,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 021"
-    },
-    {
-      "x": 32131,
-      "y": 32397,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 022"
+      "type": "node",
+      "label": "Waypoint 011",
+      "radius": 2
     },
     {
       "x": 32131,
       "y": 32394,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 023"
-    },
-    {
-      "x": 32128,
-      "y": 32392,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 024"
+      "type": "node",
+      "label": "Waypoint 012",
+      "radius": 2
     },
     {
       "x": 32125,
       "y": 32392,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 025"
-    },
-    {
-      "x": 32123,
-      "y": 32389,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 026"
+      "type": "node",
+      "label": "Waypoint 013",
+      "radius": 2
     },
     {
       "x": 32120,
       "y": 32389,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 027"
-    },
-    {
-      "x": 32118,
-      "y": 32386,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 028"
+      "type": "node",
+      "label": "Waypoint 014",
+      "radius": 2
     },
     {
       "x": 32116,
       "y": 32383,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 029"
-    },
-    {
-      "x": 32116,
-      "y": 32380,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 030"
+      "type": "node",
+      "label": "Waypoint 015",
+      "radius": 2
     },
     {
       "x": 32115,
       "y": 32377,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 031"
-    },
-    {
-      "x": 32114,
-      "y": 32374,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 032"
+      "type": "node",
+      "label": "Waypoint 016",
+      "radius": 2
     },
     {
       "x": 32114,
       "y": 32371,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 033"
-    },
-    {
-      "x": 32113,
-      "y": 32368,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 034"
+      "type": "node",
+      "label": "Waypoint 017",
+      "radius": 2
     },
     {
       "x": 32112,
       "y": 32365,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 035"
-    },
-    {
-      "x": 32112,
-      "y": 32362,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 036"
+      "type": "node",
+      "label": "Waypoint 018",
+      "radius": 2
     },
     {
       "x": 32109,
       "y": 32362,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 037"
-    },
-    {
-      "x": 32106,
-      "y": 32362,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 038"
+      "type": "node",
+      "label": "Waypoint 019",
+      "radius": 2
     },
     {
       "x": 32106,
       "y": 32358,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 039"
-    },
-    {
-      "x": 32109,
-      "y": 32357,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 040"
+      "type": "node",
+      "label": "Waypoint 020",
+      "radius": 2
     },
     {
       "x": 32112,
       "y": 32357,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 041"
-    },
-    {
-      "x": 32115,
-      "y": 32356,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 042"
+      "type": "node",
+      "label": "Waypoint 021",
+      "radius": 2
     },
     {
       "x": 32114,
       "y": 32353,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 043"
-    },
-    {
-      "x": 32113,
-      "y": 32350,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 044"
+      "type": "node",
+      "label": "Waypoint 022",
+      "radius": 2
     },
     {
       "x": 32110,
       "y": 32349,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 045"
-    },
-    {
-      "x": 32107,
-      "y": 32349,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 046"
+      "type": "node",
+      "label": "Waypoint 023",
+      "radius": 2
     },
     {
       "x": 32107,
       "y": 32346,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 047"
-    },
-    {
-      "x": 32105,
-      "y": 32343,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 048"
+      "type": "node",
+      "label": "Waypoint 024",
+      "radius": 2
     },
     {
       "x": 32105,
       "y": 32340,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 049"
-    },
-    {
-      "x": 32105,
-      "y": 32337,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 050"
+      "type": "node",
+      "label": "Waypoint 025",
+      "radius": 2
     },
     {
       "x": 32102,
       "y": 32335,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 051"
-    },
-    {
-      "x": 32102,
-      "y": 32332,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 052"
+      "type": "node",
+      "label": "Waypoint 026",
+      "radius": 2
     },
     {
       "x": 32102,
       "y": 32329,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 053"
-    },
-    {
-      "x": 32103,
-      "y": 32326,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 054"
+      "type": "node",
+      "label": "Waypoint 027",
+      "radius": 2
     },
     {
       "x": 32103,
       "y": 32323,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 055"
-    },
-    {
-      "x": 32103,
-      "y": 32320,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 056"
+      "type": "node",
+      "label": "Waypoint 028",
+      "radius": 2
     },
     {
       "x": 32106,
       "y": 32319,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 057"
-    },
-    {
-      "x": 32109,
-      "y": 32319,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 058"
+      "type": "node",
+      "label": "Waypoint 029",
+      "radius": 2
     },
     {
       "x": 32112,
       "y": 32319,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 059"
-    },
-    {
-      "x": 32115,
-      "y": 32319,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 060"
+      "type": "node",
+      "label": "Waypoint 030",
+      "radius": 2
     },
     {
       "x": 32118,
       "y": 32319,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 061"
-    },
-    {
-      "x": 32121,
-      "y": 32319,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 062"
+      "type": "node",
+      "label": "Waypoint 031",
+      "radius": 2
     },
     {
       "x": 32124,
       "y": 32321,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 063"
-    },
-    {
-      "x": 32127,
-      "y": 32321,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 064"
+      "type": "node",
+      "label": "Waypoint 032",
+      "radius": 2
     },
     {
       "x": 32130,
       "y": 32321,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 065"
-    },
-    {
-      "x": 32133,
-      "y": 32321,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 066"
+      "type": "node",
+      "label": "Waypoint 033",
+      "radius": 2
     },
     {
       "x": 32136,
       "y": 32321,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 067"
-    },
-    {
-      "x": 32139,
-      "y": 32322,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 068"
+      "type": "node",
+      "label": "Waypoint 034",
+      "radius": 2
     },
     {
       "x": 32139,
       "y": 32325,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 069"
-    },
-    {
-      "x": 32142,
-      "y": 32327,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 070"
+      "type": "node",
+      "label": "Waypoint 035",
+      "radius": 2
     },
     {
       "x": 32145,
       "y": 32328,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 071"
-    },
-    {
-      "x": 32148,
-      "y": 32328,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 072"
+      "type": "node",
+      "label": "Waypoint 036",
+      "radius": 2
     },
     {
       "x": 32151,
       "y": 32328,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 073"
-    },
-    {
-      "x": 32154,
-      "y": 32327,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 074"
+      "type": "node",
+      "label": "Waypoint 037",
+      "radius": 2
     },
     {
       "x": 32157,
       "y": 32326,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 075"
-    },
-    {
-      "x": 32160,
-      "y": 32328,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 076"
+      "type": "node",
+      "label": "Waypoint 038",
+      "radius": 2
     },
     {
       "x": 32161,
       "y": 32331,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 077"
-    },
-    {
-      "x": 32161,
-      "y": 32334,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 078"
+      "type": "node",
+      "label": "Waypoint 039",
+      "radius": 2
     },
     {
       "x": 32164,
       "y": 32336,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 079"
-    },
-    {
-      "x": 32168,
-      "y": 32338,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 080"
+      "type": "node",
+      "label": "Waypoint 040",
+      "radius": 2
     },
     {
       "x": 32171,
       "y": 32338,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 081"
-    },
-    {
-      "x": 32172,
-      "y": 32341,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 082"
+      "type": "node",
+      "label": "Waypoint 041",
+      "radius": 2
     },
     {
       "x": 32174,
       "y": 32344,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 083"
+      "type": "node",
+      "label": "Waypoint 042",
+      "radius": 2
     },
     {
-      "x": 32173,
+      "x": 32171,
       "y": 32347,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 084"
-    },
-    {
-      "x": 32170,
-      "y": 32347,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 085"
-    },
-    {
-      "x": 32170,
-      "y": 32352,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 086"
+      "type": "node",
+      "label": "Waypoint 043",
+      "radius": 2
     },
     {
       "x": 32171,
       "y": 32355,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 087"
-    },
-    {
-      "x": 32174,
-      "y": 32356,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 088"
+      "type": "node",
+      "label": "Waypoint 044",
+      "radius": 2
     },
     {
       "x": 32177,
       "y": 32356,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 089"
-    },
-    {
-      "x": 32177,
-      "y": 32359,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 090"
+      "type": "node",
+      "label": "Waypoint 045",
+      "radius": 2
     },
     {
       "x": 32177,
       "y": 32362,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 091"
-    },
-    {
-      "x": 32176,
-      "y": 32365,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 092"
+      "type": "node",
+      "label": "Waypoint 046",
+      "radius": 2
     },
     {
       "x": 32175,
       "y": 32368,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 093"
-    },
-    {
-      "x": 32172,
-      "y": 32368,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 094"
+      "type": "node",
+      "label": "Waypoint 047",
+      "radius": 2
     },
     {
       "x": 32169,
       "y": 32368,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 095"
-    },
-    {
-      "x": 32166,
-      "y": 32368,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 096"
+      "type": "node",
+      "label": "Waypoint 048",
+      "radius": 2
     },
     {
       "x": 32163,
       "y": 32366,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 097"
-    },
-    {
-      "x": 32160,
-      "y": 32364,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 098"
+      "type": "node",
+      "label": "Waypoint 049",
+      "radius": 2
     },
     {
       "x": 32160,
       "y": 32361,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 099"
-    },
-    {
-      "x": 32160,
-      "y": 32358,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 100"
+      "type": "node",
+      "label": "Waypoint 050",
+      "radius": 2
     },
     {
       "x": 32160,
       "y": 32355,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 101"
-    },
-    {
-      "x": 32157,
-      "y": 32355,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 102"
+      "type": "node",
+      "label": "Waypoint 051",
+      "radius": 2
     },
     {
       "x": 32154,
       "y": 32355,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 103"
-    },
-    {
-      "x": 32151,
-      "y": 32355,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 104"
+      "type": "node",
+      "label": "Waypoint 052",
+      "radius": 2
     },
     {
       "x": 32148,
       "y": 32356,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 105"
-    },
-    {
-      "x": 32145,
-      "y": 32356,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 106"
+      "type": "node",
+      "label": "Waypoint 053",
+      "radius": 2
     },
     {
       "x": 32145,
       "y": 32359,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 107"
-    },
-    {
-      "x": 32142,
-      "y": 32360,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 108"
+      "type": "node",
+      "label": "Waypoint 054",
+      "radius": 2
     },
     {
       "x": 32142,
       "y": 32363,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 109"
-    },
-    {
-      "x": 32142,
-      "y": 32366,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 110"
+      "type": "node",
+      "label": "Waypoint 055",
+      "radius": 2
     },
     {
       "x": 32139,
       "y": 32368,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 111"
-    },
-    {
-      "x": 32139,
-      "y": 32371,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 112"
+      "type": "node",
+      "label": "Waypoint 056",
+      "radius": 2
     },
     {
       "x": 32137,
       "y": 32374,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 113"
-    },
-    {
-      "x": 32136,
-      "y": 32377,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 114"
+      "type": "node",
+      "label": "Waypoint 057",
+      "radius": 2
     },
     {
       "x": 32136,
       "y": 32380,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 115"
-    },
-    {
-      "x": 32136,
-      "y": 32383,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 116"
+      "type": "node",
+      "label": "Waypoint 058",
+      "radius": 2
     },
     {
       "x": 32136,
       "y": 32386,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 117"
-    },
-    {
-      "x": 32136,
-      "y": 32389,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 118"
+      "type": "node",
+      "label": "Waypoint 059",
+      "radius": 2
     },
     {
       "x": 32134,
       "y": 32392,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 119"
-    },
-    {
-      "x": 32131,
-      "y": 32392,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 120"
+      "type": "node",
+      "label": "Waypoint 060",
+      "radius": 2
     },
     {
       "x": 32131,
       "y": 32395,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 121"
-    },
-    {
-      "x": 32131,
-      "y": 32398,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 122"
+      "type": "node",
+      "label": "Waypoint 061",
+      "radius": 2
     },
     {
       "x": 32132,
       "y": 32401,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 123"
-    },
-    {
-      "x": 32133,
-      "y": 32407,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 124"
+      "type": "node",
+      "label": "Waypoint 062",
+      "radius": 2
     },
     {
       "x": 32135,
       "y": 32410,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 125"
-    },
-    {
-      "x": 32138,
-      "y": 32410,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 126"
+      "type": "node",
+      "label": "Waypoint 063",
+      "radius": 2
     },
     {
       "x": 32139,
       "y": 32413,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 127"
-    },
-    {
-      "x": 32139,
-      "y": 32416,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 128"
+      "type": "node",
+      "label": "Waypoint 064",
+      "radius": 2
     },
     {
       "x": 32139,
       "y": 32419,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 129"
-    },
-    {
-      "x": 32142,
-      "y": 32420,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 130"
+      "type": "node",
+      "label": "Waypoint 065",
+      "radius": 2
     },
     {
       "x": 32145,
       "y": 32420,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 131"
-    },
-    {
-      "x": 32148,
-      "y": 32422,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 132"
-    },
-    {
-      "x": 32148,
-      "y": 32425,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 133"
+      "type": "node",
+      "label": "Waypoint 066",
+      "radius": 2
     },
     {
       "x": 32155,
       "y": 32421,
       "z": 9,
-      "type": "walk",
-      "label": "Waypoint 134"
-    },
-    {
-      "x": 32158,
-      "y": 32421,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 135"
-    },
-    {
-      "x": 32161,
-      "y": 32420,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 136"
-    },
-    {
-      "x": 32161,
-      "y": 32423,
-      "z": 9,
-      "type": "walk",
-      "label": "Waypoint 137"
+      "type": "node",
+      "label": "Waypoint 067",
+      "radius": 2
     }
   ]
 }

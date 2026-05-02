@@ -52,11 +52,20 @@
       "Rezish",
       "Lililolili",
       "Eczek",
-      "Grasson"
+      "Grasson",
+      "Fifty",
+      "Czarnobrat",
+      "Golden Helmet",
+      "Kenny",
+      "Deadlyek",
+      "Kennie",
+      "minibia.com | 522: Connection timed out"
     ],
     "npcs": []
   },
   "cavebotPaused": false,
+  "alarmsEnabled": true,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false
 }
