@@ -86,6 +86,17 @@ function getRequestToken(request = {}) {
   return normalizeText(request.token || request.authToken || request.params?.token || "");
 }
 
+function sanitizeDispatcherParams(params = {}) {
+  if (!params || typeof params !== "object" || Array.isArray(params)) {
+    return params;
+  }
+
+  const sanitized = { ...params };
+  delete sanitized.token;
+  delete sanitized.authToken;
+  return sanitized;
+}
+
 function removeStaleSocketPath(socketPath) {
   if (!socketPath) {
     return;
@@ -310,7 +321,7 @@ export function createExternalControlSocket({
     }
 
     try {
-      const result = await dispatcher(method, request.params ?? {}, buildClientContext(client));
+      const result = await dispatcher(method, sanitizeDispatcherParams(request.params ?? {}), buildClientContext(client));
       send(client.socket, {
         id,
         ok: true,
@@ -370,6 +381,9 @@ export function createExternalControlSocket({
 
   async function start() {
     if (!options.enabled) {
+      try {
+        fs.rmSync(options.infoFilePath, { force: true });
+      } catch { }
       return getPublicInfo();
     }
     if (server) {

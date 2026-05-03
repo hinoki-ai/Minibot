@@ -761,13 +761,13 @@
         </div>
         <div class="route-hunt-grid route-hunt-grid-3col">
           <section class="target-profile-card target-profile-workbench route-hunt-profile-panel">
-            <div class="targeting-column-kicker">Applied Target Priority</div>
+            <div class="targeting-column-kicker">Main Target Priority</div>
             <div id="target-profile-list" class="target-profile-list"></div>
           </section>
 
           <section class="targeting-config-card route-hunt-config-panel">
             <label class="monster-field target-queue-field route-hunt-queue-field"
-              title="Top line is highest queue priority. One monster per line. Comma-separated names also work.">Queue priority<textarea id="monster" rows="4"
+              title="Top line is highest queue priority. One monster per line. Comma-separated names also work.">Main queue priority<textarea id="monster" rows="4"
                 spellcheck="false"></textarea></label>
             <div id="monster-target-list" class="monster-archive monster-target-list" hidden></div>
             <div class="form-grid route-hunt-runtime-grid">
@@ -810,10 +810,11 @@
           <section class="route-hunt-registry">
             <section class="target-source-panel route-hunt-registry-panel">
               <div class="route-hunt-panel-head route-hunt-panel-head-actions">
+                <strong>Seen Fallback</strong>
                 <div class="inline-actions">
-                  <button id="monster-use-visible" class="btn compact" type="button">Nearby</button>
-                  <button id="monster-use-archive" class="btn compact" type="button">Seen</button>
-                  <button id="monster-archive-targets" class="btn compact" type="button">Save</button>
+                  <button id="monster-use-visible" class="btn compact" type="button">Use Nearby</button>
+                  <button id="monster-use-archive" class="btn compact" type="button">Fallback</button>
+                  <button id="monster-archive-targets" class="btn compact" type="button">Save Queue</button>
                 </div>
               </div>
               <div id="monster-visible-note" class="field-note route-hunt-inline-note">Nearby now: none</div>

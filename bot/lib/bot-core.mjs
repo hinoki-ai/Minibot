@@ -663,16 +663,14 @@ const ROUTE_SAFE_STEP_NAVIGATION_OPTIONS = Object.freeze({
   allowDiagonalCornerCut: true,
 });
 const ROUTE_SPACING_LOG_COOLDOWN_MS = 4_000;
-const ROUTE_SPACING_STALE_HOLD_BREAK_MS = 6_000;
-const ROUTE_SPACING_STALE_HOLD_BYPASS_MS = 4_000;
-const ROUTE_SPACING_STALE_HOLD_FORCE_BYPASS_MS = 14_000;
-const ROUTE_SPACING_MIN_GAP_RATIO = 0.6;
-const ROUTE_SPACING_RELEASE_GAP_RATIO = 0.72;
-const ROUTE_SPACING_MIN_GAP_MAX = 4;
-const ROUTE_SPACING_RELEASE_GAP_MAX = 6;
+const ROUTE_SPACING_DRIFT_RATIO = 0.10;
+const ROUTE_SPACING_MIN_GAP_RATIO = 1 - ROUTE_SPACING_DRIFT_RATIO;
+const ROUTE_SPACING_MAX_GAP_RATIO = 1 + ROUTE_SPACING_DRIFT_RATIO;
+const ROUTE_SPACING_RELEASE_GAP_RATIO = 1;
 const ROUTE_SPACING_LIVE_PROJECTION_GAP_RATIO = 0.45;
 const ROUTE_SPACING_LIVE_PROJECTION_MAX_OFFSET = ROUTE_RESYNC_FORWARD_LOOKAHEAD;
 const ROUTE_SPACING_LIVE_POSITION_DISTANCE = ROUTE_RESYNC_GLOBAL_DISTANCE;
+const ROUTE_SPACING_TARGET_PROJECTION_MAX_DISTANCE = ROUTE_RESYNC_GLOBAL_DISTANCE;
 const ROUTE_SPACING_BOUNCE_MAX_STEPS = 6;
 const ROUTE_SPACING_BOUNCE_MAX_TILE_DISTANCE = 7;
 const ROUTE_SPACING_BOUNCE_PRESSURE_EXPONENT = 1.35;
@@ -4309,6 +4307,11 @@ function buildStateExpression(options) {
     ? options.monsterNames.map((name) => String(name))
     : normalizeMonsterNames(options.monster);
   const exactNames = JSON.stringify(expandMonsterNameKeysWithAlphaVariants(monsterNames));
+  const fallbackMonsterNames = normalizeTargetMonsterNames([
+    ...normalizeTargetMonsterNames(options.monsterArchive),
+    ...normalizeTargetMonsterNames(options.creatureLedger?.monsters),
+  ]);
+  const fallbackExactNames = JSON.stringify(expandMonsterNameKeysWithAlphaVariants(fallbackMonsterNames));
   const targetMonsterNames = JSON.stringify(monsterNames);
   const manualMonsterNameKeys = JSON.stringify(expandMonsterNameKeysWithAlphaVariants([
     ...monsterNames,
@@ -4650,6 +4653,7 @@ function buildStateExpression(options) {
       : [];
     const configuredMonsterNames = ${targetMonsterNames};
     const targetNames = new Set(${exactNames});
+    const fallbackTargetNames = new Set(${fallbackExactNames});
     const knownMonsterNames = new Set(${knownMonsterNameKeys});
     const monsterThreatScores = ${knownMonsterThreatScores};
     const knownNpcNames = new Set(${knownNpcNameKeys});
@@ -6882,33 +6886,41 @@ function buildStateExpression(options) {
       || Number(left.id || 0) - Number(right.id || 0)
     );
 
+    const serializeTargetMatch = (creature, targetSource) => ({
+      id: creature.id,
+      name: creature.name,
+      targetSource,
+      position: creature.position,
+      healthPercent: creature.healthPercent,
+      isShootable: creature.isShootable,
+      dx: creature.dx,
+      dy: creature.dy,
+      dz: creature.dz,
+      distance: creature.distance,
+      chebyshevDistance: creature.chebyshevDistance,
+      monsterThreatScore: creature.monsterThreatScore,
+      withinViewport: creature.withinViewport,
+      withinCombatWindow: creature.withinViewport,
+      withinCombatBox: creature.withinCombatBox,
+      reachableForCombat: isPositionCombatReachable(creature.position),
+      isCurrentTarget: creature.isCurrentTarget,
+      isAxisAligned: creature.isAxisAligned,
+      isDiagonalAligned: creature.isDiagonalAligned,
+      engagedPlayerIds: [...creature.engagedPlayerIds],
+      engagedPlayerNames: [...creature.engagedPlayerNames],
+      engagedPlayerCount: creature.engagedPlayerCount,
+    });
     const allMatches = visibleCreatures
       .filter((creature) => targetNames.has(creature.lowerName))
-      .map((creature) => ({
-        id: creature.id,
-        name: creature.name,
-        position: creature.position,
-        healthPercent: creature.healthPercent,
-        isShootable: creature.isShootable,
-        dx: creature.dx,
-        dy: creature.dy,
-        dz: creature.dz,
-        distance: creature.distance,
-        chebyshevDistance: creature.chebyshevDistance,
-        monsterThreatScore: creature.monsterThreatScore,
-        withinViewport: creature.withinViewport,
-        withinCombatWindow: creature.withinViewport,
-        withinCombatBox: creature.withinCombatBox,
-        reachableForCombat: isPositionCombatReachable(creature.position),
-        isCurrentTarget: creature.isCurrentTarget,
-        isAxisAligned: creature.isAxisAligned,
-        isDiagonalAligned: creature.isDiagonalAligned,
-        engagedPlayerIds: [...creature.engagedPlayerIds],
-        engagedPlayerNames: [...creature.engagedPlayerNames],
-        engagedPlayerCount: creature.engagedPlayerCount,
-      }));
+      .map((creature) => serializeTargetMatch(creature, "queue"));
+    const fallbackMatches = visibleCreatures
+      .filter((creature) => !targetNames.has(creature.lowerName) && fallbackTargetNames.has(creature.lowerName))
+      .map((creature) => serializeTargetMatch(creature, "seen-fallback"));
 
     const candidates = allMatches
+      .filter((creature) => creature.withinCombatBox && creature.reachableForCombat)
+      .sort(compareTargetPriority);
+    const fallbackCandidates = fallbackMatches
       .filter((creature) => creature.withinCombatBox && creature.reachableForCombat)
       .sort(compareTargetPriority);
     const serializedVisibleCreatures = visibleCreatures.map((creature) => ({
@@ -7255,6 +7267,8 @@ function buildStateExpression(options) {
       currentFollowTarget,
       allMatches,
       candidates,
+      fallbackMatches,
+      fallbackCandidates,
       connection,
     };
   })()`;
@@ -14491,6 +14505,152 @@ export class MinibiaTargetBot {
       : [];
   }
 
+  getRouteSpacingProjectedIndex(position, {
+    anchorIndex = this.routeIndex,
+    maxDistance = ROUTE_SPACING_TARGET_PROJECTION_MAX_DISTANCE,
+  } = {}) {
+    if (!position || !this.options.waypoints.length) {
+      return null;
+    }
+
+    return this.findClosestWaypointIndex(position, {
+      maxDistance,
+      includeCurrent: true,
+      anchorIndex,
+      candidateFilter: ({ index, waypoint, distance, reached, routeOffset }) => (
+        this.getWaypointType(waypoint) !== "helper"
+        && !this.isAmbiguousRoutePositionIndex(index, position, {
+          distance,
+          offset: routeOffset,
+          exactReached: reached,
+          maxDistance: ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE,
+          allowRouteEvidence: false,
+        })
+      ),
+    });
+  }
+
+  getRouteSpacingSectorState(snapshot = this.lastSnapshot) {
+    const members = this.getRouteSpacingMembers();
+    if (
+      !this.hasActiveRouteSpacingPeers(members)
+      || !this.options.autowalkEnabled
+      || this.isCavebotPaused()
+      || this.isRouteResetActive()
+    ) {
+      return null;
+    }
+
+    const total = this.options.waypoints.length;
+    if (total < 2) {
+      return null;
+    }
+
+    const boundedRouteIndex = Math.max(0, Math.min(Math.trunc(Number(this.routeIndex) || 0), total - 1));
+    const selfMember = this.getRouteSpacingSelfMember(members);
+    const selfIndex = this.getRouteSpacingMemberSpacingIndex({
+      ...(selfMember || {}),
+      routeIndex: boundedRouteIndex,
+      playerPosition: snapshot?.playerPosition || selfMember?.playerPosition || null,
+    }, {
+      activeCount: members.length,
+    });
+    const currentIndex = Number.isInteger(selfIndex)
+      ? Math.max(0, Math.min(selfIndex, total - 1))
+      : boundedRouteIndex;
+    const lineup = this.getRouteSpacingOrderedMembers(currentIndex);
+    if (lineup.selfSlot < 0) {
+      return null;
+    }
+
+    const successor = this.getRouteSpacingSuccessor(lineup);
+    const predecessor = this.getRouteSpacingPredecessor(lineup);
+    const { targetGap, minGap, maxGap, releaseGap, driftGap } = this.getRouteSpacingWindow(members.length);
+    const getSpacingIndex = (member) => (
+      Number.isInteger(member?.spacingIndex)
+        ? member.spacingIndex
+        : Number.isInteger(member?.routeIndex)
+          ? member.routeIndex
+          : null
+    );
+    const successorIndex = getSpacingIndex(successor);
+    const predecessorIndex = getSpacingIndex(predecessor);
+    const successorGap = Number.isInteger(successorIndex)
+      ? this.getForwardRouteOffset(currentIndex, successorIndex)
+      : Number.POSITIVE_INFINITY;
+    const predecessorGap = Number.isInteger(predecessorIndex)
+      ? this.getForwardRouteOffset(predecessorIndex, currentIndex)
+      : Number.POSITIVE_INFINITY;
+    const forwardLimitBySuccessor = Number.isFinite(successorGap)
+      ? successorGap - minGap
+      : Number.POSITIVE_INFINITY;
+    const forwardLimitByPredecessor = Number.isFinite(predecessorGap)
+      ? maxGap - predecessorGap
+      : Number.POSITIVE_INFINITY;
+    const backwardLimitByPredecessor = Number.isFinite(predecessorGap)
+      ? predecessorGap - minGap
+      : Number.POSITIVE_INFINITY;
+    const backwardLimitBySuccessor = Number.isFinite(successorGap)
+      ? maxGap - successorGap
+      : Number.POSITIVE_INFINITY;
+
+    return {
+      members,
+      currentIndex,
+      targetGap,
+      minGap,
+      maxGap,
+      releaseGap,
+      driftGap,
+      successor,
+      predecessor,
+      successorGap,
+      predecessorGap,
+      forwardAllowance: Math.max(0, Math.min(forwardLimitBySuccessor, forwardLimitByPredecessor)),
+      backwardAllowance: Math.max(0, Math.min(backwardLimitByPredecessor, backwardLimitBySuccessor)),
+    };
+  }
+
+  isEntryInsideRouteSpacingSector(entry, snapshot = this.lastSnapshot) {
+    if (!entry?.position) {
+      return true;
+    }
+
+    const sector = this.getRouteSpacingSectorState(snapshot);
+    if (!sector) {
+      return true;
+    }
+
+    const targetIndex = this.getRouteSpacingProjectedIndex(entry.position, {
+      anchorIndex: sector.currentIndex,
+    });
+    if (!Number.isInteger(targetIndex)) {
+      return true;
+    }
+
+    const forwardOffset = this.getForwardRouteOffset(sector.currentIndex, targetIndex);
+    const backwardOffset = this.getForwardRouteOffset(targetIndex, sector.currentIndex);
+    if (!Number.isFinite(forwardOffset) || !Number.isFinite(backwardOffset)) {
+      return true;
+    }
+
+    if (forwardOffset === 0 || backwardOffset === 0) {
+      return true;
+    }
+
+    if (forwardOffset <= backwardOffset) {
+      return forwardOffset <= sector.forwardAllowance;
+    }
+
+    return backwardOffset <= sector.backwardAllowance;
+  }
+
+  filterEntriesByRouteSpacingSector(entries, snapshot = this.lastSnapshot) {
+    return Array.isArray(entries)
+      ? entries.filter((entry) => this.isEntryInsideRouteSpacingSector(entry, snapshot))
+      : [];
+  }
+
   removeSharedSpawnBlockedTargetsFromSnapshot(snapshot = this.lastSnapshot, blockedTargets = []) {
     if (!snapshot || typeof snapshot !== "object") {
       return snapshot;
@@ -14552,6 +14712,8 @@ export class MinibiaTargetBot {
       visibleCreatures: filterList(snapshot.visibleCreatures),
       visibleMonsters: filterList(snapshot.visibleMonsters),
       allMatches: filterList(snapshot.allMatches),
+      fallbackMatches: filterList(snapshot.fallbackMatches),
+      fallbackCandidates: filterList(snapshot.fallbackCandidates),
     };
 
     if (this.lastSnapshot === snapshot) {
@@ -19958,22 +20120,30 @@ export class MinibiaTargetBot {
       ? Math.max(1, total / participants)
       : 1;
     const uncappedMinGap = total > 1
-      ? Math.floor(targetGap * ROUTE_SPACING_MIN_GAP_RATIO)
+      ? Math.ceil(targetGap * ROUTE_SPACING_MIN_GAP_RATIO)
       : 1;
     const minGap = total > 1
-      ? Math.max(1, Math.min(total - 1, ROUTE_SPACING_MIN_GAP_MAX, uncappedMinGap))
+      ? Math.max(1, Math.min(total - 1, uncappedMinGap))
       : 1;
     const uncappedReleaseGap = total > 1
       ? Math.ceil(targetGap * ROUTE_SPACING_RELEASE_GAP_RATIO)
       : minGap;
     const releaseGap = total > 1
-      ? Math.max(minGap, Math.min(total - 1, ROUTE_SPACING_RELEASE_GAP_MAX, uncappedReleaseGap))
+      ? Math.max(minGap, Math.min(total - 1, uncappedReleaseGap))
+      : minGap;
+    const uncappedMaxGap = total > 1
+      ? Math.floor(targetGap * ROUTE_SPACING_MAX_GAP_RATIO)
+      : minGap;
+    const maxGap = total > 1
+      ? Math.max(releaseGap, Math.min(total - 1, uncappedMaxGap))
       : minGap;
 
     return {
       targetGap,
       minGap,
+      maxGap,
       releaseGap,
+      driftGap: Math.max(0, targetGap - minGap),
     };
   }
 
@@ -20208,6 +20378,21 @@ export class MinibiaTargetBot {
       : null;
   }
 
+  getRouteSpacingPredecessor({ orderedMembers = [], selfSlot = -1 } = {}) {
+    if (!Array.isArray(orderedMembers) || orderedMembers.length <= 1 || selfSlot < 0) {
+      return null;
+    }
+
+    const previousSlot = selfSlot - 1;
+    if (previousSlot >= 0) {
+      return orderedMembers[previousSlot] || null;
+    }
+
+    return this.options.autowalkLoop
+      ? orderedMembers[orderedMembers.length - 1] || null
+      : null;
+  }
+
   getRouteSpacingPeerLabel(member) {
     if (!member) {
       return "another cavebot";
@@ -20259,36 +20444,6 @@ export class MinibiaTargetBot {
     return this.routeSpacingBypass;
   }
 
-  shouldBreakRouteSpacingStalemate({
-    selfMember = null,
-    blockingPeer = null,
-    hold = null,
-    now = this.getNow(),
-  } = {}) {
-    if (!selfMember || !blockingPeer || !hold) {
-      return false;
-    }
-
-    if (now - (Number(hold.startedAt) || 0) < ROUTE_SPACING_STALE_HOLD_BREAK_MS) {
-      return false;
-    }
-
-    if (now - (Number(hold.lastPeerProgressAt) || 0) < ROUTE_SPACING_STALE_HOLD_BREAK_MS) {
-      return false;
-    }
-
-    if (this.compareRouteSpacingPriority(selfMember, blockingPeer) < 0) {
-      return true;
-    }
-
-    if (now - (Number(hold.startedAt) || 0) < ROUTE_SPACING_STALE_HOLD_FORCE_BYPASS_MS) {
-      return false;
-    }
-
-    const currentGap = Number(hold.currentGap);
-    return Number.isFinite(currentGap) && currentGap > 0;
-  }
-
   getRouteSpacingAdvice(candidateIndex = this.routeIndex) {
     const members = this.getRouteSpacingMembers();
     if (members.length <= 1 || !this.options.autowalkEnabled || this.isCavebotPaused() || this.isRouteResetActive()) {
@@ -20313,7 +20468,7 @@ export class MinibiaTargetBot {
       };
     }
 
-    const { targetGap, minGap, releaseGap } = this.getRouteSpacingWindow(members.length);
+    const { targetGap, minGap, maxGap, releaseGap } = this.getRouteSpacingWindow(members.length);
     const currentBlockingPeer = this.getRouteSpacingSuccessor(currentLineup);
     if (currentBlockingPeer && nextIndex !== currentIndex) {
       const peerIndex = Number.isInteger(currentBlockingPeer.spacingIndex)
@@ -20321,9 +20476,6 @@ export class MinibiaTargetBot {
         : currentBlockingPeer.routeIndex;
       const currentGap = this.getForwardRouteOffset(currentIndex, peerIndex);
       const nextGap = this.getForwardRouteOffset(nextIndex, peerIndex);
-      const threshold = this.routeSpacingHold?.peerInstanceId === currentBlockingPeer.instanceId
-        ? releaseGap
-        : minGap;
       const selfMember = currentLineup.orderedMembers[selfSlot] || this.getRouteSpacingSelfMember(members);
       const priorityOpensTiedSplit = Number.isFinite(currentGap)
         && currentGap === 0
@@ -20331,17 +20483,23 @@ export class MinibiaTargetBot {
         && nextGap >= releaseGap
         && this.compareRouteSpacingPriority(selfMember, currentBlockingPeer) < 0;
 
-      if (Number.isFinite(currentGap) && currentGap < threshold && !priorityOpensTiedSplit) {
+      if (
+        Number.isFinite(currentGap)
+        && !priorityOpensTiedSplit
+        && (
+          currentGap === 0
+          || (Number.isFinite(nextGap) && nextGap < minGap)
+        )
+      ) {
         return {
           hold: true,
-          reason: currentGap === 0 ? "tied" : (
-            this.routeSpacingHold?.peerInstanceId === currentBlockingPeer.instanceId ? "recovering" : "gap"
-          ),
+          reason: currentGap === 0 ? "tied" : "gap",
           blockingPeer: currentBlockingPeer,
           currentGap,
           nextGap,
           targetGap,
           minGap,
+          maxGap,
           releaseGap,
           members,
           selfMember,
@@ -20361,19 +20519,43 @@ export class MinibiaTargetBot {
         : blockingPeer.routeIndex;
       const currentGap = this.getForwardRouteOffset(currentIndex, peerIndex);
       const nextGap = this.getForwardRouteOffset(nextIndex, peerIndex);
-      const threshold = this.routeSpacingHold?.peerInstanceId === blockingPeer.instanceId
-        ? releaseGap
-        : minGap;
 
-      if (Number.isFinite(nextGap) && nextGap < threshold) {
+      if (Number.isFinite(nextGap) && nextGap < minGap) {
         return {
           hold: true,
-          reason: this.routeSpacingHold?.peerInstanceId === blockingPeer.instanceId ? "recovering" : "gap",
+          reason: "gap",
           blockingPeer,
           currentGap,
           nextGap,
           targetGap,
           minGap,
+          maxGap,
+          releaseGap,
+          members,
+          selfMember: this.getRouteSpacingSelfMember(members),
+          selfSlot: nextLineup.selfSlot,
+        };
+      }
+    }
+
+    const trailingPeer = this.getRouteSpacingPredecessor(nextLineup);
+    if (trailingPeer) {
+      const peerIndex = Number.isInteger(trailingPeer.spacingIndex)
+        ? trailingPeer.spacingIndex
+        : trailingPeer.routeIndex;
+      const currentBackGap = this.getForwardRouteOffset(peerIndex, currentIndex);
+      const nextBackGap = this.getForwardRouteOffset(peerIndex, nextIndex);
+
+      if (Number.isFinite(nextBackGap) && nextBackGap > maxGap) {
+        return {
+          hold: true,
+          reason: "drift",
+          blockingPeer: trailingPeer,
+          currentGap: currentBackGap,
+          nextGap: nextBackGap,
+          targetGap,
+          minGap,
+          maxGap,
           releaseGap,
           members,
           selfMember: this.getRouteSpacingSelfMember(members),
@@ -20386,6 +20568,7 @@ export class MinibiaTargetBot {
       hold: false,
       targetGap,
       minGap,
+      maxGap,
       releaseGap,
       members,
       selfMember: this.getRouteSpacingSelfMember(members),
@@ -20402,17 +20585,9 @@ export class MinibiaTargetBot {
       return false;
     }
 
+    this.routeSpacingBypass = null;
     const previousHold = this.routeSpacingHold;
     const peerProgressKey = this.getRouteSpacingMemberProgressKey(advice.blockingPeer);
-
-    if (
-      this.routeSpacingBypass?.peerInstanceId
-      && this.routeSpacingBypass.peerInstanceId === advice.blockingPeer?.instanceId
-      && now < this.routeSpacingBypass.until
-    ) {
-      this.routeSpacingHold = null;
-      return false;
-    }
 
     const nextHold = previousHold?.peerInstanceId === advice.blockingPeer?.instanceId
       ? {
@@ -20422,6 +20597,7 @@ export class MinibiaTargetBot {
         nextGap: advice.nextGap,
         targetGap: advice.targetGap,
         minGap: advice.minGap,
+        maxGap: advice.maxGap,
         releaseGap: advice.releaseGap,
         peerProgressKey,
         lastPeerProgressAt: previousHold.peerProgressKey === peerProgressKey
@@ -20437,28 +20613,11 @@ export class MinibiaTargetBot {
         nextGap: advice.nextGap,
         targetGap: advice.targetGap,
         minGap: advice.minGap,
+        maxGap: advice.maxGap,
         releaseGap: advice.releaseGap,
         peerProgressKey,
         lastPeerProgressAt: now,
       };
-
-    if (this.shouldBreakRouteSpacingStalemate({
-      selfMember: advice.selfMember,
-      blockingPeer: advice.blockingPeer,
-      hold: nextHold,
-      now,
-    })) {
-      const peerLabel = this.getRouteSpacingPeerLabel(advice.blockingPeer);
-      this.log(`Autowalk breaking route spacing stalemate with ${peerLabel}`);
-      this.routeSpacingHold = null;
-      this.routeSpacingBypass = {
-        createdAt: now,
-        peerInstanceId: advice.blockingPeer?.instanceId || "",
-        routeIndex: this.routeIndex,
-        until: now + ROUTE_SPACING_STALE_HOLD_BYPASS_MS,
-      };
-      return false;
-    }
 
     if (now - nextHold.lastLogAt >= ROUTE_SPACING_LOG_COOLDOWN_MS) {
       const peerLabel = this.getRouteSpacingPeerLabel(advice.blockingPeer);
@@ -22891,9 +23050,22 @@ export class MinibiaTargetBot {
     const reachCandidates = followTrainCombat
       ? this.getFollowTrainReachAttackCandidates(snapshot)
       : this.getReachAttackCandidates(snapshot);
-    const candidates = closeCandidates.length > 0
+    let candidates = closeCandidates.length > 0
       ? this.mergeCurrentReachTargetCandidate(closeCandidates, reachCandidates, snapshot)
       : reachCandidates;
+    let usingFallbackTargets = false;
+
+    if (!followTrainCombat && !candidates.length) {
+      const fallbackCloseCandidates = this.getFallbackCombatCandidates(snapshot)
+        .filter((candidate) => !this.isEscapeEntry(candidate));
+      const fallbackReachCandidates = this.getFallbackReachCombatCandidates(snapshot)
+        .filter((candidate) => !this.isEscapeEntry(candidate));
+      candidates = fallbackCloseCandidates.length > 0
+        ? this.mergeCurrentReachTargetCandidate(fallbackCloseCandidates, fallbackReachCandidates, snapshot)
+        : fallbackReachCandidates;
+      usingFallbackTargets = candidates.length > 0;
+    }
+
     if (this.shouldDeferTargetForRoute(snapshot, candidates)) {
       this.buildTargetScoreReport(snapshot, { extraSkippedReason: "route walk in progress" });
       return null;
@@ -22924,6 +23096,7 @@ export class MinibiaTargetBot {
       chosen: candidates[0],
       candidates,
       signature,
+      targetSource: usingFallbackTargets ? "seen-fallback" : "queue",
       refresh: false,
     };
     this.buildTargetScoreReport(snapshot, { selection });
@@ -23333,7 +23506,9 @@ export class MinibiaTargetBot {
 
   getTargetSkipReasons(entry, snapshot = this.lastSnapshot, playerPosition = snapshot?.playerPosition || null) {
     const reasons = [];
-    if (!this.isTrackedMonsterName(entry?.name)) {
+    const isSeenFallback = String(entry?.targetSource || "").trim().toLowerCase() === "seen-fallback"
+      || this.isFallbackMonsterName(entry?.name);
+    if (!this.isTrackedMonsterName(entry?.name) && !isSeenFallback) {
       reasons.push("not tracked");
     }
     if (this.isEscapeEntry(entry)) {
@@ -23341,6 +23516,9 @@ export class MinibiaTargetBot {
     }
     if (this.isEntryBlockedBySharedSpawn(entry, snapshot)) {
       reasons.push("shared spawn reserved");
+    }
+    if (!this.isEntryInsideRouteSpacingSector(entry, snapshot)) {
+      reasons.push("route spacing lane");
     }
     if (!this.isEntryWithinCombatWindow(entry, playerPosition)) {
       reasons.push("outside combat window");
@@ -23388,15 +23566,26 @@ export class MinibiaTargetBot {
     extraSkippedReason = "",
   } = {}) {
     const playerPosition = snapshot?.playerPosition || null;
-    const rawEntries = Array.isArray(snapshot?.allMatches) && snapshot.allMatches.length
-      ? snapshot.allMatches
-      : Array.isArray(snapshot?.visibleCreatures) && snapshot.visibleCreatures.length
-        ? snapshot.visibleCreatures.filter((entry) => this.isTrackedMonsterName(entry?.name))
-        : Array.isArray(snapshot?.candidates)
-          ? snapshot.candidates
-          : [];
     const selected = selection?.chosen || selection || null;
     const selectedId = Number(selected?.id);
+    const selectionTargetSource = String(selection?.targetSource || selected?.targetSource || "").trim().toLowerCase();
+    const primaryMatches = Array.isArray(snapshot?.allMatches) && snapshot.allMatches.length
+      ? snapshot.allMatches
+      : [];
+    const fallbackMatches = Array.isArray(snapshot?.fallbackMatches) && snapshot.fallbackMatches.length
+      ? snapshot.fallbackMatches
+      : [];
+    const rawEntries = selectionTargetSource === "seen-fallback" && fallbackMatches.length
+      ? fallbackMatches
+      : primaryMatches.length
+      ? primaryMatches
+      : fallbackMatches.length
+        ? fallbackMatches
+        : Array.isArray(snapshot?.visibleCreatures) && snapshot.visibleCreatures.length
+          ? snapshot.visibleCreatures.filter((entry) => this.isTrackedMonsterName(entry?.name) || this.isFallbackMonsterName(entry?.name))
+          : Array.isArray(snapshot?.candidates)
+            ? snapshot.candidates
+            : [];
     const ranked = rawEntries
       .map((entry) => {
         const score = this.buildTargetScoreBreakdown(entry, playerPosition, snapshot);
@@ -23411,6 +23600,7 @@ export class MinibiaTargetBot {
           scoreBreakdown: score.components,
           profileName: score.profileName,
           profileIndex: score.profileIndex,
+          targetSource: String(entry?.targetSource || (this.isFallbackMonsterName(entry?.name) ? "seen-fallback" : "queue")),
           healthPercent: score.healthPercent,
           range: score.range,
           distance: score.distance,
@@ -23653,19 +23843,74 @@ export class MinibiaTargetBot {
 
   getCombatCandidates(snapshot) {
     const playerPosition = snapshot?.playerPosition || null;
-    return this.filterEntriesBySharedSpawnPolicy(
+    return this.filterEntriesByRouteSpacingSector(this.filterEntriesBySharedSpawnPolicy(
       this.sortTargetCandidates(snapshot?.candidates, playerPosition, snapshot),
       snapshot,
-    )
+    ), snapshot)
       .filter((candidate) => this.isEntryEligibleForCombat(candidate, playerPosition));
   }
 
   getReachCombatCandidates(snapshot) {
     const playerPosition = snapshot?.playerPosition || null;
-    return this.filterEntriesBySharedSpawnPolicy(
+    return this.filterEntriesByRouteSpacingSector(this.filterEntriesBySharedSpawnPolicy(
       this.getTrackedTargets(snapshot),
       snapshot,
-    )
+    ), snapshot)
+      .filter((candidate) => this.isEntryWithinCombatWindow(candidate, playerPosition))
+      .filter((candidate) => this.isEntryReachableForCombat(candidate));
+  }
+
+  isFallbackMonsterName(name) {
+    const lowerName = String(name || "").trim().toLowerCase();
+    if (!lowerName || this.isTrackedMonsterName(lowerName)) return false;
+
+    const alphaBaseName = getAlphaBaseMonsterNameKey(lowerName);
+    const fallbackNames = [
+      ...(Array.isArray(this.options.monsterArchive) ? this.options.monsterArchive : []),
+      ...(Array.isArray(this.options.creatureLedger?.monsters) ? this.options.creatureLedger.monsters : []),
+    ];
+    return fallbackNames.some((entry) => {
+      const entryKey = String(entry || "").trim().toLowerCase();
+      return entryKey === lowerName || (alphaBaseName !== lowerName && entryKey === alphaBaseName);
+    });
+  }
+
+  getFallbackTargets(snapshot) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const fallbackMatches = Array.isArray(snapshot?.fallbackMatches)
+      ? snapshot.fallbackMatches
+      : [];
+    const fallbackCandidates = Array.isArray(snapshot?.fallbackCandidates)
+      ? snapshot.fallbackCandidates
+      : [];
+    const visibleCreatures = Array.isArray(snapshot?.visibleCreatures)
+      ? snapshot.visibleCreatures.filter((entry) => this.isFallbackMonsterName(entry?.name))
+      : [];
+    const source = fallbackMatches.length
+      ? fallbackMatches
+      : (fallbackCandidates.length ? fallbackCandidates : visibleCreatures);
+
+    return this.filterEntriesByRouteSpacingSector(this.filterEntriesBySharedSpawnPolicy(
+      this.sortTargetCandidates(source, playerPosition, snapshot),
+      snapshot,
+    ), snapshot);
+  }
+
+  getFallbackCombatCandidates(snapshot) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const source = Array.isArray(snapshot?.fallbackCandidates) && snapshot.fallbackCandidates.length
+      ? this.filterEntriesByRouteSpacingSector(this.filterEntriesBySharedSpawnPolicy(
+        this.sortTargetCandidates(snapshot.fallbackCandidates, playerPosition, snapshot),
+        snapshot,
+      ), snapshot)
+      : this.getFallbackTargets(snapshot);
+
+    return source.filter((candidate) => this.isEntryEligibleForCombat(candidate, playerPosition));
+  }
+
+  getFallbackReachCombatCandidates(snapshot) {
+    const playerPosition = snapshot?.playerPosition || null;
+    return this.getFallbackTargets(snapshot)
       .filter((candidate) => this.isEntryWithinCombatWindow(candidate, playerPosition))
       .filter((candidate) => this.isEntryReachableForCombat(candidate));
   }
@@ -23694,10 +23939,10 @@ export class MinibiaTargetBot {
       ? allMatches
       : (visibleCreatures.length ? visibleCreatures : snapshot?.candidates);
 
-    return this.filterEntriesBySharedSpawnPolicy(
+    return this.filterEntriesByRouteSpacingSector(this.filterEntriesBySharedSpawnPolicy(
       this.sortTargetCandidates(source, playerPosition, snapshot),
       snapshot,
-    );
+    ), snapshot);
   }
 
   findTrackedTargetById(snapshot, targetId) {
@@ -23782,7 +24027,10 @@ export class MinibiaTargetBot {
     }
 
     if (Number.isFinite(currentTargetId)) {
-      if (!this.isEntryBlockedBySharedSpawn(snapshot.currentTarget, snapshot)) {
+      if (
+        !this.isEntryBlockedBySharedSpawn(snapshot.currentTarget, snapshot)
+        && this.isEntryInsideRouteSpacingSector(snapshot.currentTarget, snapshot)
+      ) {
         const trackedCurrentTarget = this.findTrackedTargetById(snapshot, currentTargetId);
         if (trackedCurrentTarget
           && lastTargetIds.has(currentTargetId)
@@ -32807,11 +33055,29 @@ export class MinibiaTargetBot {
   async target(selection) {
     if (!selection) return null;
 
-    const chosen = selection.chosen || selection;
-    const candidates = Array.isArray(selection.candidates) && selection.candidates.length
+    let chosen = selection.chosen || selection;
+    let candidates = Array.isArray(selection.candidates) && selection.candidates.length
       ? selection.candidates
       : [chosen].filter(Boolean);
-    const signature = selection.signature || candidates.map((candidate) => candidate.id).join(",");
+    let signature = selection.signature || candidates.map((candidate) => candidate.id).join(",");
+    const routeSafeCandidates = this.filterEntriesByRouteSpacingSector(candidates, this.lastSnapshot);
+    if (routeSafeCandidates.length !== candidates.length) {
+      if (!routeSafeCandidates.length) {
+        return {
+          ok: false,
+          reason: "route spacing boundary",
+          blockedByRouteSpacing: true,
+          target: chosen,
+          candidates,
+        };
+      }
+
+      candidates = routeSafeCandidates;
+      if (!candidates.some((candidate) => Number(candidate?.id) === Number(chosen?.id))) {
+        chosen = candidates[0];
+      }
+      signature = candidates.map((candidate) => candidate.id).join(",");
+    }
 
     const now = Date.now();
 
@@ -36197,6 +36463,16 @@ export class MinibiaTargetBot {
       }
 
       if (snapshot.currentTarget && this.isEntryBlockedBySharedSpawn(snapshot.currentTarget, snapshot)) {
+        const clearAggroResult = await this.clearAggro().catch(() => null);
+        if (clearAggroResult?.ok) {
+          snapshot = {
+            ...snapshot,
+            currentTarget: null,
+          };
+        }
+      }
+
+      if (snapshot.currentTarget && !this.isEntryInsideRouteSpacingSector(snapshot.currentTarget, snapshot)) {
         const clearAggroResult = await this.clearAggro().catch(() => null);
         if (clearAggroResult?.ok) {
           snapshot = {

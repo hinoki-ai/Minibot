@@ -4142,6 +4142,21 @@ async function setExternalControlCavebotPaused(params = {}) {
   return serializeState();
 }
 
+async function persistExternalControlBotOptions(session) {
+  if (!session?.bot?.options) {
+    return false;
+  }
+
+  const currentConfig = normalizeOptions(session.config || {});
+  const nextConfig = normalizeOptions(session.bot.options || {});
+  if (JSON.stringify(currentConfig) === JSON.stringify(nextConfig)) {
+    return false;
+  }
+
+  await persistSessionConfig(session, nextConfig, { emitState: false });
+  return true;
+}
+
 function getExternalControlActionPayload(params = {}) {
   if (isPlainObject(params?.action)) {
     return params.action;
@@ -4165,6 +4180,7 @@ async function executeExternalControlAction(params = {}) {
     ...action,
     snapshot: action.snapshot || snapshot || session.bot.lastSnapshot || {},
   });
+  await persistExternalControlBotOptions(session);
   pushSessionLog(
     session,
     `External action ${String(action.type || "action").trim()} ${result?.ok ? "succeeded" : `failed: ${result?.reason || "unknown error"}`}`,
@@ -4207,6 +4223,7 @@ async function executeExternalControlActionBlock(params = {}) {
     snapshot: block.snapshot || snapshot || session.bot.lastSnapshot || {},
     activeOwner: "external-control",
   });
+  await persistExternalControlBotOptions(session);
   pushSessionLog(
     session,
     `External action block ${result?.ok ? "completed" : `failed: ${result?.reason || "unknown error"}`}`,
@@ -4249,6 +4266,7 @@ async function executeExternalControlBotCommand(params = {}) {
 
   const session = await attachExternalControlSession(params);
   const result = await handler(session, params);
+  await persistExternalControlBotOptions(session);
   pushSessionLog(session, `External bot command ${command} ${result?.ok === false ? `failed: ${result.reason || "unknown error"}` : "completed"}`);
   sendEvent("state", { sessionId: session.id, scope: "external-control-bot-command" });
   return {

@@ -14720,7 +14720,7 @@ function syncTargetingActionAvailability({
   setDisabled(
     actionButtons.useArchiveCreatures,
     !canOperate || !archivedNames.length,
-    !ready ? stateReason : !canOperate ? operationReason || bindingReason : "No seen monsters available yet.",
+    !ready ? stateReason : !canOperate ? operationReason || bindingReason : "Seen fallback is empty.",
   );
   setDisabled(
     actionButtons.archiveTargetCreatures,
@@ -16454,10 +16454,13 @@ function renderMonsterArchive() {
   const targetNames = getTargetQueueDraft();
   const searchQuery = getCreatureRegistrySearchQuery();
   const searchTerms = getCreatureRegistrySearchTerms(searchQuery);
+  const targetNameKeys = new Set(targetNames.map((name) => name.toLowerCase()));
   const monsterEntries = buildCreatureRegistryEntries({
-    selectedNames: targetNames,
     archivedNames,
     visibleNames,
+  });
+  monsterEntries.forEach((entry) => {
+    entry.selected = targetNameKeys.has(entry.key);
   });
   const playerEntries = buildCreatureRegistryEntries({
     archivedNames: archivedPlayerNames,
@@ -16485,10 +16488,13 @@ function renderMonsterArchive() {
     return;
   }
 
+  const fallbackLabel = archivedNames.length
+    ? `Seen fallback: ${archivedNames.length}.`
+    : "Seen fallback empty.";
   monsterVisibleNote.textContent = visibleNames.length
-    ? `Nearby now (${visibleNames.length}): ${visibleNames.join(", ")}`
+    ? `Nearby now (${visibleNames.length}): ${visibleNames.join(", ")}. ${fallbackLabel}`
     : archivedNames.length
-      ? `No monsters nearby. ${archivedNames.length} seen for this character.`
+      ? `No monsters nearby. ${fallbackLabel}`
       : "No monsters seen yet for this character.";
   playerVisibleNote.textContent = visiblePlayerNames.length
     ? `Nearby now (${visiblePlayerNames.length}): ${visiblePlayerNames.join(", ")}`
@@ -16503,20 +16509,28 @@ function renderMonsterArchive() {
 
   setTextContent(targetingRegistryFields.queue, String(targetNames.length));
   setTextContent(targetingRegistryFields.profiles, String(syncTargetProfilesDraftToTargetNames(targetNames).length));
-  setTextContent(targetingRegistryFields.monsterHistory, String(monsterEntries.length));
+  setTextContent(targetingRegistryFields.monsterHistory, String(archivedNames.length));
   setTextContent(targetingRegistryFields.playerHistory, String(playerEntries.length));
   Object.values(targetingRegistryFields).forEach(syncTextTitle);
 
-  const filteredTargetNames = filterNamesByCreatureRegistrySearch(targetNames, searchTerms);
+  const filteredTargetNames = monsterTargetList.hidden
+    ? []
+    : filterNamesByCreatureRegistrySearch(targetNames, searchTerms);
   const filteredMonsterEntries = filterCreatureRegistryEntriesBySearch(monsterEntries, searchTerms);
   const filteredPlayerEntries = filterCreatureRegistryEntriesBySearch(playerEntries, searchTerms);
   const filteredNpcEntries = filterCreatureRegistryEntriesBySearch(npcEntries, searchTerms);
 
-  monsterTargetList.innerHTML = filteredTargetNames.length
-    ? filteredTargetNames
-      .map((name) => `<button type="button" class="monster-chip active" data-name="${escapeHtml(name)}">${escapeHtml(name)}</button>`)
-      .join("")
-    : `<div class="empty-state">${escapeHtml(formatCreatureSearchEmptyState("No targets selected", searchQuery))}</div>`;
+  if (monsterTargetList.hidden) {
+    if (monsterTargetList.textContent) {
+      monsterTargetList.innerHTML = "";
+    }
+  } else {
+    monsterTargetList.innerHTML = filteredTargetNames.length
+      ? filteredTargetNames
+        .map((name) => `<button type="button" class="monster-chip active" data-name="${escapeHtml(name)}">${escapeHtml(name)}</button>`)
+        .join("")
+      : `<div class="empty-state">${escapeHtml(formatCreatureSearchEmptyState("No targets selected", searchQuery))}</div>`;
+  }
 
   monsterArchive.innerHTML = filteredMonsterEntries.length
     ? renderTargetSourceRows({
@@ -19546,13 +19560,14 @@ actionButtons.useVisibleCreatures.addEventListener("click", () => {
 actionButtons.useArchiveCreatures.addEventListener("click", () => {
   clearPendingDangerAction("clear-archive");
   const archivedNames = getArchivedMonsterNames();
-  captureTargetProfilesDraftFromDom();
-  markTargetingDirty();
-  setTargetQueueDraft(archivedNames);
-  syncTargetProfilesDraftToTargetNames(archivedNames);
   renderMonsterArchive();
-  renderTargetProfiles();
-  flashStatus(archivedNames.length ? "Loaded seen monsters into target queue" : "No seen monsters to load", archivedNames.length ? "ready" : "warn", 2200);
+  flashStatus(
+    archivedNames.length
+      ? `Seen fallback ready for ${archivedNames.length} monster${archivedNames.length === 1 ? "" : "s"}; main queue unchanged`
+      : "No seen fallback monsters yet",
+    archivedNames.length ? "ready" : "warn",
+    2600,
+  );
 });
 
 actionButtons.archiveTargetCreatures.addEventListener("click", async () => {

@@ -3973,6 +3973,77 @@ test("refresh reads creature names from state and private name fields before cla
   assert.equal(snapshot.allMatches[0]?.name, "Dragon");
 });
 
+test("refresh keeps seen fallback matches separate from the main target queue", async () => {
+  const bot = new MinibiaTargetBot({
+    monster: "Bat",
+    monsterArchive: ["Rat"],
+    rangeX: 7,
+    rangeY: 5,
+    combatRangeX: 2,
+    combatRangeY: 2,
+  });
+  const player = {
+    id: 1,
+    __name: "Dark Knight",
+    __position: { x: 100, y: 200, z: 7 },
+    state: {
+      health: 250,
+      maxHealth: 300,
+      mana: 90,
+      maxMana: 120,
+    },
+    isMoving() {
+      return false;
+    },
+    hasCondition() {
+      return false;
+    },
+  };
+  const bat = {
+    id: 10,
+    __name: "Bat",
+    __position: { x: 101, y: 200, z: 7 },
+  };
+  const rat = {
+    id: 11,
+    __name: "Rat",
+    __position: { x: 100, y: 201, z: 7 },
+  };
+
+  bot.page = { id: "page-seen-fallback", title: "Minibia" };
+  bot.cdp = {
+    async evaluate(expression) {
+      return evaluatePageExpression(expression, {
+        gameClient: {
+          player,
+          world: {
+            activeCreatures: new Map([
+              [player.id, player],
+              [bat.id, bat],
+              [rat.id, rat],
+            ]),
+            pathfinder: {},
+          },
+          interface: {
+            hotbarManager: {
+              __findFullCoinStack() {
+                return null;
+              },
+            },
+          },
+        },
+      });
+    },
+  };
+
+  const snapshot = await bot.refresh({ emitSnapshot: false });
+
+  assert.deepEqual(snapshot.allMatches.map((entry) => entry.name), ["Bat"]);
+  assert.deepEqual(snapshot.fallbackMatches.map((entry) => entry.name), ["Rat"]);
+  assert.deepEqual(snapshot.candidates.map((entry) => entry.name), ["Bat"]);
+  assert.deepEqual(snapshot.fallbackCandidates.map((entry) => entry.name), ["Rat"]);
+});
+
 test("alpha monster variants inherit base target tracking and profile settings", () => {
   const bot = new MinibiaTargetBot({
     monster: "Bat",
@@ -10663,6 +10734,108 @@ test("chooseTarget keeps only reachable monsters inside the local combat box", (
   assert.equal(selection?.chosen?.id, 11);
   assert.deepEqual(selection?.candidates.map((candidate) => candidate.id), [11]);
   assert.equal(bot.shouldHoldRouteForCombat(snapshot), true);
+});
+
+test("chooseTarget keeps seen fallback behind the main target queue", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Larva"],
+    monsterArchive: ["Rat"],
+    rangeX: 7,
+    rangeY: 5,
+    combatRangeX: 2,
+    combatRangeY: 2,
+  });
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [
+      {
+        id: 10,
+        name: "Larva",
+        position: { x: 102, y: 100, z: 8 },
+        dx: 2,
+        dy: 0,
+        dz: 0,
+        reachableForCombat: true,
+        withinCombatBox: true,
+      },
+    ],
+    fallbackCandidates: [
+      {
+        id: 11,
+        name: "Rat",
+        targetSource: "seen-fallback",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        reachableForCombat: true,
+        withinCombatBox: true,
+      },
+    ],
+  };
+
+  const selection = bot.chooseTarget(snapshot);
+
+  assert.equal(selection?.chosen?.name, "Larva");
+  assert.equal(selection?.targetSource, "queue");
+  assert.deepEqual(selection?.candidates.map((candidate) => candidate.name), ["Larva"]);
+});
+
+test("chooseTarget uses seen fallback only when no queued target is attackable", () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Larva"],
+    monsterArchive: ["Rat"],
+    rangeX: 7,
+    rangeY: 5,
+    combatRangeX: 2,
+    combatRangeY: 2,
+  });
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    allMatches: [],
+    fallbackMatches: [
+      {
+        id: 11,
+        name: "Rat",
+        targetSource: "seen-fallback",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        reachableForCombat: true,
+        withinCombatWindow: true,
+        withinCombatBox: true,
+      },
+    ],
+    fallbackCandidates: [
+      {
+        id: 11,
+        name: "Rat",
+        targetSource: "seen-fallback",
+        position: { x: 101, y: 100, z: 8 },
+        dx: 1,
+        dy: 0,
+        dz: 0,
+        reachableForCombat: true,
+        withinCombatBox: true,
+      },
+    ],
+  };
+
+  const selection = bot.chooseTarget(snapshot);
+
+  assert.equal(selection?.chosen?.name, "Rat");
+  assert.equal(selection?.targetSource, "seen-fallback");
+  assert.deepEqual(selection?.candidates.map((candidate) => candidate.name), ["Rat"]);
+  assert.equal(snapshot.targetScoring?.candidates[0]?.targetSource, "seen-fallback");
+  assert.ok(!snapshot.targetScoring?.candidates[0]?.skippedReasons.includes("not tracked"));
 });
 
 test("chooseTarget expands the local combat box by 1 sqm on each axis", () => {
@@ -18201,8 +18374,8 @@ test("chooseRouteAction pauses a follower before it walks into a close predecess
   assert.equal(bot.chooseRouteAction(snapshot), null);
   assert.equal(bot.routeIndex, 20);
 
-  bot.routeCoordinationState.members[0].routeIndex = 27;
-  bot.routeCoordinationState.members[0].confirmedIndex = 26;
+  bot.routeCoordinationState.members[0].routeIndex = 66;
+  bot.routeCoordinationState.members[0].confirmedIndex = 65;
 
   const action = bot.chooseRouteAction(snapshot);
   assert.equal(action?.kind, "walk");
@@ -18274,7 +18447,7 @@ test("chooseRouteAction lets one tied session open a loose split and parks the o
   assert.equal(late.routeSpacingHold?.peerInstanceId, "early");
 });
 
-test("chooseRouteAction does not park a shared cavebot until a peer reaches half the loop", () => {
+test("chooseRouteAction holds a shared cavebot until the peer opens the 10 percent drift window", () => {
   const waypoints = Array.from({ length: 67 }, (_, index) => ({
     x: 100 + index,
     y: 200,
@@ -18318,9 +18491,231 @@ test("chooseRouteAction does not park a shared cavebot until a peer reaches half
     pathfinderFinalDestination: null,
   });
 
-  assert.equal(action?.kind, "walk");
-  assert.equal(action?.destination?.x, 101);
+  assert.equal(action, null);
+  assert.equal(bot.routeSpacingHold?.peerInstanceId, "early");
+
+  bot.routeCoordinationState.members[0].routeIndex = 35;
+  bot.routeCoordinationState.members[0].confirmedIndex = 34;
+
+  const releasedAction = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(releasedAction?.kind, "walk");
+  assert.equal(releasedAction?.destination?.x, 101);
   assert.equal(bot.routeSpacingHold, null);
+});
+
+test("route spacing window uses the route spread, not a small fixed waypoint cap", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypoints: Array.from({ length: 100 }, (_, index) => ({
+      x: 100 + index,
+      y: 200,
+      z: 8,
+      type: "walk",
+    })),
+  });
+
+  const window = bot.getRouteSpacingWindow(2);
+
+  assert.equal(window.targetGap, 50);
+  assert.equal(window.minGap, 45);
+  assert.equal(window.maxGap, 55);
+  assert.equal(window.releaseGap, 50);
+  assert.equal(window.driftGap, 5);
+});
+
+test("chooseRouteAction holds before it runs more than 10 percent ahead of its predecessor", () => {
+  const waypoints = Array.from({ length: 90 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypoints,
+  });
+
+  bot.routeIndex = 33;
+  bot.routeCoordinationState = {
+    selfInstanceId: "middle",
+    members: [
+      {
+        instanceId: "behind",
+        characterName: "Behind",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 1,
+      },
+      {
+        instanceId: "middle",
+        characterName: "Middle",
+        routeIndex: 33,
+        confirmedIndex: 32,
+        startedAt: 2,
+      },
+      {
+        instanceId: "ahead",
+        characterName: "Ahead",
+        routeIndex: 70,
+        confirmedIndex: 69,
+        startedAt: 3,
+      },
+    ],
+  };
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 133, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(action, null);
+  assert.equal(bot.routeSpacingHold?.peerInstanceId, "behind");
+  assert.equal(bot.routeSpacingHold?.reason, "drift");
+});
+
+test("chooseTarget ignores monsters beyond the route spacing lane boundary", () => {
+  const waypoints = Array.from({ length: 100 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    monsterNames: ["Larva"],
+    rangeX: 20,
+    rangeY: 20,
+    combatRangeX: 20,
+    combatRangeY: 20,
+    waypoints,
+  });
+
+  bot.routeIndex = 0;
+  bot.routeCoordinationState = {
+    selfInstanceId: "follower",
+    members: [
+      {
+        instanceId: "follower",
+        characterName: "Follower",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 2,
+      },
+      {
+        instanceId: "leader",
+        characterName: "Leader",
+        routeIndex: 50,
+        confirmedIndex: 49,
+        startedAt: 1,
+      },
+    ],
+  };
+
+  const blockedTarget = {
+    id: 10,
+    name: "Larva",
+    position: { x: 110, y: 200, z: 8 },
+    dx: 10,
+    dy: 0,
+    dz: 0,
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [blockedTarget],
+    allMatches: [blockedTarget],
+    candidates: [blockedTarget],
+  });
+
+  assert.equal(selection, null);
+  assert.deepEqual(bot.lastTargetScoreReport?.candidates[0]?.skippedReasons, ["route spacing lane"]);
+});
+
+test("chooseTarget allows monsters inside the 10 percent route spacing drift window", () => {
+  const waypoints = Array.from({ length: 100 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    monsterNames: ["Larva"],
+    rangeX: 20,
+    rangeY: 20,
+    combatRangeX: 20,
+    combatRangeY: 20,
+    waypoints,
+  });
+
+  bot.routeIndex = 0;
+  bot.routeCoordinationState = {
+    selfInstanceId: "follower",
+    members: [
+      {
+        instanceId: "follower",
+        characterName: "Follower",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 2,
+      },
+      {
+        instanceId: "leader",
+        characterName: "Leader",
+        routeIndex: 50,
+        confirmedIndex: 49,
+        startedAt: 1,
+      },
+    ],
+  };
+
+  const localTarget = {
+    id: 10,
+    name: "Larva",
+    position: { x: 105, y: 200, z: 8 },
+    dx: 5,
+    dy: 0,
+    dz: 0,
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [localTarget],
+    allMatches: [localTarget],
+    candidates: [localTarget],
+  });
+
+  assert.equal(selection?.chosen?.id, 10);
 });
 
 test("chooseRouteAction bounces backward on visible route tiles during a cramped spacing hold", () => {
@@ -18443,7 +18838,7 @@ test("chooseRouteAction can retroactively hold an earlier-started bot behind a w
   assert.equal(bot.routeIndex, 146);
 });
 
-test("chooseRouteAction breaks a stale wrapped route-spacing stalemate for the earlier session", () => {
+test("chooseRouteAction keeps a stale wrapped route-spacing hold inside the hard boundary", () => {
   const waypoints = Array.from({ length: 219 }, (_, index) => ({
     x: 33000 + index,
     y: 32500,
@@ -18495,17 +18890,13 @@ test("chooseRouteAction breaks a stale wrapped route-spacing stalemate for the e
 
   now += 6_001;
 
-  const action = bot.chooseRouteAction(snapshot);
-  assert.equal(action?.kind, "walk");
-  assert.equal(action?.destination?.x, 33147);
-  assert.equal(action?.destination?.y, 32500);
-  assert.equal(action?.destination?.z, 8);
-  assert.equal(bot.routeIndex, 147);
-  assert.equal(bot.routeSpacingHold, null);
-  assert.equal(bot.routeSpacingBypass?.peerInstanceId, "late");
+  assert.equal(bot.chooseRouteAction(snapshot), null);
+  assert.equal(bot.routeIndex, 146);
+  assert.equal(bot.routeSpacingHold?.peerInstanceId, "late");
+  assert.equal(bot.routeSpacingBypass, null);
 });
 
-test("chooseRouteAction parks the lower-priority session briefly before force-bypassing a stale route-spacing hold", () => {
+test("chooseRouteAction keeps the lower-priority session parked instead of force-bypassing spacing", () => {
   const waypoints = Array.from({ length: 100 }, (_, index) => ({
     x: 100 + index,
     y: 200,
@@ -18563,11 +18954,10 @@ test("chooseRouteAction parks the lower-priority session briefly before force-by
 
   now += 8_000;
 
-  const action = bot.chooseRouteAction(snapshot);
-  assert.equal(action?.kind, "walk");
-  assert.equal(action?.destination?.x, 101);
-  assert.equal(bot.routeSpacingHold, null);
-  assert.equal(bot.routeSpacingBypass?.peerInstanceId, "leader");
+  assert.equal(bot.chooseRouteAction(snapshot), null);
+  assert.equal(bot.routeIndex, 0);
+  assert.equal(bot.routeSpacingHold?.peerInstanceId, "leader");
+  assert.equal(bot.routeSpacingBypass, null);
 });
 
 test("chooseRouteAction lets a wrapped later-started bot keep moving when that widens the live gap", () => {
@@ -18645,7 +19035,7 @@ test("chooseRouteAction uses a local peer live route position before the peer's 
         characterName: "Leader",
         routeIndex: 40,
         confirmedIndex: 39,
-        playerPosition: { x: 120, y: 200, z: 8 },
+        playerPosition: { x: 160, y: 200, z: 8 },
         startedAt: 1,
       },
       {

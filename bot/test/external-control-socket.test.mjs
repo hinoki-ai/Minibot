@@ -136,7 +136,7 @@ test("external control socket requires auth when a token is configured", async (
       MINIBOT_CONTROL_PORT: "0",
       MINIBOT_CONTROL_TOKEN: "secret-token",
     },
-    dispatcher: async (method) => ({ method }),
+    dispatcher: async (method, params) => ({ method, params }),
     logger: {
       info() { },
       warn() { },
@@ -171,15 +171,45 @@ test("external control socket requires auth when a token is configured", async (
     writeRequest(socket, {
       id: 3,
       method: "echo",
+      params: {
+        token: "secret-token",
+        value: 9,
+      },
     });
     assert.deepEqual(await readJsonLine(socket), {
       id: 3,
       ok: true,
-      result: { method: "echo" },
+      result: {
+        method: "echo",
+        params: { value: 9 },
+      },
     });
   } finally {
     socket.destroy();
     await controller.stop();
     await fs.rm(configDir, { recursive: true, force: true });
   }
+});
+
+test("external control socket removes stale discovery files when disabled", async () => {
+  const configDir = await makeTempDir();
+  const infoFilePath = path.join(configDir, "control-socket.json");
+  await fs.writeFile(infoFilePath, "{}\n");
+
+  const controller = createExternalControlSocket({
+    configDir,
+    env: {
+      MINIBOT_CONTROL_SOCKET: "0",
+    },
+    dispatcher: async () => ({}),
+    logger: {
+      info() { },
+      warn() { },
+    },
+  });
+
+  const info = await controller.start();
+  assert.equal(info.enabled, false);
+  await assert.rejects(fs.stat(infoFilePath));
+  await fs.rm(configDir, { recursive: true, force: true });
 });

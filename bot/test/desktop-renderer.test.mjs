@@ -6210,7 +6210,7 @@ test("hunt workspace shows one configured monster per line", async () => {
   assert.equal(document.getElementById("summary-targeting").textContent.trim(), "Swamp Troll, Rat, Bat");
   assert.match(document.getElementById("monster-archive").textContent, /Larva/);
   assert.match(document.getElementById("monster-archive").textContent, /Rat/);
-  assert.match(document.getElementById("monster-target-list").textContent, /Swamp Troll/);
+  assert.equal(document.getElementById("monster-target-list").textContent.trim(), "");
   assert.match(document.getElementById("monster-visible-note").textContent, /Nearby now \(2\): Larva, Rat/);
   assert.match(document.getElementById("player-visible-note").textContent, /Nearby now \(2\): Knight Alpha, Scout Beta/);
   assert.match(document.getElementById("player-visible-list").textContent, /Knight Alpha/);
@@ -6507,7 +6507,7 @@ test("hunt workspace strips polluted target names and filters registry lists by 
 
   assert.deepEqual(
     [...document.querySelectorAll("#monster-target-list [data-name]")].map((node) => node.textContent.trim()),
-    ["Alpha Rat", "Rat"],
+    [],
   );
   assert.deepEqual(
     [...document.querySelectorAll("#monster-archive [data-name]")].map((node) => node.textContent.trim()),
@@ -8172,7 +8172,7 @@ test("banking modal renders banking rules and saves edited bank actions", async 
   assert.equal(currentState().options.bankingRules[0].amount, 5000);
 });
 
-test("target archive buttons can load visible monsters without mixing players into the target field", async () => {
+test("target archive buttons load nearby monsters while seen stays fallback-only", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
@@ -8198,7 +8198,8 @@ test("target archive buttons can load visible monsters without mixing players in
 
   document.getElementById("monster-use-archive").click();
   await flush();
-  assert.equal(document.getElementById("monster").value, "Bat\nRat\nRotworm");
+  assert.equal(document.getElementById("monster").value, "Bat\nRat");
+  assert.ok(!document.getElementById("monster").value.includes("Rotworm"));
 });
 
 test("target source chips support one-click add and remove flows", async () => {
@@ -8223,12 +8224,12 @@ test("target source chips support one-click add and remove flows", async () => {
   document.querySelector('#monster-archive [data-name="Bat"]').click();
   await flush();
   assert.equal(document.getElementById("monster").value, "Rotworm\nBat");
-  assert.match(document.getElementById("monster-target-list").textContent, /Bat/);
+  assert.match(document.getElementById("target-profile-list").textContent, /Bat/);
 
-  document.querySelector('#monster-target-list [data-name="Rotworm"]').click();
+  document.querySelector('#monster-archive [data-name="Rotworm"]').click();
   await flush();
   assert.equal(document.getElementById("monster").value, "Bat");
-  assert.ok(!document.getElementById("monster-target-list").textContent.includes("Rotworm"));
+  assert.ok(!document.getElementById("target-profile-list").textContent.includes("Rotworm"));
 });
 
 test("target archive supports create and delete flows without clobbering unsaved target edits", async () => {
