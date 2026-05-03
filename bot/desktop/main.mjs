@@ -91,7 +91,7 @@ import {
   validateRouteConfig,
 } from "../lib/config-store.mjs";
 import { buildHuntPresetCatalog } from "../lib/hunt-presets.mjs";
-import { resolveMinibiaItemName, resolveMinibiaItemSlotType } from "../lib/minibia-item-metadata.mjs";
+import { resolveMinibiaItemInfo, resolveMinibiaItemName } from "../lib/minibia-item-metadata.mjs";
 import { loadMinibiaData } from "../lib/minibia-data.mjs";
 import { resolveRuntimeLayout } from "../lib/runtime-layout.mjs";
 import {
@@ -1174,12 +1174,11 @@ function serializeDialogueState(dialogue) {
 function serializeInventoryItem(item) {
   if (!item) return null;
 
-  const resolvedName = resolveMinibiaItemName(item);
-  const resolvedSlotType = resolveMinibiaItemSlotType(item);
+  const resolvedInfo = resolveMinibiaItemInfo(item);
   return {
     itemId: Number.isFinite(Number(item.itemId ?? item.id)) ? Number(item.itemId ?? item.id) : null,
-    name: resolvedName ? String(resolvedName) : "",
-    slotType: resolvedSlotType ? String(resolvedSlotType) : "",
+    name: resolvedInfo.name ? String(resolvedInfo.name) : "",
+    slotType: resolvedInfo.slotType ? String(resolvedInfo.slotType) : "",
     count: Number.isFinite(Number(item.count)) ? Number(item.count) : 0,
     category: item.category ? String(item.category) : "",
     slotIndex: Number.isInteger(Number(item.slotIndex)) ? Number(item.slotIndex) : null,
@@ -1353,7 +1352,9 @@ function serializeRouteProfile(config, routeProfile = null) {
   if (routeProfile?.path) {
     return {
       ...routeProfile,
-      exists: routeProfile.exists ?? fs.existsSync(routeProfile.path),
+      exists: typeof routeProfile.exists === "boolean"
+        ? routeProfile.exists
+        : fs.existsSync(routeProfile.path),
     };
   }
 
@@ -1894,7 +1895,6 @@ function sendLiveStatePatch() {
     runningSessionCount: getRunningSessionCount(),
     sessionCount: sessions.size,
   });
-  nextState.runtimeMetrics = serializeRuntimeMetrics(activeSession);
   dispatchEvent("state", {}, {
     state: nextState,
     statePatch: true,

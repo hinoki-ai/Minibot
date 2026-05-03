@@ -913,49 +913,49 @@ export async function listRouteProfiles() {
   await fs.mkdir(PROFILE_DIR, { recursive: true });
 
   const entries = await fs.readdir(PROFILE_DIR, { withFileTypes: true }).catch(() => []);
-  const profiles = [];
+  const profiles = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map(async (entry) => {
+        const filePath = path.join(PROFILE_DIR, entry.name);
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
-      continue;
-    }
+        try {
+          const [raw, stats] = await Promise.all([
+            fs.readFile(filePath, "utf8"),
+            fs.stat(filePath),
+          ]);
+          const rawPayload = JSON.parse(String(raw || "").trim() || "{}");
+          const normalizedProfile = normalizeRouteProfilePayload(rawPayload, routeNameFromFileName(entry.name));
+          const validation = validateRouteConfig(normalizedProfile.options, {
+            sourceName: normalizedProfile.routeName,
+            sourcePath: filePath,
+            rawConfig: rawPayload,
+          });
 
-    const filePath = path.join(PROFILE_DIR, entry.name);
-
-    try {
-      const raw = await fs.readFile(filePath, "utf8");
-      const rawPayload = JSON.parse(String(raw || "").trim() || "{}");
-      const normalizedProfile = normalizeRouteProfilePayload(rawPayload, routeNameFromFileName(entry.name));
-      const stats = await fs.stat(filePath);
-      const validation = validateRouteConfig(normalizedProfile.options, {
-        sourceName: normalizedProfile.routeName,
-        sourcePath: filePath,
-        rawConfig: rawPayload,
-      });
-
-      profiles.push({
-        name: normalizedProfile.routeName,
-        fileName: entry.name,
-        path: filePath,
-        exists: true,
-        waypointCount: normalizedProfile.options.waypoints.length,
-        tileRuleCount: normalizedProfile.options.tileRules.length,
-        validation,
-        updatedAt: stats.mtimeMs,
-      });
-    } catch {
-      const stats = await fs.stat(filePath).catch(() => null);
-      profiles.push({
-        name: routeNameFromFileName(entry.name),
-        fileName: entry.name,
-        path: filePath,
-        exists: true,
-        waypointCount: 0,
-        tileRuleCount: 0,
-        updatedAt: stats?.mtimeMs || 0,
-      });
-    }
-  }
+          return {
+            name: normalizedProfile.routeName,
+            fileName: entry.name,
+            path: filePath,
+            exists: true,
+            waypointCount: normalizedProfile.options.waypoints.length,
+            tileRuleCount: normalizedProfile.options.tileRules.length,
+            validation,
+            updatedAt: stats.mtimeMs,
+          };
+        } catch {
+          const stats = await fs.stat(filePath).catch(() => null);
+          return {
+            name: routeNameFromFileName(entry.name),
+            fileName: entry.name,
+            path: filePath,
+            exists: true,
+            waypointCount: 0,
+            tileRuleCount: 0,
+            updatedAt: stats?.mtimeMs || 0,
+          };
+        }
+      }),
+  );
 
   return profiles.sort((left, right) => left.name.localeCompare(right.name, undefined, {
     sensitivity: "base",
@@ -1355,32 +1355,34 @@ export async function listCharacterConfigs() {
   await fs.mkdir(CHARACTER_CONFIG_DIR, { recursive: true });
 
   const entries = await fs.readdir(CHARACTER_CONFIG_DIR, { withFileTypes: true }).catch(() => []);
-  const characters = [];
+  const characters = (await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map(async (entry) => {
+        const profileKey = String(entry.name || "").replace(/\.json$/i, "");
+        if (!profileKey) {
+          return null;
+        }
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
-      continue;
-    }
+        const filePath = path.join(CHARACTER_CONFIG_DIR, entry.name);
 
-    const profileKey = String(entry.name || "").replace(/\.json$/i, "");
-    if (!profileKey) {
-      continue;
-    }
-
-    const filePath = path.join(CHARACTER_CONFIG_DIR, entry.name);
-
-    try {
-      const options = await readNormalizedConfig(filePath);
-      const stats = await fs.stat(filePath);
-      characters.push({
-        profileKey,
-        fileName: entry.name,
-        path: filePath,
-        updatedAt: Number(stats?.mtimeMs) || 0,
-        options,
-      });
-    } catch { }
-  }
+        try {
+          const [options, stats] = await Promise.all([
+            readNormalizedConfig(filePath),
+            fs.stat(filePath),
+          ]);
+          return {
+            profileKey,
+            fileName: entry.name,
+            path: filePath,
+            updatedAt: Number(stats?.mtimeMs) || 0,
+            options,
+          };
+        } catch {
+          return null;
+        }
+      }),
+  )).filter(Boolean);
 
   return characters.sort((left, right) => (
     String(left.profileKey || "").localeCompare(String(right.profileKey || ""), undefined, {
@@ -1405,21 +1407,20 @@ export async function listAccounts() {
   await fs.mkdir(ACCOUNT_DIR, { recursive: true });
 
   const entries = await fs.readdir(ACCOUNT_DIR, { withFileTypes: true }).catch(() => []);
-  const accounts = [];
-
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
-      continue;
-    }
-
-    const filePath = path.join(ACCOUNT_DIR, entry.name);
-    try {
-      const raw = await readJsonFile(filePath);
-      accounts.push(normalizeAccountRecord(raw));
-    } catch {
-      await fs.rm(filePath, { force: true }).catch(() => {});
-    }
-  }
+  const accounts = (await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map(async (entry) => {
+        const filePath = path.join(ACCOUNT_DIR, entry.name);
+        try {
+          const raw = await readJsonFile(filePath);
+          return normalizeAccountRecord(raw);
+        } catch {
+          await fs.rm(filePath, { force: true }).catch(() => {});
+          return null;
+        }
+      }),
+  )).filter(Boolean);
 
   return accounts.sort((left, right) => (
     String(left.label || left.id || "").localeCompare(String(right.label || right.id || ""), undefined, {
@@ -1569,28 +1570,27 @@ export async function listCharacterClaims() {
   await fs.mkdir(CHARACTER_CLAIM_DIR, { recursive: true });
 
   const entries = await fs.readdir(CHARACTER_CLAIM_DIR, { withFileTypes: true }).catch(() => []);
-  const claims = [];
+  const claims = (await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map(async (entry) => {
+        const claimFile = path.join(CHARACTER_CLAIM_DIR, entry.name);
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
-      continue;
-    }
+        try {
+          const claim = await readJsonFile(claimFile);
 
-    const claimFile = path.join(CHARACTER_CLAIM_DIR, entry.name);
+          if (!isClaimActive(claim)) {
+            await fs.rm(claimFile, { force: true });
+            return null;
+          }
 
-    try {
-      const claim = await readJsonFile(claimFile);
-
-      if (!isClaimActive(claim)) {
-        await fs.rm(claimFile, { force: true });
-        continue;
-      }
-
-      claims.push(claim);
-    } catch {
-      await fs.rm(claimFile, { force: true }).catch(() => {});
-    }
-  }
+          return claim;
+        } catch {
+          await fs.rm(claimFile, { force: true }).catch(() => {});
+          return null;
+        }
+      }),
+  )).filter(Boolean);
 
   return claims;
 }
@@ -1605,26 +1605,25 @@ export async function listRouteSpacingLeases({ routeKey } = {}) {
   await fs.mkdir(groupDir, { recursive: true });
 
   const entries = await fs.readdir(groupDir, { withFileTypes: true }).catch(() => []);
-  const leases = [];
+  const leases = (await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map(async (entry) => {
+        const leaseFile = path.join(groupDir, entry.name);
+        try {
+          const lease = await readJsonFile(leaseFile);
+          if (!isRouteSpacingLeaseActive(lease)) {
+            await fs.rm(leaseFile, { force: true }).catch(() => {});
+            return null;
+          }
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
-      continue;
-    }
-
-    const leaseFile = path.join(groupDir, entry.name);
-    try {
-      const lease = await readJsonFile(leaseFile);
-      if (!isRouteSpacingLeaseActive(lease)) {
-        await fs.rm(leaseFile, { force: true }).catch(() => {});
-        continue;
-      }
-
-      leases.push(lease);
-    } catch {
-      await fs.rm(leaseFile, { force: true }).catch(() => {});
-    }
-  }
+          return lease;
+        } catch {
+          await fs.rm(leaseFile, { force: true }).catch(() => {});
+          return null;
+        }
+      }),
+  )).filter(Boolean);
 
   return leases.sort((left, right) => (
     (Number(left.startedAt) || 0) - (Number(right.startedAt) || 0)

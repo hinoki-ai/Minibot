@@ -301,6 +301,87 @@ test("normalizeOptions defaults the route recorder to 3 SQM and shows waypoint o
   });
 });
 
+test("route waypoint cache resolves selectors and invalidates on option changes", () => {
+  const bot = new MinibiaTargetBot({
+    waypoints: [
+      { x: 100, y: 100, z: 7, label: "Entry", type: "walk" },
+      { x: 101, y: 101, z: 7, label: "Target", type: "walk" },
+      { x: 102, y: 102, z: 7, label: "Jump", type: "action", action: "goto", targetLabel: "Target" },
+      { x: 103, y: 103, z: 7, label: "Danger", type: "danger-zone", radius: 1 },
+      { x: 104, y: 104, z: 7, label: "Stairs", type: "stairs-up" },
+    ],
+  });
+
+  assert.equal(bot.findWaypointIndexBySelector("entry"), 0);
+  assert.equal(bot.findWaypointIndexBySelector("101,101,7"), 1);
+  assert.equal(bot.findWaypointIndexBySelector("wp 3"), 2);
+  assert.equal(bot.getWaypointActionTargetIndex(bot.options.waypoints[2]), 1);
+  assert.equal(bot.getNoGoZoneWaypointAt({ x: 104, y: 104, z: 7 })?.label, "Danger");
+  assert.equal(bot.getRouteFloorTransitionNoGoAt({ x: 104, y: 104, z: 7 })?.label, "Stairs");
+
+  bot.setOptions({
+    waypoints: [
+      { x: 200, y: 200, z: 7, label: "Fresh", type: "walk" },
+      { x: 201, y: 201, z: 7, label: "Return", type: "action", action: "goto", targetLabel: "Fresh" },
+    ],
+  });
+
+  assert.equal(bot.findWaypointIndexBySelector("Target"), -1);
+  assert.equal(bot.getWaypointActionTargetIndex(bot.options.waypoints[1]), 0);
+  assert.equal(bot.getNoGoZoneWaypointAt({ x: 104, y: 104, z: 7 }), null);
+});
+
+test("refresh inspects auxiliary snapshot state concurrently", async () => {
+  const bot = new MinibiaTargetBot({});
+  let activeInspections = 0;
+  let maxActiveInspections = 0;
+
+  const delayedInspection = (value) => async () => {
+    activeInspections += 1;
+    maxActiveInspections = Math.max(maxActiveInspections, activeInspections);
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    activeInspections -= 1;
+    return value;
+  };
+
+  bot.attach = async () => {
+    bot.page = { id: "page-1", url: "https://minibia.com/play" };
+    bot.cdp = {
+      evaluate: async () => createModuleSnapshot(),
+    };
+    return bot.page;
+  };
+  bot.shouldInspectAuxiliarySnapshotState = () => true;
+  bot.inspectDialogueState = delayedInspection({ open: true, npcName: "Sam" });
+  bot.inspectTradeState = delayedInspection({
+    open: true,
+    npcName: "Sam",
+    activeSide: "buy",
+    selectedItem: null,
+    buyItems: [],
+    sellItems: [],
+  });
+  bot.inspectTaskState = delayedInspection({
+    open: false,
+    activeTaskType: "",
+    taskNpc: "",
+    taskTarget: "",
+    progressCurrent: null,
+    progressRequired: null,
+    rewardReady: false,
+  });
+  bot.syncRouteCoordination = async () => {};
+  bot.syncFollowTrainCoordination = async () => {};
+  bot.syncWaypointOverlay = async () => {};
+
+  const snapshot = await bot.refresh({ emitSnapshot: false });
+
+  assert.equal(maxActiveInspections, 3);
+  assert.equal(snapshot.dialogue.open, true);
+  assert.equal(snapshot.trade.open, true);
+  assert.equal(snapshot.task.open, false);
+});
+
 test("multi-session runtime load backs off stable loops but keeps critical health fast", () => {
   const bot = new MinibiaTargetBot({
     intervalMs: 250,

@@ -1954,6 +1954,10 @@ export function normalizeWaypointAction(value = DEFAULT_WAYPOINT_ACTION) {
 }
 
 export function normalizeWaypointTargetIndex(value) {
+  if (value == null || (typeof value === "string" && !value.trim())) {
+    return null;
+  }
+
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
     return null;
@@ -4067,6 +4071,8 @@ export async function discoverGamePages(port, urlPrefix, {
 
 export const CDP_COMMAND_TIMEOUT_MS = 10_000;
 export const CDP_CONNECT_TIMEOUT_MS = 5_000;
+const CDP_COMPILED_SCRIPT_CACHE_MAX_ENTRIES = 16;
+const CDP_STATE_SNAPSHOT_SOURCE_URL = "minibot://runtime/state-snapshot.js";
 
 function asError(value, fallbackMessage) {
   if (value instanceof Error) {
@@ -4095,6 +4101,8 @@ export class CdpPage {
     this.ws = null;
     this.nextId = 0;
     this.pending = new Map();
+    this.compiledScripts = new Map();
+    this.cachedEvaluationUnavailable = false;
   }
 
   isOpen() {
@@ -4117,6 +4125,8 @@ export class CdpPage {
     const normalizedError = asError(error, "CDP socket closed");
     const ws = this.ws;
     this.ws = null;
+    this.compiledScripts.clear();
+    this.cachedEvaluationUnavailable = false;
 
     if (ws) {
       ws.onopen = null;
@@ -4244,6 +4254,83 @@ export class CdpPage {
     });
 
     return result.result?.value;
+  }
+
+  isCachedEvaluationUnsupported(error = null) {
+    const message = String(error?.message || error || "").toLowerCase();
+    return message.includes("compilescript")
+      || message.includes("runscript")
+      || message.includes("method not found")
+      || message.includes("wasn't found")
+      || message.includes("unknown method")
+      || message.includes("not supported");
+  }
+
+  rememberCompiledScript(expression, scriptId) {
+    if (!expression || !scriptId) {
+      return null;
+    }
+
+    if (this.compiledScripts.has(expression)) {
+      this.compiledScripts.delete(expression);
+    }
+    this.compiledScripts.set(expression, scriptId);
+
+    while (this.compiledScripts.size > CDP_COMPILED_SCRIPT_CACHE_MAX_ENTRIES) {
+      const oldestKey = this.compiledScripts.keys().next().value;
+      this.compiledScripts.delete(oldestKey);
+    }
+
+    return scriptId;
+  }
+
+  async getCompiledScriptId(expression, { sourceURL = "minibot://runtime/evaluation.js" } = {}) {
+    const cachedScriptId = this.compiledScripts.get(expression);
+    if (cachedScriptId) {
+      this.compiledScripts.delete(expression);
+      this.compiledScripts.set(expression, cachedScriptId);
+      return cachedScriptId;
+    }
+
+    const result = await this.send("Runtime.compileScript", {
+      expression,
+      sourceURL,
+      persistScript: true,
+    });
+    return this.rememberCompiledScript(expression, result?.scriptId || "");
+  }
+
+  async runCompiledScript(scriptId) {
+    const result = await this.send("Runtime.runScript", {
+      scriptId,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+
+    return result.result?.value;
+  }
+
+  async evaluateCached(expression, options = {}) {
+    if (this.cachedEvaluationUnavailable) {
+      return this.evaluate(expression);
+    }
+
+    let scriptId = "";
+    try {
+      scriptId = await this.getCompiledScriptId(expression, options);
+      if (!scriptId) {
+        return this.evaluate(expression);
+      }
+      return await this.runCompiledScript(scriptId);
+    } catch (error) {
+      if (scriptId) {
+        this.compiledScripts.delete(expression);
+      }
+      if (this.isCachedEvaluationUnsupported(error)) {
+        this.cachedEvaluationUnavailable = true;
+      }
+      return this.evaluate(expression);
+    }
   }
 
   close() {
@@ -13232,6 +13319,9 @@ export class MinibiaTargetBot {
     };
     this.lastRuntimeDiagnostics = null;
     this.lastTargetScoreReport = null;
+    this.routeWaypointCache = null;
+    this.routeWaypointCacheSource = null;
+    this.routeWaypointCacheLength = -1;
     this.protectorState = {
       active: false,
       activeAlarms: [],
@@ -14282,6 +14372,84 @@ export class MinibiaTargetBot {
   clearFollowTrainState() {
     this.followTrainState = null;
     this.followTrainConsumedActionIds.clear();
+  }
+
+  invalidateRouteWaypointCache() {
+    this.routeWaypointCache = null;
+    this.routeWaypointCacheSource = null;
+    this.routeWaypointCacheLength = -1;
+  }
+
+  appendRouteWaypointCacheEntry(map, key, value) {
+    if (!key || map.has(key)) {
+      return;
+    }
+
+    map.set(key, value);
+  }
+
+  appendRouteWaypointCacheList(map, key, value) {
+    if (!key) {
+      return;
+    }
+
+    const entries = map.get(key);
+    if (entries) {
+      entries.push(value);
+      return;
+    }
+
+    map.set(key, [value]);
+  }
+
+  getRouteWaypointCache() {
+    const waypoints = Array.isArray(this.options?.waypoints) ? this.options.waypoints : [];
+    if (
+      this.routeWaypointCache
+      && this.routeWaypointCacheSource === waypoints
+      && this.routeWaypointCacheLength === waypoints.length
+    ) {
+      return this.routeWaypointCache;
+    }
+
+    const labelIndex = new Map();
+    const selectorIndex = new Map();
+    const noGoWaypointsByFloor = new Map();
+    const floorTransitionWaypointByPosition = new Map();
+    const floorTransitionWaypointsByFloor = new Map();
+
+    for (let index = 0; index < waypoints.length; index += 1) {
+      const waypoint = waypoints[index];
+      const labelKey = this.getNameKey(waypoint?.label);
+      const positionKey = this.getPositionKey(waypoint);
+      const floorKey = Number.isFinite(Number(waypoint?.z)) ? String(Math.trunc(Number(waypoint.z))) : "";
+
+      this.appendRouteWaypointCacheEntry(labelIndex, labelKey, index);
+      this.appendRouteWaypointCacheEntry(selectorIndex, labelKey, index);
+      this.appendRouteWaypointCacheEntry(selectorIndex, positionKey, index);
+      this.appendRouteWaypointCacheEntry(selectorIndex, this.getNameKey(`wp ${index + 1}`), index);
+      this.appendRouteWaypointCacheEntry(selectorIndex, this.getNameKey(`waypoint ${index + 1}`), index);
+
+      if (this.isNoGoWaypointType(waypoint)) {
+        this.appendRouteWaypointCacheList(noGoWaypointsByFloor, floorKey, waypoint);
+      }
+
+      if (this.isFloorTransitionWaypointType(waypoint)) {
+        this.appendRouteWaypointCacheEntry(floorTransitionWaypointByPosition, positionKey, waypoint);
+        this.appendRouteWaypointCacheList(floorTransitionWaypointsByFloor, floorKey, waypoint);
+      }
+    }
+
+    this.routeWaypointCache = {
+      labelIndex,
+      selectorIndex,
+      noGoWaypointsByFloor,
+      floorTransitionWaypointByPosition,
+      floorTransitionWaypointsByFloor,
+    };
+    this.routeWaypointCacheSource = waypoints;
+    this.routeWaypointCacheLength = waypoints.length;
+    return this.routeWaypointCache;
   }
 
   getNameKey(value = "") {
@@ -18040,12 +18208,9 @@ export class MinibiaTargetBot {
     }
 
     const key = this.getNameKey(text);
-    return waypoints.findIndex((waypoint, index) => (
-      this.getNameKey(waypoint?.label) === key
-      || this.getPositionKey(waypoint) === text
-      || this.getNameKey(`wp ${index + 1}`) === key
-      || this.getNameKey(`waypoint ${index + 1}`) === key
-    ));
+    const cache = this.getRouteWaypointCache();
+    const index = cache.selectorIndex.get(key) ?? cache.selectorIndex.get(text);
+    return Number.isInteger(index) ? index : -1;
   }
 
   findNextWaypointIndexMatching(predicate = () => false, {
@@ -20072,7 +20237,9 @@ export class MinibiaTargetBot {
     return this.routeCoordinationState;
   }
 
-  async syncFollowTrainCoordination(snapshot = this.lastSnapshot) {
+  async syncFollowTrainCoordination(snapshot = this.lastSnapshot, {
+    now = this.getNow(),
+  } = {}) {
     if (!this.followTrainCoordinationAdapter) {
       this.followTrainCoordinationState = null;
       return null;
@@ -20082,7 +20249,7 @@ export class MinibiaTargetBot {
       options: this.options,
       snapshot,
       running: this.running,
-      now: this.getNow(),
+      now,
     });
 
     this.followTrainCoordinationState = state || null;
@@ -21119,6 +21286,9 @@ export class MinibiaTargetBot {
       combatMode: String(this.options?.partyFollowCombatMode || ""),
     });
     this.options = mergeOptions(this.options, nextOptions);
+    this.invalidateRouteWaypointCache();
+    const nextRouteTelemetrySignature = this.getRouteTelemetrySignature(this.options);
+    const nextRouteResetSignature = this.getRouteResetContinuitySignature(this.options);
     const nextFollowTrainSignature = JSON.stringify({
       enabled: Boolean(this.options?.partyFollowEnabled),
       members: Array.isArray(this.options?.partyFollowMembers) ? this.options.partyFollowMembers : [],
@@ -21131,11 +21301,11 @@ export class MinibiaTargetBot {
       distance: Number(this.options?.partyFollowDistance) || 0,
       combatMode: String(this.options?.partyFollowCombatMode || ""),
     });
-    const routeTelemetryChanged = previousRouteTelemetrySignature !== this.getRouteTelemetrySignature(this.options);
+    const routeTelemetryChanged = previousRouteTelemetrySignature !== nextRouteTelemetrySignature;
     const canPreserveRouteReset = previousRouteResetState
-      && previousRouteResetSignature === this.getRouteResetContinuitySignature(this.options);
+      && previousRouteResetSignature === nextRouteResetSignature;
     const canPreserveCorpseReturn = previousCorpseReturnState
-      && previousRouteResetSignature === this.getRouteResetContinuitySignature(this.options);
+      && previousRouteResetSignature === nextRouteResetSignature;
     this.overlayRevision += 1;
     this.routeResetState = canPreserveRouteReset
       ? this.normalizeRouteResetStateForOptions(previousRouteResetState, this.options)
@@ -22828,7 +22998,9 @@ export class MinibiaTargetBot {
       preferredValueSlotIndex: usePreferredValueSlot ? (this.lastSnapshot?.currency?.valueSlotIndex ?? null) : null,
       preferredValueContainerRuntimeId: usePreferredValueSlot ? (this.lastSnapshot?.currency?.valueContainerRuntimeId ?? null) : null,
     });
-    const evaluatedSnapshot = await this.cdp.evaluate(stateExpression);
+    const evaluatedSnapshot = typeof this.cdp.evaluateCached === "function"
+      ? await this.cdp.evaluateCached(stateExpression, { sourceURL: CDP_STATE_SNAPSHOT_SOURCE_URL })
+      : await this.cdp.evaluate(stateExpression);
     const snapshot = evaluatedSnapshot && typeof evaluatedSnapshot === "object"
       ? evaluatedSnapshot
       : {
@@ -22865,24 +23037,29 @@ export class MinibiaTargetBot {
       }
 
       if (this.shouldInspectAuxiliarySnapshotState(this.lastSnapshot, { background, now })) {
-        snapshot.dialogue = await this.inspectDialogueState().catch(() => normalizeDialogueState(null));
-        snapshot.trade = await this.inspectTradeState().catch(() => ({
-          open: false,
-          npcName: "",
-          activeSide: "",
-          selectedItem: null,
-          buyItems: [],
-          sellItems: [],
-        }));
-        snapshot.task = await this.inspectTaskState().catch(() => ({
-          open: false,
-          activeTaskType: "",
-          taskNpc: "",
-          taskTarget: "",
-          progressCurrent: null,
-          progressRequired: null,
-          rewardReady: false,
-        }));
+        const [dialogue, trade, task] = await Promise.all([
+          this.inspectDialogueState().catch(() => normalizeDialogueState(null)),
+          this.inspectTradeState().catch(() => ({
+            open: false,
+            npcName: "",
+            activeSide: "",
+            selectedItem: null,
+            buyItems: [],
+            sellItems: [],
+          })),
+          this.inspectTaskState().catch(() => ({
+            open: false,
+            activeTaskType: "",
+            taskNpc: "",
+            taskTarget: "",
+            progressCurrent: null,
+            progressRequired: null,
+            rewardReady: false,
+          })),
+        ]);
+        snapshot.dialogue = dialogue;
+        snapshot.trade = trade;
+        snapshot.task = task;
         this.lastAuxiliarySnapshotInspectionAt = now;
       } else {
         snapshot.dialogue = normalizeDialogueState(this.lastSnapshot?.dialogue);
@@ -22939,25 +23116,17 @@ export class MinibiaTargetBot {
     this.lastSnapshot = snapshot;
     this.lastSnapshotAt = now;
     if (!background || this.running) {
-      try {
-        await this.syncRouteCoordination(snapshot, {
+      await Promise.all([
+        this.syncRouteCoordination(snapshot, {
           throttle: this.running,
           now,
-        });
-      } catch { }
-    }
-    if (!background || this.running) {
-      try {
-        await this.syncFollowTrainCoordination(snapshot);
-      } catch { }
-    }
-    if (!background || this.running) {
-      try {
-        await this.syncWaypointOverlay(snapshot, {
+        }).catch(() => null),
+        this.syncFollowTrainCoordination(snapshot, { now }).catch(() => null),
+        this.syncWaypointOverlay(snapshot, {
           throttle: this.running,
           now,
-        });
-      } catch { }
+        }).catch(() => null),
+      ]);
     }
     if (emitSnapshot) {
       this.emit("snapshot", { snapshot });
@@ -25102,8 +25271,9 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    return this.options.waypoints
-      .find((waypoint) => this.matchesNoGoWaypointPosition(position, waypoint)) || null;
+    const floorKey = Number.isFinite(Number(position.z)) ? String(Math.trunc(Number(position.z))) : "";
+    const candidates = this.getRouteWaypointCache().noGoWaypointsByFloor.get(floorKey) || [];
+    return candidates.find((waypoint) => this.matchesNoGoWaypointPosition(position, waypoint)) || null;
   }
 
   getAvoidTileRuleAt(snapshot, position) {
@@ -25158,10 +25328,7 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    return this.options.waypoints.find((waypoint) => (
-      this.isFloorTransitionWaypointType(waypoint)
-      && this.getPositionKey(waypoint) === positionKey
-    )) || null;
+    return this.getRouteWaypointCache().floorTransitionWaypointByPosition.get(positionKey) || null;
   }
 
   getFloorTransitionDangerZoneAt(snapshot, position, {
@@ -25190,15 +25357,13 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    return this.options.waypoints.find((waypoint) => {
-      if (!this.isFloorTransitionWaypointType(waypoint)) {
-        return false;
-      }
-
-      return this.matchesFloorTransitionDangerZonePosition(position, waypoint, {
+    const floorKey = Number.isFinite(Number(position.z)) ? String(Math.trunc(Number(position.z))) : "";
+    const candidates = this.getRouteWaypointCache().floorTransitionWaypointsByFloor.get(floorKey) || [];
+    return candidates.find((waypoint) => (
+      this.matchesFloorTransitionDangerZonePosition(position, waypoint, {
         radius,
-      });
-    }) || null;
+      })
+    )) || null;
   }
 
   getCombatFloorTransitionDangerZoneAt(snapshot, position, options = {}) {
@@ -30788,15 +30953,15 @@ export class MinibiaTargetBot {
       && Math.trunc(Number(position.z)) === Math.trunc(playerZ)
     );
 
-    return Array.isArray(this.options.waypoints)
-      && this.options.waypoints.some((routeWaypoint) => (
-        this.isNoGoWaypointType(routeWaypoint)
-        && isSameFloor(routeWaypoint)
-        && this.routeSafetyBoundsIntersectSegment(snapshot, this.getNoGoWaypointBounds(routeWaypoint), {
-          destination,
-          waypoint,
-        })
-      ));
+    const floorKey = String(Math.trunc(playerZ));
+    const noGoWaypoints = this.getRouteWaypointCache().noGoWaypointsByFloor.get(floorKey) || [];
+    return noGoWaypoints.some((routeWaypoint) => (
+      isSameFloor(routeWaypoint)
+      && this.routeSafetyBoundsIntersectSegment(snapshot, this.getNoGoWaypointBounds(routeWaypoint), {
+        destination,
+        waypoint,
+      })
+    ));
   }
 
   hasAvoidTileRuleOnRouteSegment(snapshot = this.lastSnapshot, {
@@ -30942,14 +31107,9 @@ export class MinibiaTargetBot {
     }
 
     if (!destination) {
+      const floorKey = String(Math.trunc(playerZ));
       return this.hasRecentBlockedWalkDestinationOnFloor(playerZ)
-        || (
-          Array.isArray(this.options.waypoints)
-          && this.options.waypoints.some((routeWaypoint) => (
-            this.isNoGoWaypointType(routeWaypoint)
-            && Math.trunc(Number(routeWaypoint?.z)) === Math.trunc(playerZ)
-          ))
-        )
+        || Boolean(this.getRouteWaypointCache().noGoWaypointsByFloor.get(floorKey)?.length)
         || this.getActiveTileRules(snapshot, { policy: "avoid" }).some((rule) => (
           Math.trunc(Number(rule?.z)) === Math.trunc(playerZ)
         ))
@@ -32450,10 +32610,8 @@ export class MinibiaTargetBot {
     }
 
     const targetLabelKey = this.getNameKey(targetLabel);
-    const resolvedIndex = this.options.waypoints.findIndex((entry) => (
-      this.getNameKey(entry?.label) === targetLabelKey
-    ));
-    return resolvedIndex >= 0 ? resolvedIndex : null;
+    const resolvedIndex = this.getRouteWaypointCache().labelIndex.get(targetLabelKey);
+    return Number.isInteger(resolvedIndex) ? resolvedIndex : null;
   }
 
   isWaypointWaitingForFloorChange(waypoint) {
