@@ -619,7 +619,7 @@ test("normalizeOptions normalizes PK assist module settings", () => {
   assert.equal(options.pkAssistMode, "assist-only");
   assert.deepEqual(options.pkAssistAllies, ["Knight Alpha", "Scout Beta"]);
   assert.equal(options.pkAssistRadiusSqm, 14);
-  assert.equal(options.pkAssistRetreatHealthPercent, 38);
+  assert.equal(options.pkAssistRetreatHealthPercent, 37.8);
   assert.equal(options.pkAssistRetreatDistance, 7);
   assert.equal(options.pkAssistCooldownMs, 900);
 });
@@ -2149,6 +2149,176 @@ test("trainer mode does not infer a random visible player when trainer buddy is 
 
   assert.equal(bot.getTrainerPartnerName(snapshot), "");
   assert.equal(bot.chooseTrainerPartnerTarget(snapshot), null);
+});
+
+test("PK assist detects a visible aggressor targeting the local player", () => {
+  const bot = new MinibiaTargetBot({
+    pkAssistEnabled: true,
+    pkAssistMode: "evade-and-assist",
+  });
+  const snapshot = {
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    playerStats: { healthPercent: 88 },
+    currentTarget: null,
+    visiblePlayers: [
+      {
+        id: 20,
+        name: "PK Two",
+        position: { x: 102, y: 100, z: 7 },
+        healthPercent: 100,
+        skull: { key: "white", label: "White Skull" },
+        isTargetingSelf: true,
+        reachableForCombat: true,
+        withinCombatWindow: true,
+      },
+    ],
+    visibleCreatures: [],
+    reachableTiles: [{ x: 101, y: 100, z: 7 }],
+    safeTiles: [{ x: 101, y: 100, z: 7 }],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  const incident = bot.getPkAssistLocalIncident(snapshot);
+  const action = bot.choosePkAssistAction(snapshot);
+
+  assert.equal(incident?.aggressorName, "PK Two");
+  assert.equal(incident?.victimName, "Scout Beta");
+  assert.equal(action?.type, "pk-assist-target");
+  assert.equal(action?.selection?.chosen?.name, "PK Two");
+});
+
+test("PK assist helpers focus a shared nearby aggressor", () => {
+  const now = Date.now();
+  const bot = new MinibiaTargetBot({
+    pkAssistEnabled: true,
+    pkAssistMode: "assist-only",
+    pkAssistRadiusSqm: 10,
+  });
+  bot.pkAssistCoordinationState = {
+    selfInstanceId: "helper",
+    members: [
+      {
+        instanceId: "victim",
+        characterName: "Scout Beta",
+        enabled: true,
+        mode: "evade-and-assist",
+        playerPosition: { x: 103, y: 100, z: 7 },
+        healthPercent: 42,
+        updatedAt: now,
+        incident: {
+          active: true,
+          source: "local",
+          victimName: "Scout Beta",
+          victimPosition: { x: 103, y: 100, z: 7 },
+          victimHealthPercent: 42,
+          aggressorId: 20,
+          aggressorName: "PK Two",
+          aggressorPosition: { x: 104, y: 100, z: 7 },
+          targetingSelf: true,
+          updatedAt: now,
+        },
+      },
+    ],
+  };
+
+  const snapshot = {
+    ready: true,
+    playerName: "Knight Alpha",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    playerStats: { healthPercent: 100 },
+    currentTarget: null,
+    visiblePlayers: [
+      {
+        id: 20,
+        name: "PK Two",
+        position: { x: 104, y: 100, z: 7 },
+        healthPercent: 100,
+        skull: { key: "white" },
+        isTargetingSelf: false,
+        reachableForCombat: true,
+        withinCombatWindow: true,
+      },
+      {
+        id: 2,
+        name: "Scout Beta",
+        position: { x: 103, y: 100, z: 7 },
+        healthPercent: 42,
+        isTargetingSelf: false,
+      },
+    ],
+    visibleCreatures: [],
+    reachableTiles: [{ x: 101, y: 100, z: 7 }],
+    safeTiles: [{ x: 101, y: 100, z: 7 }],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  const action = bot.choosePkAssistAction(snapshot);
+  assert.equal(action?.type, "pk-assist-target");
+  assert.equal(action?.selection?.chosen?.name, "PK Two");
+  assert.equal(action?.incident?.victimName, "Scout Beta");
+});
+
+test("PK assist support healing chooses the victim instead of the aggressor target", () => {
+  const now = Date.now();
+  const bot = new MinibiaTargetBot({
+    pkAssistEnabled: true,
+    pkAssistMode: "assist-only",
+    pkAssistRadiusSqm: 10,
+  });
+  bot.pkAssistCoordinationState = {
+    selfInstanceId: "druid",
+    members: [
+      {
+        instanceId: "victim",
+        characterName: "Scout Beta",
+        enabled: true,
+        playerPosition: { x: 101, y: 100, z: 7 },
+        incident: {
+          active: true,
+          victimName: "Scout Beta",
+          victimPosition: { x: 101, y: 100, z: 7 },
+          victimHealthPercent: 32,
+          aggressorId: 20,
+          aggressorName: "PK Two",
+          aggressorPosition: { x: 102, y: 100, z: 7 },
+          updatedAt: now,
+        },
+        updatedAt: now,
+      },
+    ],
+  };
+  const snapshot = {
+    ready: true,
+    playerName: "Druid Gamma",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    playerStats: { healthPercent: 100 },
+    currentTarget: {
+      id: 20,
+      name: "PK Two",
+      position: { x: 102, y: 100, z: 7 },
+    },
+    visiblePlayers: [
+      {
+        id: 20,
+        name: "PK Two",
+        position: { x: 102, y: 100, z: 7 },
+        healthPercent: 100,
+        skull: { key: "white" },
+      },
+      {
+        id: 2,
+        name: "Scout Beta",
+        position: { x: 101, y: 100, z: 7 },
+        healthPercent: 32,
+      },
+    ],
+  };
+
+  assert.equal(bot.getHealerSupportTarget(snapshot)?.name, "Scout Beta");
 });
 
 test("chooseFollowTrainAction waits for a short desync window before using shared live chain coordinates to recover", () => {
