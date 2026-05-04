@@ -180,6 +180,11 @@ if (unknownLanes.length) {
 }
 
 const files = unique(laneNames.flatMap((laneName) => resolvedLanes[laneName]));
+if (!files.length) {
+  console.log(`No test files selected for lane${laneNames.length === 1 ? "" : "s"}: ${laneNames.join(", ")}`);
+  process.exit(0);
+}
+
 const missingFiles = files.filter((file) => !fs.existsSync(path.join(appRoot, file)));
 if (missingFiles.length) {
   console.error(`Missing test file${missingFiles.length === 1 ? "" : "s"}: ${missingFiles.join(", ")}`);
