@@ -62,6 +62,7 @@ Current summary cards and quick toggles cover:
 - anti-idle
 - alarms
 - follow chain
+- PK assist
 - auto light
 - auto convert
 - rookiller
@@ -70,7 +71,7 @@ Not every card opens the shared module modal:
 
 - `Hunt` opens the dedicated Hunt Studio modal
 - `Field Safe` and waypoint overlay controls point into route-focused surfaces
-- healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, and follow chain use the shared module modal
+- healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, follow chain, and PK assist use the shared module modal
 
 ### Center Column
 

@@ -40,17 +40,18 @@ tick order is:
 5. refresh protector alarms and apply configured route or targeter holds
 6. enforce follow-only and shared-spawn target clearing
 7. refresh follow-chain runtime state
-8. handle paused cavebot or trainer mode utilities
-9. run trainer escape and rookiller
-10. handle route-only rookiller branch when active
-11. handle field or distance escape threats
-12. run follow-chain suspend or follow actions
-13. run auto eat, ammo reload, equipment replacement, haste, light, mana trainer, and rune maker
-14. run urgent coin conversion or value-slot repair
-15. run ammo restock, refill, then looting
-16. run pending route actions
-17. choose combat target, distance keeper, and spell caster
-18. run normal coin conversion, route movement, auto eat, equipment replacement,
+8. run PK Assist self-retreat, shared regroup, or aggressor focus actions
+9. handle paused cavebot or trainer mode utilities
+10. run trainer escape and rookiller
+11. handle route-only rookiller branch when active
+12. handle field or distance escape threats
+13. run follow-chain suspend or follow actions
+14. run auto eat, ammo reload, equipment replacement, haste, light, mana trainer, and rune maker
+15. run urgent coin conversion or value-slot repair
+16. run ammo restock, refill, then looting
+17. run pending route actions
+18. choose combat target, distance keeper, and spell caster
+19. run normal coin conversion, route movement, auto eat, equipment replacement,
     and anti-idle fallbacks
 
 That ordering is intentional. In particular, sustain/healer must stay ahead of
@@ -99,6 +100,7 @@ These are the feature modules visible in the desktop app or route workspace.
 | `antiIdle` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `antiIdleEnabled`, `antiIdleIntervalMs` | Idle keepalive. Prefers direct keepalive hooks, then reversible inventory move pulse, then keyboard/input fallback. Trainer reuses the same pulse timing. |
 | `alarms` | [`lib/modules/protector.mjs`](../lib/modules/protector.mjs), [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `alarmsEnabled`, `alarmsSoundEnabled`, `alarmsPlayerEnabled`, `alarmsPlayerRadiusSqm`, `alarmsPlayerFloorRange`, `alarmsStaffEnabled`, `alarmsStaffRadiusSqm`, `alarmsStaffFloorRange`, `alarmsBlacklistEnabled`, `alarmsBlacklistNames`, `alarmsBlacklistRadiusSqm`, `alarmsBlacklistFloorRange`, `alarmsProtectorEnabled`, `alarmsPauseRoute`, `alarmsPauseTargeter`, `alarmsStopTargeter`, `alarmsRequireAcknowledgement`, `alarmsPauseModules`, `alarmsLowHpPercent`, `alarmsLowHealthPercent`, `alarmsLowMpPercent`, `alarmsLowManaPercent`, `alarmsNoCapacityAt`, `alarmsFullBackpackFreeSlots`, `alarmsHighIncomingDamagePerSecond` | Regular player, staff-like name, explicit blacklist proximity alarms, and protector alarms for low HP/MP, capacity, full backpack, private message, route stuck/no progress, stale target, incoming damage, disconnect, and death. Protector actions can log, notify, sound, pause route, stop targeter, pause configured modules, and require acknowledgement. Alarm pauses record owner, paused modules, resume policy, and acknowledgement state without changing healer priority. |
 | `partyFollow` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/renderer.js`](../desktop/renderer.js), [`desktop/party-follow-summary.js`](../desktop/party-follow-summary.js) | `partyFollowEnabled`, `partyFollowMembers`, `partyFollowManualPlayers`, `partyFollowMemberRoles`, `partyFollowMemberChaseModes`, `partyFollowDistance`, `partyFollowCombatMode` plus legacy `followChain*` aliases | Ordered follow chain. Slot 1 leads; each later member follows the name above it. Supports multiple independent live chains, live tabs, seen players, manual names, per-member roles and stances, follow-and-fight, follow-only, stair recovery, same-floor stall recovery, target clearing for passive roles, client-path recovery without viewport mouse clicks, and shared live HP/supply/loot summaries across chain members. |
+| `pkAssist` | [`lib/bot-core.mjs`](../lib/bot-core.mjs), [`desktop/main.mjs`](../desktop/main.mjs), [`desktop/renderer.js`](../desktop/renderer.js) | `pkAssistEnabled`, `pkAssistMode`, `pkAssistAllies`, `pkAssistRadiusSqm`, `pkAssistRetreatHealthPercent`, `pkAssistRetreatDistance`, `pkAssistCooldownMs` | Shared PK defence. Enabled live sessions publish local aggressor incidents when a visible non-trusted player targets them. Nearby enabled sessions can focus the shared aggressor, regroup toward the victim when the aggressor is not yet visible, and the attacked character can step away below the retreat HP threshold. Modes are `evade-and-assist`, `assist-only`, and `evade-only`; blank allies means all live PK Assist sessions are trusted. Friend-heal support prefers the shared victim and does not heal the aggressor current target. |
 | `rookiller` | [`lib/bot-core.mjs`](../lib/bot-core.mjs) | `rookillerEnabled` | Rook guard that watches level progress, returns to waypoint 1 at the configured cap, and closes the live client. Can temporarily constrain runtime to route-only behavior. |
 
 ## Route Schema
