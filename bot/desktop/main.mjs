@@ -681,6 +681,64 @@ function createFollowTrainCoordinationAdapter(session) {
   };
 }
 
+function createPkAssistCoordinationAdapter(session) {
+  return {
+    async sync(context = {}) {
+      if (!context?.options?.pkAssistEnabled) {
+        return {
+          selfInstanceId: session.claimOwnerId,
+          members: [],
+        };
+      }
+
+      const members = [];
+      for (const peer of sessions.values()) {
+        if (!canSyncSession(peer) || peer?.bot?.options?.pkAssistEnabled !== true) {
+          continue;
+        }
+
+        const snapshotAgeMs = Number(peer?.bot?.getSnapshotAgeMs?.());
+        if (Number.isFinite(snapshotAgeMs) && snapshotAgeMs >= RUNNING_SESSION_STALE_MS) {
+          continue;
+        }
+
+        const characterName = getSessionCharacterName(peer);
+        const playerPosition = normalizeSessionPlayerPosition(
+          peer?.bot?.lastSnapshot?.playerPosition
+          || peer?.instance?.playerPosition
+          || null,
+        );
+        if (!characterName || !playerPosition) {
+          continue;
+        }
+
+        const snapshot = peer?.bot?.lastSnapshot || null;
+        const incident = peer?.bot?.getPkAssistLocalIncident?.(snapshot) || null;
+        members.push({
+          instanceId: peer.claimOwnerId,
+          characterName,
+          enabled: peer?.bot?.options?.pkAssistEnabled === true,
+          mode: String(peer?.bot?.options?.pkAssistMode || ""),
+          playerPosition,
+          healthPercent: Number.isFinite(Number(snapshot?.playerStats?.healthPercent))
+            ? Number(snapshot.playerStats.healthPercent)
+            : null,
+          incident,
+          updatedAt: Number(peer?.bot?.lastSnapshotAt) || 0,
+        });
+      }
+
+      return {
+        selfInstanceId: session.claimOwnerId,
+        members,
+      };
+    },
+    async release() {
+      return null;
+    },
+  };
+}
+
 function createSession(instance) {
   const config = normalizeOptions(defaultConfig || {});
   const session = {
@@ -712,6 +770,7 @@ function createSession(instance) {
   session.bot.setPageResolver(() => session.instance || null);
   session.bot.setRouteCoordinationAdapter(createRouteSpacingAdapter(session));
   session.bot.setFollowTrainCoordinationAdapter(createFollowTrainCoordinationAdapter(session));
+  session.bot.setPkAssistCoordinationAdapter(createPkAssistCoordinationAdapter(session));
 
   installSessionListeners(session);
   applySessionRuntimeLoad();
@@ -783,9 +842,9 @@ function getLiveFollowTrainCharacterEntries() {
   return entries;
 }
 
-function orderFollowTrainEntriesByLiveLinks(entries = []) {
+function buildFollowTrainEntryComponents(entries = []) {
   if (!Array.isArray(entries) || entries.length <= 1) {
-    return Array.isArray(entries) ? entries : [];
+    return Array.isArray(entries) && entries.length ? [entries] : [];
   }
 
   const byKey = new Map(entries.map((entry) => [entry.key, entry]));
@@ -805,7 +864,7 @@ function orderFollowTrainEntriesByLiveLinks(entries = []) {
   }
 
   if (!liveLinkCount) {
-    return entries;
+    return [entries];
   }
 
   for (const children of childrenByKey.values()) {
@@ -841,12 +900,25 @@ function orderFollowTrainEntriesByLiveLinks(entries = []) {
     || left[0].index - right[0].index
   ));
 
-  return components.flat();
+  return components;
 }
 
-function getAutomaticFollowTrainMemberNames() {
-  return orderFollowTrainEntriesByLiveLinks(getLiveFollowTrainCharacterEntries())
-    .map((entry) => entry.name);
+function orderFollowTrainEntriesByLiveLinks(entries = []) {
+  return buildFollowTrainEntryComponents(entries).flat();
+}
+
+function getAutomaticFollowTrainMemberNames(activeSession = null) {
+  const entries = getLiveFollowTrainCharacterEntries();
+  const components = buildFollowTrainEntryComponents(entries);
+  const activeNameKey = getSessionCharacterName(activeSession).toLowerCase();
+  const selectedComponent = activeNameKey
+    ? components.find((component) => component.some((entry) => entry.key === activeNameKey))
+    : null;
+  const sourceEntries = selectedComponent?.length >= 2
+    ? selectedComponent
+    : orderFollowTrainEntriesByLiveLinks(entries);
+
+  return sourceEntries.map((entry) => entry.name);
 }
 
 const FOLLOW_TRAIN_OPTION_KEYS = new Set([
@@ -854,6 +926,7 @@ const FOLLOW_TRAIN_OPTION_KEYS = new Set([
   "partyFollowMembers",
   "partyFollowManualPlayers",
   "partyFollowMemberRoles",
+  "partyFollowMemberChaseModes",
   "partyFollowDistance",
   "partyFollowCombatMode",
 ]);
@@ -867,7 +940,7 @@ function isFollowTrainOnlyPatch(partial = {}) {
   return keys.length > 0 && keys.every((key) => FOLLOW_TRAIN_OPTION_KEYS.has(key));
 }
 
-function buildFollowTrainOptionsPatch(partial = {}) {
+function buildFollowTrainOptionsPatch(partial = {}, activeSession = null) {
   const patch = {};
   for (const key of FOLLOW_TRAIN_OPTION_KEYS) {
     if (Object.prototype.hasOwnProperty.call(partial, key)) {
@@ -878,9 +951,14 @@ function buildFollowTrainOptionsPatch(partial = {}) {
   if (patch.partyFollowEnabled === true) {
     const requestedMembers = mergeMonsterNames(patch.partyFollowMembers || []);
     if (requestedMembers.length < 2) {
-      const liveMembers = getAutomaticFollowTrainMemberNames();
-      if (liveMembers.length >= 2) {
-        patch.partyFollowMembers = liveMembers;
+      const activeMembers = mergeMonsterNames(activeSession?.config?.partyFollowMembers || []);
+      if (activeMembers.length >= 2) {
+        patch.partyFollowMembers = activeMembers;
+      } else {
+        const liveMembers = getAutomaticFollowTrainMemberNames(activeSession);
+        if (liveMembers.length >= 2) {
+          patch.partyFollowMembers = liveMembers;
+        }
       }
     }
   }
@@ -888,12 +966,51 @@ function buildFollowTrainOptionsPatch(partial = {}) {
   return patch;
 }
 
+function getSessionFollowTrainMemberKeys(session = null) {
+  return new Set(
+    mergeMonsterNames(session?.config?.partyFollowMembers || [])
+      .map((name) => name.toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+function resolveFollowTrainPersistSessions(activeSession = null, patch = {}) {
+  const syncSessions = [...sessions.values()].filter(canSyncSession);
+  const requestedMembers = Object.prototype.hasOwnProperty.call(patch, "partyFollowMembers")
+    ? mergeMonsterNames(patch.partyFollowMembers || [])
+    : [];
+  const memberKeys = new Set(
+    (requestedMembers.length
+      ? requestedMembers
+      : [...getSessionFollowTrainMemberKeys(activeSession)])
+      .map((name) => String(name || "").trim().toLowerCase())
+      .filter(Boolean),
+  );
+
+  if (!memberKeys.size) {
+    const activeName = getSessionCharacterName(activeSession).toLowerCase();
+    if (activeName) {
+      memberKeys.add(activeName);
+    }
+  }
+
+  const selectedSessions = memberKeys.size
+    ? syncSessions.filter((session) => memberKeys.has(getSessionCharacterName(session).toLowerCase()))
+    : [];
+  if (!selectedSessions.length && activeSession) {
+    return [activeSession];
+  }
+
+  return selectedSessions;
+}
+
 async function persistFollowTrainOptionsForLiveSessions(activeSession, partial = {}) {
-  const patch = buildFollowTrainOptionsPatch(partial);
-  const targetSessions = [...sessions.values()].filter(canSyncSession);
-  const selectedSessions = targetSessions.length
-    ? targetSessions
-    : [activeSession].filter(Boolean);
+  if (activeSession) {
+    await ensureSessionConfig(activeSession);
+  }
+
+  const patch = buildFollowTrainOptionsPatch(partial, activeSession);
+  const selectedSessions = resolveFollowTrainPersistSessions(activeSession, patch);
 
   for (const session of selectedSessions) {
     await ensureSessionConfig(session);
@@ -905,7 +1022,7 @@ async function persistFollowTrainOptionsForLiveSessions(activeSession, partial =
       pushSessionLog(
         session,
         patch.partyFollowEnabled
-          ? "Follow chain enabled from live tabs."
+          ? "Follow chain enabled."
           : "Follow chain disabled.",
       );
     }
@@ -1344,6 +1461,7 @@ function serializeSnapshot(snapshot) {
     huntLedger: snapshot.huntLedger && typeof snapshot.huntLedger === "object" ? snapshot.huntLedger : null,
     targetScoring: snapshot.targetScoring && typeof snapshot.targetScoring === "object" ? snapshot.targetScoring : null,
     protectorStatus: snapshot.protectorStatus && typeof snapshot.protectorStatus === "object" ? snapshot.protectorStatus : null,
+    pkAssistStatus: snapshot.pkAssistStatus && typeof snapshot.pkAssistStatus === "object" ? snapshot.pkAssistStatus : null,
     runtimeDiagnostics: snapshot.runtimeDiagnostics && typeof snapshot.runtimeDiagnostics === "object" ? snapshot.runtimeDiagnostics : null,
     playerName: snapshot.playerName || "",
     playerPosition: serializePosition(snapshot.playerPosition),
@@ -1672,6 +1790,7 @@ function serializeSession(session) {
     huntLedger: session.bot.getHuntLedger?.() || snapshot?.huntLedger || null,
     targetScoring: session.bot.getTargetScoreReport?.() || snapshot?.targetScoring || null,
     protectorStatus: session.bot.getProtectorStatus?.() || snapshot?.protectorStatus || null,
+    pkAssistStatus: session.bot.getPkAssistStatus?.(snapshot) || snapshot?.pkAssistStatus || null,
     runtimeDiagnostics: session.bot.getRuntimeDiagnostics?.() || snapshot?.runtimeDiagnostics || null,
     routeResetActive: routeResetStatus.active,
     routeResetPhase: routeResetStatus.phase,

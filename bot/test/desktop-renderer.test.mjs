@@ -3142,11 +3142,26 @@ test("healer modal renders tier cards without repeated headers or summaries", as
     assert.equal(card.querySelector(".module-rule-name"), null);
     assert.equal(card.querySelector(".module-rule-summary"), null);
     assert.equal(card.querySelector(".module-rule-section-title"), null);
-    assert.ok(card.querySelector(".module-rule-footer [data-delete-module-rule='healer']"));
+    assert.ok(card.querySelector(".module-rule-toolbar [data-delete-module-rule='healer']"));
+    assert.ok(card.querySelector(".module-rule-corner-toggle input[data-rule-field='enabled']"));
+    assert.equal(card.querySelector(".module-rule-check input[data-rule-field='enabled']"), null);
+    assert.equal(card.querySelectorAll("input[data-rule-field='enabled']").length, 1);
     assert.ok(card.querySelector('[data-module-key="healer"][data-rule-field="words"]'));
+    assert.equal(
+      card.querySelector('[data-module-key="healer"][data-rule-field="hotkey"]')?.closest(".module-rule-section"),
+      card.querySelector('[data-module-key="healer"][data-rule-field="label"]')?.closest(".module-rule-section"),
+    );
+    assert.deepEqual(
+      [...card.querySelectorAll(".module-rule-section")]
+        .map((section) => section.querySelectorAll("[data-rule-field]").length),
+      [2, 2, 2, 2],
+    );
     assert.ok(card.querySelector('[data-module-key="healer"][data-rule-field="minHealthPercent"]'));
     assert.ok(card.querySelector('[data-module-key="healer"][data-rule-field="maxHealthPercent"]'));
   }
+
+  assert.match(stylesSource, /\.module-rule-toolbar[\s\S]*justify-content:\s*space-between/);
+  assert.match(stylesSource, /\.module-rule-toolbar \.module-rule-actions[\s\S]*margin-left:\s*auto/);
 });
 
 test("route stack rows double click opens the editor and right click resumes from that waypoint", async () => {
@@ -4281,6 +4296,24 @@ test("keyboard hotkey fields render for healing, rune, and spell actions", async
     document.querySelector(`[data-open-modal="${moduleName}"]`).click();
     await flush();
   };
+  const assertHotkeySharesIdentitySection = (moduleName) => {
+    const labelField = document.querySelector(`[data-module-key="${moduleName}"][data-rule-index="0"][data-rule-field="label"]`);
+    const hotkeyField = document.querySelector(`[data-module-key="${moduleName}"][data-rule-index="0"][data-rule-field="hotkey"]`);
+    assert.equal(
+      hotkeyField?.closest(".module-rule-section"),
+      labelField?.closest(".module-rule-section"),
+      `${moduleName} should group hotkey with the rule name`,
+    );
+  };
+  const assertNoCrowdedRuleSections = (moduleName) => {
+    const card = document.querySelector(`[data-module-key="${moduleName}"].module-rule-card[data-rule-index="0"]`);
+    for (const section of card.querySelectorAll(".module-rule-section")) {
+      assert.ok(
+        section.querySelectorAll("[data-rule-field]").length <= 2,
+        `${moduleName} rule sections should stay capped at two controls`,
+      );
+    }
+  };
 
   await openModule("deathHeal");
   assert.ok(document.querySelector('[data-module-key="deathHeal"][data-module-option-field="deathHealHotkey"]'));
@@ -4289,6 +4322,10 @@ test("keyboard hotkey fields render for healing, rune, and spell actions", async
   assert.ok(document.querySelector('[data-module-key="healer"][data-rule-index="0"][data-rule-field="hotkey"]'));
   assert.ok(document.querySelector('[data-module-key="potionHealer"][data-rule-index="0"][data-rule-field="hotkey"]'));
   assert.ok(document.querySelector('[data-module-key="conditionHealer"][data-rule-index="0"][data-rule-field="hotkey"]'));
+  for (const moduleName of ["healer", "potionHealer", "conditionHealer"]) {
+    assertHotkeySharesIdentitySection(moduleName);
+    assertNoCrowdedRuleSections(moduleName);
+  }
 
   for (const moduleName of ["manaTrainer", "runeMaker", "spellCaster", "autoLight"]) {
     await openModule(moduleName);
@@ -4296,6 +4333,8 @@ test("keyboard hotkey fields render for healing, rune, and spell actions", async
       document.querySelector(`[data-module-key="${moduleName}"][data-rule-index="0"][data-rule-field="hotkey"]`),
       `${moduleName} should render a rule hotkey input`,
     );
+    assertHotkeySharesIdentitySection(moduleName);
+    assertNoCrowdedRuleSections(moduleName);
   }
 
   await openModule("trainer");
@@ -6613,7 +6652,10 @@ test("hunt workspace saves per-monster target profiles from the target panel", a
   assert.equal(combatRule.querySelector(".module-rule-head"), null);
   assert.equal(combatRule.querySelector(".module-rule-summary"), null);
   assert.equal(combatRule.querySelector(".module-rule-section-title"), null);
-  assert.ok(combatRule.querySelector(".module-rule-footer [data-targeting-distance-delete]"));
+  assert.ok(combatRule.querySelector(".module-rule-toolbar [data-targeting-distance-delete]"));
+  assert.ok(combatRule.querySelector(".module-rule-corner-toggle input[data-rule-field='enabled']"));
+  assert.equal(combatRule.querySelector(".module-rule-check input[data-rule-field='enabled']"), null);
+  assert.equal(combatRule.querySelectorAll("input[data-rule-field='enabled']").length, 1);
   const setCombatField = (field, value, type = "input") => {
     const element = combatRule.querySelector(`[data-rule-field="${field}"]`);
     if (element.type === "checkbox") {
@@ -6693,7 +6735,7 @@ test("mana trainer rules render as grouped rule cards", async () => {
   assert.equal(card.querySelector(".module-rule-name"), null);
   assert.equal(card.querySelector(".module-rule-summary"), null);
   assert.equal(card.querySelector(".module-rule-section-title"), null);
-  assert.ok(card.querySelector(".module-rule-footer [data-delete-module-rule='manaTrainer']"));
+  assert.ok(card.querySelector(".module-rule-toolbar [data-delete-module-rule='manaTrainer']"));
   assert.ok(card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="requireNoTargets"]'));
 
   const spellInput = card.querySelector('[data-module-key="manaTrainer"][data-rule-index="0"][data-rule-field="words"]');
@@ -8173,6 +8215,91 @@ test("follow chain auto-fills live tabs when enabled and refreshes seen players 
   assert.match(document.querySelector("[data-follow-train-chain-list]").textContent, /Scout Beta/);
 });
 
+test("follow chain auto-fill keeps separate live follow components", async () => {
+  const makeSession = ({
+    id,
+    name,
+    profileKey,
+    followTargetName = "",
+    visiblePlayerNames = [],
+  }) => ({
+    id,
+    profileKey,
+    pageId: id,
+    title: "Minibia",
+    url: `https://minibia.com/play?client=${id}`,
+    characterName: name,
+    displayName: name,
+    label: name,
+    playerPosition: { x: 100, y: 200, z: 7 },
+    playerStats: {
+      health: 870,
+      maxHealth: 1000,
+      mana: 320,
+      maxMana: 500,
+      healthPercent: 87,
+      manaPercent: 64,
+    },
+    visiblePlayerNames,
+    currentFollowTarget: followTargetName ? { name: followTargetName } : null,
+    running: false,
+    connected: true,
+    ready: true,
+    present: true,
+    claimed: false,
+    claimedBySelf: true,
+    available: true,
+    routeIndex: 0,
+    routeComplete: false,
+    overlayFocusIndex: 0,
+    routeName: "dararotworms",
+    page: {
+      id,
+      title: "Minibia",
+      url: `https://minibia.com/play?client=${id}`,
+    },
+  });
+  const desk = await createDesk({
+    initialState: createState({
+      activeSessionId: "page-3",
+      options: {
+        partyFollowEnabled: false,
+        partyFollowMembers: [],
+        partyFollowManualPlayers: [],
+      },
+      snapshot: {
+        playerName: "Druid Gamma",
+        visiblePlayerNames: [],
+      },
+      sessions: [
+        makeSession({ id: "page-1", name: "Knight Alpha", profileKey: "knight-alpha" }),
+        makeSession({ id: "page-2", name: "Scout Beta", profileKey: "scout-beta", followTargetName: "Knight Alpha" }),
+        makeSession({ id: "page-3", name: "Druid Gamma", profileKey: "druid-gamma" }),
+        makeSession({
+          id: "page-4",
+          name: "Mule Delta",
+          profileKey: "mule-delta",
+          followTargetName: "Druid Gamma",
+          visiblePlayerNames: ["Guide Gamma"],
+        }),
+      ],
+    }),
+  });
+  const { document, calls, currentState } = desk;
+
+  document.getElementById("quick-toggle-party-follow").click();
+  await flush();
+
+  assert.equal(calls.updateOptions.at(-1).partyFollowEnabled, true);
+  assert.equal(calls.updateOptions.at(-1).partyFollowMembers, "Druid Gamma\nMule Delta");
+  assert.deepEqual(currentState().options.partyFollowMembers, ["Druid Gamma", "Mule Delta"]);
+
+  document.querySelector('[data-open-modal="partyFollow"]').click();
+  await flush();
+
+  assert.equal(document.querySelector('[data-follow-train-source-name="Guide Gamma"]') !== null, true);
+});
+
 test("banking modal renders banking rules and saves edited bank actions", async () => {
   const desk = await createDesk({
     initialState: createState({
@@ -8211,7 +8338,7 @@ test("banking modal renders banking rules and saves edited bank actions", async 
   assert.equal(card.querySelector(".module-rule-name"), null);
   assert.equal(card.querySelector(".module-rule-summary"), null);
   assert.equal(card.querySelector(".module-rule-section-title"), null);
-  assert.ok(card.querySelector(".module-rule-footer [data-delete-module-rule='banking']"));
+  assert.ok(card.querySelector(".module-rule-toolbar [data-delete-module-rule='banking']"));
 
   const bankerInput = card.querySelector('[data-module-key="banking"][data-rule-index="0"][data-rule-field="bankerNames"]');
   const operationSelect = card.querySelector('[data-module-key="banking"][data-rule-index="0"][data-rule-field="operation"]');

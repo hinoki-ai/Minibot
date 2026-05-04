@@ -840,18 +840,12 @@
   "bankingRules": [],
   "partyFollowEnabled": false,
   "partyFollowMembers": [
-    "Dark Knight",
-    "Holy Rat",
-    "Lord Larva",
-    "Lady Larva"
+    "Zlocimir Wielkoportf",
+    "Czarnobrat"
   ],
   "partyFollowManualPlayers": [],
-  "partyFollowMemberRoles": {
-    "Dark Knight": "attack-and-follow"
-  },
-  "partyFollowMemberChaseModes": {
-    "Lord Larva": "aggressive"
-  },
+  "partyFollowMemberRoles": {},
+  "partyFollowMemberChaseModes": {},
   "partyFollowDistance": 1,
   "partyFollowCombatMode": "follow-and-fight",
   "chaseMode": "aggressive",

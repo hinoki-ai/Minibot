@@ -20,6 +20,12 @@ Run the test suite:
 npm test
 ```
 
+When a live Minibia session is already available and safe to exercise, validate
+the implementation against that live session first. Prefer the control socket or
+other direct live-session probe over fake renderer/user shims. Run mocked or
+synthetic tests afterward as regression coverage, or only first when live
+validation is impossible or unsafe.
+
 Build an unpacked production bundle:
 
 ```bash
@@ -323,9 +329,10 @@ Important behavior notes:
 - reconnect uses disconnect-only retry windows and the real Minibia reconnect surface; death still blocks it
 - alarms own low-HP, player, staff-like, and blacklist proximity thresholds instead of hiding that alert policy in the tab strip alone
 - banking uses banker-name matching, deposit or withdraw operations, and safety gates
-- follow chain uses an ordered character chain where each follower native-follows the name directly above it
+- follow chain uses ordered chains where each follower native-follows the name directly above it; separate live link components stay as separate chains
+- follow chain members can be live tabs, seen players, or manual player names
 - follow chain supports `Follow and fight` plus `Follow only`, with optional per-member tactical role overrides like `front-guard`, `assist-dps`, `sio-healer`, `party-buffer`, `rearguard`, and `scout`
-- visible same-floor combat threats suspend native follow so each follower can target, fight, and then reform the chain
+- visible same-floor combat threats suspend native follow so each follower can target, fight, and then reform the chain; recovery movement uses client pathing rather than viewport mouse clicks
 - anti-idle sends a guarded keepalive pulse after real gameplay inactivity crosses the configured delay
 
 `Combat` and `Once` live in Hunt Studio, not in the shared module modal or Route Builder. `Field Safe`, `Session Waypoints`, `Cavebot Pause`, and `Rookiller` are quick controls on the desk.

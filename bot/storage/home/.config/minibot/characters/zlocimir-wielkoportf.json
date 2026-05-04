@@ -1,5 +1,5 @@
 {
-  "cavebotName": "RotwormsFibula",
+  "cavebotName": "Venore Dragons East",
   "creatureLedger": {
     "monsters": [
       "Larva",
@@ -22,7 +22,10 @@
       "Dragon",
       "Rotworm",
       "Rat",
-      "Alpha Rotworm"
+      "Alpha Rotworm",
+      "Wolf",
+      "Spider",
+      "Rabbit"
     ],
     "players": [
       "Czarnobrat",
@@ -65,7 +68,13 @@
       "Mclovin Doom Mage",
       "John Doez",
       "Rezish",
-      "Scouse Goebbels"
+      "Scouse Goebbels",
+      "Dark Ninja",
+      "Master Of The Runes",
+      "Grof",
+      "the guard",
+      "Minek",
+      "Uh Maker"
     ],
     "npcs": []
   },

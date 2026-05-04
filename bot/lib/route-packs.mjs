@@ -101,6 +101,13 @@ const ROUTE_PACK_SECTION_KEYS = Object.freeze({
     "partyFollowMemberChaseModes",
     "partyFollowDistance",
     "partyFollowCombatMode",
+    "pkAssistEnabled",
+    "pkAssistMode",
+    "pkAssistAllies",
+    "pkAssistRadiusSqm",
+    "pkAssistRetreatHealthPercent",
+    "pkAssistRetreatDistance",
+    "pkAssistCooldownMs",
   ],
   options: [
     "autowalkLoop",

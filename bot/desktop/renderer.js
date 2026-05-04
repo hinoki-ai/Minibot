@@ -181,6 +181,8 @@ const summaryFields = {
   alarmsDetail: document.getElementById("summary-alarms-detail"),
   partyFollow: document.getElementById("summary-party-follow"),
   partyFollowDetail: document.getElementById("summary-party-follow-detail"),
+  pkAssist: document.getElementById("summary-pk-assist"),
+  pkAssistDetail: document.getElementById("summary-pk-assist-detail"),
   rookiller: document.getElementById("summary-rookiller"),
   rookillerDetail: document.getElementById("summary-rookiller-detail"),
 };
@@ -207,6 +209,7 @@ const compactPanelFields = {
   antiIdle: document.getElementById("compact-anti-idle-summary"),
   alarms: document.getElementById("compact-alarms-summary"),
   partyFollow: document.getElementById("compact-party-follow-summary"),
+  pkAssist: document.getElementById("compact-pk-assist-summary"),
   rookiller: document.getElementById("compact-rookiller-summary"),
   decision: document.getElementById("compact-decision-summary"),
 };
@@ -245,6 +248,7 @@ const quickButtons = {
   antiIdle: document.getElementById("quick-toggle-anti-idle"),
   alarms: document.getElementById("quick-toggle-alarms"),
   partyFollow: document.getElementById("quick-toggle-party-follow"),
+  pkAssist: document.getElementById("quick-toggle-pk-assist"),
 };
 
 const compactQuickButtons = {
@@ -272,6 +276,7 @@ const compactQuickButtons = {
   antiIdle: document.getElementById("compact-toggle-anti-idle"),
   alarms: document.getElementById("compact-toggle-alarms"),
   partyFollow: document.getElementById("compact-toggle-party-follow"),
+  pkAssist: document.getElementById("compact-toggle-pk-assist"),
   rookiller: document.getElementById("compact-toggle-rookiller"),
 };
 
@@ -1607,6 +1612,54 @@ const MODULE_RULE_SCHEMAS = {
       },
     ],
   },
+  pkAssist: {
+    enabledKey: "pkAssistEnabled",
+    allowRules: false,
+    moduleFields: [
+      {
+        key: "pkAssistMode",
+        label: "Response mode",
+        type: "select",
+        options: [
+          { value: "evade-and-assist", label: "Evade and assist" },
+          { value: "assist-only", label: "Assist only" },
+          { value: "evade-only", label: "Evade only" },
+        ],
+        help: "Evade makes the attacked character step away at low HP. Assist makes nearby enabled sessions focus the aggressor.",
+      },
+      {
+        key: "pkAssistAllies",
+        label: "Assist allies",
+        type: "textarea",
+        rows: 3,
+        placeholder: "Leave blank for all live bot sessions",
+        help: "Optional allow-list. Blank means every live PK Assist session can call or answer assistance.",
+      },
+      {
+        key: "pkAssistRadiusSqm",
+        label: "Assist radius",
+        type: "number",
+        help: "Nearby enabled sessions answer a PK call only inside this same-floor range.",
+      },
+      {
+        key: "pkAssistRetreatHealthPercent",
+        label: "Retreat HP %",
+        type: "number",
+        help: "The attacked character prioritizes stepping away at or below this HP.",
+      },
+      {
+        key: "pkAssistRetreatDistance",
+        label: "Retreat range",
+        type: "number",
+        help: "Target distance the victim tries to open while escaping.",
+      },
+      {
+        key: "pkAssistCooldownMs",
+        label: "Action repeat ms",
+        type: "number",
+      },
+    ],
+  },
 };
 
 const HEADLESS_RULE_CARD_UI = Object.freeze({
@@ -1657,8 +1710,8 @@ const MODULE_RULE_UI = {
     note: "Top-down priority. Lowest active band auto-covers 0% HP.",
     multipleActiveSummary: "Active heal tiers run top to bottom. Lowest active band auto-covers 0% HP.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "hotkey", "cooldownMs"] },
+      { title: "Priority", fields: ["label", "hotkey"] },
+      { title: "Cast", fields: ["words", "cooldownMs"] },
       { title: "Configured HP Band", fields: ["minHealthPercent", "maxHealthPercent"] },
       { title: "Mana Gate", fields: ["minMana", "minManaPercent"] },
     ],
@@ -1668,8 +1721,8 @@ const MODULE_RULE_UI = {
     fallbackName: "Potion Rule",
     addLabel: "Add Potion Rule",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Potion", fields: ["itemName", "hotkey", "cooldownMs"] },
+      { title: "Priority", fields: ["label", "hotkey"] },
+      { title: "Potion", fields: ["itemName", "cooldownMs"] },
       { title: "HP Band", fields: ["minHealthPercent", "maxHealthPercent"] },
       { title: "Mana Gate", fields: ["minMana", "minManaPercent"] },
     ],
@@ -1679,10 +1732,11 @@ const MODULE_RULE_UI = {
     fallbackName: "Condition Rule",
     addLabel: "Add Condition Rule",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Trigger", fields: ["condition", "words", "hotkey", "cooldownMs"] },
+      { title: "Priority", fields: ["label", "hotkey"] },
+      { title: "Trigger", fields: ["condition", "words"] },
       { title: "HP Band", fields: ["minHealthPercent", "maxHealthPercent"] },
       { title: "Mana Gate", fields: ["minMana", "minManaPercent"] },
+      { title: "Timing", fields: ["cooldownMs"] },
     ],
   },
   manaTrainer: {
@@ -1695,10 +1749,11 @@ const MODULE_RULE_UI = {
     note: "First active window that matches casts.",
     multipleActiveSummary: "Active mana windows run top to bottom. Put tighter windows first.",
     sections: [
-      { title: "Window Identity", fields: ["label", "enabled"] },
-      { title: "Cast Cadence", fields: ["words", "hotkey", "cooldownMs"] },
+      { title: "Window Identity", fields: ["label", "hotkey"] },
+      { title: "Cast Cadence", fields: ["words", "cooldownMs"] },
       { title: "Mana Band", fields: ["minManaPercent", "maxManaPercent"] },
-      { title: "Safety Gates", fields: ["minHealthPercent", "requireNoTargets", "requireStationary"] },
+      { title: "Safety Gates", fields: ["minHealthPercent", "requireNoTargets"] },
+      { title: "Movement Gate", fields: ["requireStationary"] },
     ],
   },
   runeMaker: {
@@ -1710,10 +1765,11 @@ const MODULE_RULE_UI = {
     note: "Top-down priority. Use separate windows for different rune spells.",
     multipleActiveSummary: "Active rune windows run top to bottom.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "hotkey", "cooldownMs"] },
+      { title: "Priority", fields: ["label", "hotkey"] },
+      { title: "Cast", fields: ["words", "cooldownMs"] },
       { title: "Mana Window", fields: ["minManaPercent", "maxManaPercent"] },
-      { title: "Safety Gates", fields: ["minHealthPercent", "requireNoTargets", "requireStationary"] },
+      { title: "Safety Gates", fields: ["minHealthPercent", "requireNoTargets"] },
+      { title: "Movement Gate", fields: ["requireStationary"] },
     ],
   },
   spellCaster: {
@@ -1726,9 +1782,10 @@ const MODULE_RULE_UI = {
     note: "Top-down priority. Put stricter wave or pack casts first.",
     multipleActiveSummary: "Active spell rules run top to bottom. Put stricter patterns first.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "hotkey", "cooldownMs", "pattern"] },
-      { title: "Target Gate", fields: ["maxTargetDistance", "minTargetCount", "minManaPercent"] },
+      { title: "Priority", fields: ["label", "hotkey"] },
+      { title: "Cast", fields: ["words", "cooldownMs"] },
+      { title: "Pattern Gate", fields: ["pattern", "minManaPercent"] },
+      { title: "Target Gate", fields: ["maxTargetDistance", "minTargetCount"] },
       { title: "Safety Gates", fields: ["requireTarget", "requireStationary"] },
     ],
   },
@@ -1742,10 +1799,11 @@ const MODULE_RULE_UI = {
     note: "Top-down priority. Hold sidesteps, retreat backs off, kite steps back in.",
     multipleActiveSummary: "Active distance rules run top to bottom. Use hold for sidesteps and kite for full spacing control.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Range Window", fields: ["minTargetDistance", "maxTargetDistance", "behavior"] },
-      { title: "Threat Gate", fields: ["minMonsterCount", "cooldownMs"] },
-      { title: "Safety Gates", fields: ["dodgeBeams", "dodgeWaves", "requireTarget"] },
+      { title: "Priority", fields: ["label", "cooldownMs"] },
+      { title: "Range Window", fields: ["minTargetDistance", "maxTargetDistance"] },
+      { title: "Threat Gate", fields: ["behavior", "minMonsterCount"] },
+      { title: "Safety Gates", fields: ["dodgeBeams", "dodgeWaves"] },
+      { title: "Target Gate", fields: ["requireTarget"] },
     ],
   },
   autoLight: {
@@ -1758,10 +1816,10 @@ const MODULE_RULE_UI = {
     note: "Rules run top to bottom. Put stricter light checks first.",
     multipleActiveSummary: "Active light rules run top to bottom.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Cast", fields: ["words", "hotkey", "cooldownMs"] },
-      { title: "Mana Gate", fields: ["minManaPercent"] },
-      { title: "Safety Gates", fields: ["requireNoLight", "requireNoTargets", "requireStationary"] },
+      { title: "Priority", fields: ["label", "hotkey"] },
+      { title: "Cast", fields: ["words", "cooldownMs"] },
+      { title: "Light Gate", fields: ["minManaPercent", "requireNoLight"] },
+      { title: "Safety Gates", fields: ["requireNoTargets", "requireStationary"] },
     ],
   },
   autoConvert: {
@@ -1774,8 +1832,7 @@ const MODULE_RULE_UI = {
     note: "Top-down priority. Safety gates keep conversions safer.",
     multipleActiveSummary: "Active coin rules run top to bottom.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
-      { title: "Timing", fields: ["cooldownMs"] },
+      { title: "Priority", fields: ["label", "cooldownMs"] },
       { title: "Safety Gates", fields: ["requireNoTargets", "requireStationary"] },
     ],
   },
@@ -1868,10 +1925,11 @@ const MODULE_RULE_UI = {
     note: "Top-down priority. Match banker names only when needed.",
     multipleActiveSummary: "Active banking rules run top to bottom.",
     sections: [
-      { title: "Priority", fields: ["label", "enabled"] },
+      { title: "Priority", fields: ["label", "cooldownMs"] },
       { title: "Banker", fields: ["bankerNames", "maxNpcDistance"] },
-      { title: "Action", fields: ["operation", "amount", "reserveGold", "recipient"] },
-      { title: "Safety Gates", fields: ["cooldownMs", "requireNoTargets", "requireStationary"] },
+      { title: "Action", fields: ["operation", "amount"] },
+      { title: "Money Flow", fields: ["reserveGold", "recipient"] },
+      { title: "Safety Gates", fields: ["requireNoTargets", "requireStationary"] },
     ],
   },
   partyFollow: {
@@ -1880,6 +1938,14 @@ const MODULE_RULE_UI = {
     modalMeta: "follow chain",
     cardTitle: "Follow Chain",
     note: "Build a chain from live tabs, seen players, or manual names. Slot 1 leads; each next slot follows the member above with its own role and fight stance.",
+    settingsOnly: false,
+  },
+  pkAssist: {
+    ...HEADLESS_SETTINGS_UI,
+    modalTitle: "PK Assist",
+    modalMeta: "shared defence",
+    cardTitle: "PK Assist",
+    note: "Nearby enabled sessions share attacker calls. Victims can retreat at low HP, helpers can regroup and focus the aggressor.",
     settingsOnly: false,
   },
 };
@@ -3872,8 +3938,21 @@ function getVisibleMonsterNames() {
   ));
 }
 
-function getVisiblePlayerNames() {
-  return sortMonsterNames(state?.snapshot?.visiblePlayerNames || []);
+function getVisiblePlayerNames(sourceState = state) {
+  const names = [
+    ...(Array.isArray(sourceState?.snapshot?.visiblePlayerNames) ? sourceState.snapshot.visiblePlayerNames : []),
+  ];
+
+  for (const session of Array.isArray(sourceState?.sessions) ? sourceState.sessions : []) {
+    if (Array.isArray(session?.visiblePlayerNames)) {
+      names.push(...session.visiblePlayerNames);
+    }
+    if (Array.isArray(session?.visiblePlayers)) {
+      names.push(...session.visiblePlayers.map((entry) => entry?.name));
+    }
+  }
+
+  return sortMonsterNames(names);
 }
 
 function getVisibleNpcNames() {
@@ -3920,9 +3999,9 @@ function getFollowTrainLiveCharacterEntries(sourceState = state) {
   return unique;
 }
 
-function orderFollowTrainEntriesByLiveLinks(entries = []) {
+function buildFollowTrainEntryComponents(entries = []) {
   if (!Array.isArray(entries) || entries.length <= 1) {
-    return Array.isArray(entries) ? entries : [];
+    return Array.isArray(entries) && entries.length ? [entries] : [];
   }
 
   const byKey = new Map(entries.map((entry) => [entry.key, entry]));
@@ -3942,7 +4021,7 @@ function orderFollowTrainEntriesByLiveLinks(entries = []) {
   }
 
   if (!liveLinkCount) {
-    return entries;
+    return [entries];
   }
 
   for (const children of childrenByKey.values()) {
@@ -3988,7 +4067,20 @@ function orderFollowTrainEntriesByLiveLinks(entries = []) {
     || left[0].index - right[0].index
   ));
 
-  return components.flat();
+  return components;
+}
+
+function orderFollowTrainEntriesByLiveLinks(entries = []) {
+  return buildFollowTrainEntryComponents(entries).flat();
+}
+
+function getCurrentFollowTrainSessionNameKey(sourceState = state) {
+  return String(
+    sourceState?.snapshot?.playerName
+    || sourceState?.binding?.characterName
+    || sourceState?.binding?.label
+    || "",
+  ).trim().toLowerCase();
 }
 
 function getFollowTrainLiveCharacterNames(sourceState = state) {
@@ -4002,7 +4094,20 @@ function getAutomaticFollowTrainMembers(modulesState = null, sourceState = state
     return configured;
   }
 
-  const liveNames = getFollowTrainLiveCharacterNames(sourceState);
+  const entries = getFollowTrainLiveCharacterEntries(sourceState);
+  const components = buildFollowTrainEntryComponents(entries);
+  const currentNameKey = getCurrentFollowTrainSessionNameKey(sourceState);
+  const activeComponent = currentNameKey
+    ? components.find((component) => component.some((entry) => entry.key === currentNameKey))
+    : null;
+  const componentNames = activeComponent?.length >= 2
+    ? activeComponent.map((entry) => entry.name)
+    : [];
+  if (componentNames.length >= 2) {
+    return componentNames;
+  }
+
+  const liveNames = orderFollowTrainEntriesByLiveLinks(entries).map((entry) => entry.name);
   return liveNames.length >= 2
     ? liveNames
     : configured;
@@ -6671,6 +6776,50 @@ function getPartySharedSummary(sourceState = state, options = sourceState?.optio
   };
 }
 
+function formatPkAssistModeLabel(value = "") {
+  switch (String(value || "").trim().toLowerCase()) {
+    case "assist-only":
+      return "Assist";
+    case "evade-only":
+      return "Evade";
+    case "evade-and-assist":
+    default:
+      return "Evade + Assist";
+  }
+}
+
+function getPkAssistRuntimeStatus(sourceState = state) {
+  const boundStatus = getBoundInstance()?.pkAssistStatus;
+  if (boundStatus && typeof boundStatus === "object") {
+    return boundStatus;
+  }
+  const snapshotStatus = sourceState?.snapshot?.pkAssistStatus;
+  return snapshotStatus && typeof snapshotStatus === "object" ? snapshotStatus : null;
+}
+
+function formatPkAssistHeadline(options = state?.options || {}, sourceState = state) {
+  const status = getPkAssistRuntimeStatus(sourceState);
+  if (status?.active) {
+    return status.aggressorName ? `PK ${status.aggressorName}` : "PK active";
+  }
+  return options?.pkAssistEnabled ? formatPkAssistModeLabel(options.pkAssistMode) : "Off";
+}
+
+function formatPkAssistDetail(options = state?.options || {}, sourceState = state) {
+  const status = getPkAssistRuntimeStatus(sourceState);
+  if (status?.active) {
+    const victim = status.victimName ? `Victim ${status.victimName}` : "Victim detected";
+    const aggressor = status.aggressorName ? `aggressor ${status.aggressorName}` : "aggressor visible";
+    return `${victim} / ${aggressor} / ${status.aggressorVisible ? "focus ready" : "regrouping"}`;
+  }
+  if (!options?.pkAssistEnabled) {
+    return "Shared PK defence disabled";
+  }
+
+  const allyCount = normalizeTextListSummary(options.pkAssistAllies).length;
+  return `${formatPkAssistModeLabel(options.pkAssistMode)} / radius ${Math.max(1, Math.trunc(Number(options.pkAssistRadiusSqm) || 0))} sqm / retreat <= ${formatPercent(options.pkAssistRetreatHealthPercent)} / ${allyCount ? `${allyCount} allies` : "all live bot sessions"}`;
+}
+
 function getResolvedTrainerPartnerName(modulesState = ensureModulesDraft(), sourceState = state) {
   const configuredName = String(modulesState?.trainerPartnerName || "").trim();
   const currentNameKeys = getCurrentSessionNameKeys(sourceState);
@@ -8114,6 +8263,8 @@ function formatModuleCurrentLine(moduleKey, rules = [], modulesState = null) {
         return modulesState?.partyFollowEnabled
           ? formatFollowTrainDetail(modulesState.partyFollowMembers, modulesState.partyFollowDistance)
           : "Follow chain disabled";
+      case "pkAssist":
+        return formatPkAssistDetail(modulesState, state);
       default:
         return "No active rules";
     }
@@ -8647,6 +8798,25 @@ function renderModuleRuleField(moduleKey, index, field, value) {
     <label class="module-rule-control compact-rule-control">
       <span>${escapeHtml(field.label)}</span>
       <input type="${field.type}" value="${escapeHtml(value ?? "")}"${placeholder}${inputMode} ${sharedData} />
+    </label>
+  `;
+}
+
+function renderModuleRuleCornerToggle(moduleKey, index, enabled, title = "") {
+  const label = title
+    ? `${enabled ? "Disable" : "Enable"} ${title}`
+    : `${enabled ? "Disable" : "Enable"} rule`;
+
+  return `
+    <label class="module-rule-corner-toggle" aria-label="${escapeAttributeValue(label)}">
+      <input
+        type="checkbox"
+        ${enabled ? "checked" : ""}
+        data-module-key="${escapeAttributeValue(moduleKey)}"
+        data-rule-index="${index}"
+        data-rule-field="enabled"
+      />
+      <span class="visually-hidden">Rule power</span>
     </label>
   `;
 }
@@ -11438,6 +11608,7 @@ function renderModuleRuleFieldSection(moduleKey, index, rule = {}, section = {})
   const ui = MODULE_RULE_UI[moduleKey] || {};
   const fields = (section.fields || [])
     .map((key) => getModuleRuleFieldSpec(moduleKey, key))
+    .filter((field) => field?.key !== "enabled")
     .filter(Boolean)
     .map((field) => renderModuleRuleField(moduleKey, index, field, rule?.[field.key]))
     .join("");
@@ -11458,6 +11629,15 @@ function renderModuleRuleActions(moduleKey, title, index, rulesLength) {
       <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} up">Move Up</button>
       <button type="button" class="btn mini" data-move-module-rule="${moduleKey}" data-rule-index="${index}" data-rule-delta="1" ${index === rulesLength - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(title)} down">Move Down</button>
       <button type="button" class="btn mini danger" data-delete-module-rule="${moduleKey}" data-rule-index="${index}" aria-label="Delete ${escapeHtml(title)}">Delete Rule</button>
+    </div>
+  `;
+}
+
+function renderModuleRuleToolbar(cornerToggle, ruleActions) {
+  return `
+    <div class="module-rule-toolbar">
+      ${cornerToggle}
+      ${ruleActions}
     </div>
   `;
 }
@@ -11497,23 +11677,26 @@ function renderModuleRuleList(moduleKey, rules = []) {
       const enabled = rule?.enabled !== false;
       const title = formatRuleDisplayName(moduleKey, rule, index);
       const ruleActions = renderModuleRuleActions(moduleKey, title, index, rules.length);
+      const cornerToggle = renderModuleRuleCornerToggle(moduleKey, index, enabled, title);
       const sections = (ui.sections || [])
         .map((section) => renderModuleRuleFieldSection(moduleKey, index, rule, section))
         .join("");
 
       return `
-        <div class="module-rule-card ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="${moduleKey}" data-rule-index="${index}">
-          ${ui.showRuleHeader === false ? "" : `<div class="module-rule-head">
-            <div class="module-rule-title-row">
-              <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
-              <strong class="module-rule-name">${escapeHtml(title)}</strong>
-              <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
+        <div class="module-rule-card module-rule-card-with-toggle ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="${moduleKey}" data-rule-index="${index}">
+          ${ui.showRuleHeader === false ? renderModuleRuleToolbar(cornerToggle, ruleActions) : `<div class="module-rule-head">
+            <div class="module-rule-head-main">
+              ${cornerToggle}
+              <div class="module-rule-title-row">
+                <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
+                <strong class="module-rule-name">${escapeHtml(title)}</strong>
+                <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
+              </div>
             </div>
             ${ruleActions}
           </div>`}
           ${ui.showRuleSummary === false ? "" : `<div class="module-rule-summary">${renderModuleRuleSummary(moduleKey, rule, { rules, index })}</div>`}
           <div class="module-rule-sections">${sections}</div>
-          ${ui.showRuleHeader === false ? `<div class="module-rule-footer">${ruleActions}</div>` : ""}
         </div>
       `;
     })
@@ -11593,13 +11776,22 @@ function syncRenderedModuleRuleCards(container, moduleKey, rules = []) {
       const ruleIndex = Number(card.dataset.ruleIndex);
       const rule = rules[ruleIndex] || {};
       const ruleEnabled = rule?.enabled !== false;
+      const title = formatRuleDisplayName(moduleKey, rule, ruleIndex);
       const badge = card.querySelector(".module-rule-badge");
       const name = card.querySelector(".module-rule-name");
       const summary = card.querySelector(".module-rule-summary");
+      const cornerToggle = card.querySelector('.module-rule-corner-toggle input[data-rule-field="enabled"]');
+      const cornerLabel = card.querySelector(".module-rule-corner-toggle");
 
       card.classList.toggle("module-rule-card-disabled", !ruleEnabled);
+      if (cornerToggle instanceof HTMLInputElement) {
+        cornerToggle.checked = ruleEnabled;
+      }
+      if (cornerLabel instanceof HTMLElement) {
+        cornerLabel.setAttribute("aria-label", `${ruleEnabled ? "Disable" : "Enable"} ${title}`);
+      }
       if (name) {
-        name.textContent = formatRuleDisplayName(moduleKey, rule, ruleIndex);
+        name.textContent = title;
       }
       if (badge) {
         badge.textContent = ruleEnabled ? "Active" : "Off";
@@ -13384,6 +13576,7 @@ function renderCompactPanel() {
   setTextContent(compactPanelFields.antiIdle, summaryFields.antiIdle?.textContent || "-");
   setTextContent(compactPanelFields.alarms, alarmSummary.headline || "-");
   setTextContent(compactPanelFields.partyFollow, summaryFields.partyFollow?.textContent || "-");
+  setTextContent(compactPanelFields.pkAssist, summaryFields.pkAssist?.textContent || "-");
   setTextContent(compactPanelFields.rookiller, summaryFields.rookiller?.textContent || "-");
   setTextContent(compactPanelFields.decision, formatDecisionCompactSummary(getActiveDecisionTrace()?.current));
 
@@ -15804,6 +15997,8 @@ function renderSummarySheets() {
         : ""}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
       : "No follow chain active",
   );
+  setTextContent(summaryFields.pkAssist, formatPkAssistHeadline(options, state));
+  setTextContent(summaryFields.pkAssistDetail, formatPkAssistDetail(options, state));
   const rookillerStatus = getBoundInstance()?.rookillerStatus || null;
   const rookillerLevel = Number(rookillerStatus?.level);
   const rookillerLevelPercent = Number(rookillerStatus?.levelPercent);
@@ -16224,6 +16419,7 @@ function renderTargetingDistanceRuleList(rules = []) {
     .map((rule, index) => {
       const enabled = rule?.enabled !== false;
       const title = formatRuleDisplayName("distanceKeeper", rule, index);
+      const cornerToggle = renderModuleRuleCornerToggle("distanceKeeper", index, enabled, title);
       const ruleActions = `
         <div class="module-rule-actions">
           <button type="button" class="btn mini" data-targeting-distance-move="${index}" data-rule-delta="-1" ${index === 0 ? "disabled" : ""} aria-label="Raise priority for ${escapeHtml(title)}">Higher</button>
@@ -16236,18 +16432,20 @@ function renderTargetingDistanceRuleList(rules = []) {
         .join("");
 
       return `
-        <div class="module-rule-card ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="distanceKeeper" data-rule-index="${index}">
-          ${ui.showRuleHeader === false ? "" : `<div class="module-rule-head">
-            <div class="module-rule-title-row">
-              <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
-              <strong class="module-rule-name">${escapeHtml(title)}</strong>
-              <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
+        <div class="module-rule-card module-rule-card-with-toggle ${enabled ? "" : "module-rule-card-disabled"}" data-module-key="distanceKeeper" data-rule-index="${index}">
+          ${ui.showRuleHeader === false ? renderModuleRuleToolbar(cornerToggle, ruleActions) : `<div class="module-rule-head">
+            <div class="module-rule-head-main">
+              ${cornerToggle}
+              <div class="module-rule-title-row">
+                <span class="module-rule-index">${escapeHtml(formatPriorityRankLabel(index))}</span>
+                <strong class="module-rule-name">${escapeHtml(title)}</strong>
+                <span class="module-rule-badge ${enabled ? "active" : "off"}">${enabled ? "Active" : "Off"}</span>
+              </div>
             </div>
             ${ruleActions}
           </div>`}
           ${ui.showRuleSummary === false ? "" : `<div class="module-rule-summary">${renderModuleRuleSummary("distanceKeeper", rule, { rules, index })}</div>`}
           <div class="module-rule-sections">${sections}</div>
-          ${ui.showRuleHeader === false ? `<div class="module-rule-footer">${ruleActions}</div>` : ""}
         </div>
       `;
     })
@@ -18364,6 +18562,13 @@ function modulesPayload() {
     ),
     partyFollowDistance: draft.partyFollowDistance,
     partyFollowCombatMode: draft.partyFollowCombatMode,
+    pkAssistEnabled: draft.pkAssistEnabled,
+    pkAssistMode: draft.pkAssistMode,
+    pkAssistAllies: normalizeTextListSummary(draft.pkAssistAllies).join("\n"),
+    pkAssistRadiusSqm: draft.pkAssistRadiusSqm,
+    pkAssistRetreatHealthPercent: draft.pkAssistRetreatHealthPercent,
+    pkAssistRetreatDistance: draft.pkAssistRetreatDistance,
+    pkAssistCooldownMs: draft.pkAssistCooldownMs,
   };
 }
 
@@ -19325,6 +19530,9 @@ document.addEventListener("change", (event) => {
     if (event.target.matches('[data-module-key="reconnect"][data-module-option-field]')) {
       renderModules({ force: true });
     }
+    if (event.target.matches('[data-module-key][data-rule-index][data-rule-field="enabled"]')) {
+      renderModules({ force: true });
+    }
   }
 });
 
@@ -20205,6 +20413,7 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
   { button: quickButtons.antiIdle, optionKey: "antiIdleEnabled", label: "Anti Idle" },
   { button: quickButtons.alarms, optionKey: "alarmsEnabled", label: "Alarms" },
   { button: quickButtons.partyFollow, optionKey: "partyFollowEnabled", label: "Follow Chain" },
+  { button: quickButtons.pkAssist, optionKey: "pkAssistEnabled", label: "PK Assist" },
 ].forEach(({ button, optionKey, label, getCurrentEnabled, buildPayload }) => {
   button?.addEventListener("click", async () => {
     if (!isStateReady() || !isDeskBound()) return;

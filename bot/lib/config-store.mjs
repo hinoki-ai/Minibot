@@ -239,6 +239,13 @@ const ROUTE_PROFILE_PACK_SECTION_KEYS = Object.freeze({
     "partyFollowMemberChaseModes",
     "partyFollowDistance",
     "partyFollowCombatMode",
+    "pkAssistEnabled",
+    "pkAssistMode",
+    "pkAssistAllies",
+    "pkAssistRadiusSqm",
+    "pkAssistRetreatHealthPercent",
+    "pkAssistRetreatDistance",
+    "pkAssistCooldownMs",
   ],
 });
 const ROUTE_PROFILE_PACK_SECTION_BY_KEY = new Map(

@@ -254,6 +254,18 @@
   "autoEatCooldownMs": 55000,
   "autoEatRequireNoTargets": true,
   "autoEatRequireStationary": true,
+  "hasteEnabled": false,
+  "hasteWords": "utani hur",
+  "hasteHotkey": "",
+  "hasteMinMana": 60,
+  "hasteMinManaPercent": 0,
+  "hasteCooldownMs": 1500,
+  "hasteRequireNoTargets": false,
+  "hasteRequireStationary": false,
+  "hasteManaFluidEnabled": true,
+  "hasteManaFluidName": "Mana Fluid",
+  "hasteManaFluidHotkey": "",
+  "hasteManaFluidCooldownMs": 900,
   "ringAutoReplaceEnabled": false,
   "ringAutoReplaceItemName": "stealth ring",
   "ringAutoReplaceCooldownMs": 1000,
@@ -278,6 +290,13 @@
   "partyFollowMemberChaseModes": {},
   "partyFollowDistance": 1,
   "partyFollowCombatMode": "follow-and-fight",
+  "pkAssistEnabled": false,
+  "pkAssistMode": "evade-and-assist",
+  "pkAssistAllies": [],
+  "pkAssistRadiusSqm": 10,
+  "pkAssistRetreatHealthPercent": 45,
+  "pkAssistRetreatDistance": 6,
+  "pkAssistCooldownMs": 650,
   "chaseMode": "aggressive",
   "runeMakerEnabled": false,
   "runeMakerRules": [],
@@ -300,7 +319,7 @@
       "maxHealthPercent": 70,
       "minMana": 0,
       "minManaPercent": 0,
-      "cooldownMs": 120
+      "cooldownMs": 50
     },
     {
       "enabled": true,
@@ -447,7 +466,7 @@
       "x": 32817,
       "y": 32137,
       "z": 8,
-      "type": "node",
+      "type": "walk",
       "label": "Waypoint 009"
     },
     {
@@ -479,8 +498,8 @@
       "label": "Waypoint 013"
     },
     {
-      "x": 32838,
-      "y": 32135,
+      "x": 32833,
+      "y": 32141,
       "z": 9,
       "type": "walk",
       "label": "Waypoint 014"

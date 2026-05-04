@@ -132,6 +132,7 @@ const MODULE_REQUIRED_SNAPSHOT_FAMILIES = Object.freeze({
   reconnect: Object.freeze(["self"]),
   trainer: Object.freeze(["self", "party", "creatures"]),
   followChain: Object.freeze(["self", "party", "creatures", "tiles"]),
+  pkAssist: Object.freeze(["self", "creatures", "tiles"]),
   autoEat: Object.freeze(["inventory", "hotbar"]),
   ammo: Object.freeze(["inventory", "hotbar"]),
   antiIdle: Object.freeze(["self", "inventory"]),
@@ -625,6 +626,13 @@ export const DEFAULTS = {
   partyFollowMemberChaseModes: {},
   partyFollowDistance: 2,
   partyFollowCombatMode: "follow-and-fight",
+  pkAssistEnabled: false,
+  pkAssistMode: "evade-and-assist",
+  pkAssistAllies: [],
+  pkAssistRadiusSqm: 10,
+  pkAssistRetreatHealthPercent: 45,
+  pkAssistRetreatDistance: 6,
+  pkAssistCooldownMs: 650,
   chaseMode: "auto",
   runeMakerEnabled: false,
   runeMakerRules: [],
@@ -705,6 +713,8 @@ const ROUTE_SPACING_BOUNCE_MAX_STEPS = 6;
 const ROUTE_SPACING_BOUNCE_MAX_TILE_DISTANCE = 7;
 const ROUTE_SPACING_BOUNCE_PRESSURE_EXPONENT = 1.35;
 const ROUTE_SPACING_BOUNCE_COOLDOWN_MS = 1_200;
+const ROUTE_SPACING_HOLD_BYPASS_MS = 12_000;
+const ROUTE_SPACING_HOLD_BYPASS_WINDOW_MS = 8_000;
 const ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE = 1;
 const COMBAT_FAST_LOOP_DELAY_MS = 75;
 const TARGET_PROFILE_CHASE_MODE_GRACE_MS = 2_000;
@@ -731,6 +741,14 @@ const FOLLOW_TRAIN_FLOOR_TRAIL_MAX_ENTRIES = 18;
 const FOLLOW_TRAIN_SAFE_HOLD_AFTER_MS = 6_000;
 const FOLLOW_TRAIN_COMBAT_MODES = ["follow-and-fight", "follow-only"];
 const DEFAULT_FOLLOW_TRAIN_COMBAT_MODE = "follow-and-fight";
+const PK_ASSIST_MODES = Object.freeze([
+  "evade-and-assist",
+  "assist-only",
+  "evade-only",
+]);
+const DEFAULT_PK_ASSIST_MODE = "evade-and-assist";
+const PK_ASSIST_HOSTILE_SKULL_KEYS = Object.freeze(new Set(["white", "yellow", "red", "black"]));
+const PK_ASSIST_INCIDENT_TTL_MS = 8_000;
 const FOLLOW_TRAIN_ROLES = Object.freeze([
   "follow-only",
   "attack-and-follow",
@@ -2311,6 +2329,18 @@ function normalizeFollowTrainCombatMode(value) {
     || DEFAULT_FOLLOW_TRAIN_COMBAT_MODE;
 }
 
+function normalizePkAssistMode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["assist", "help", "attack", "attack-only", "assist-allies"].includes(normalized)) {
+    return "assist-only";
+  }
+  if (["evade", "escape", "run", "run-away", "hide", "defensive"].includes(normalized)) {
+    return "evade-only";
+  }
+  return normalizeEnum(normalized, PK_ASSIST_MODES, DEFAULT_PK_ASSIST_MODE)
+    || DEFAULT_PK_ASSIST_MODE;
+}
+
 function normalizeFollowTrainRole(value, fallback = DEFAULT_FOLLOW_TRAIN_ROLE) {
   const normalized = String(value || "").trim().toLowerCase();
   const canonical = FOLLOW_TRAIN_ROLE_ALIASES[normalized] || normalized;
@@ -3708,6 +3738,25 @@ export function normalizeOptions(options = {}) {
     merged.trainerConfigured = merged.trainerConfigured || merged.trainerEnabled;
     merged.trainerEnabled = false;
   }
+  merged.pkAssistEnabled = Boolean(merged.pkAssistEnabled);
+  merged.pkAssistMode = normalizePkAssistMode(merged.pkAssistMode);
+  merged.pkAssistAllies = normalizeTextList(merged.pkAssistAllies);
+  merged.pkAssistRadiusSqm = Math.max(
+    1,
+    Math.trunc(normalizeNonNegativeNumber(merged.pkAssistRadiusSqm, DEFAULTS.pkAssistRadiusSqm)),
+  );
+  merged.pkAssistRetreatHealthPercent = clampPercent(
+    merged.pkAssistRetreatHealthPercent,
+    DEFAULTS.pkAssistRetreatHealthPercent,
+  );
+  merged.pkAssistRetreatDistance = Math.max(
+    2,
+    Math.trunc(normalizeNonNegativeNumber(merged.pkAssistRetreatDistance, DEFAULTS.pkAssistRetreatDistance)),
+  );
+  merged.pkAssistCooldownMs = Math.max(
+    250,
+    Math.trunc(normalizeNonNegativeNumber(merged.pkAssistCooldownMs, DEFAULTS.pkAssistCooldownMs) || DEFAULTS.pkAssistCooldownMs),
+  );
   merged.chaseMode = normalizeChaseModeOption(merged.chaseMode);
   merged.runeMakerEnabled = Boolean(merged.runeMakerEnabled);
   merged.runeMakerRules = normalizeRuneMakerRules(merged.runeMakerRules);
@@ -13464,6 +13513,8 @@ export class MinibiaTargetBot {
     this.routeCoordinationState = null;
     this.followTrainCoordinationAdapter = null;
     this.followTrainCoordinationState = null;
+    this.pkAssistCoordinationAdapter = null;
+    this.pkAssistCoordinationState = null;
     this.followTrainRecentTrail = [];
     this.followTrainRecentActions = [];
     this.followTrainConsumedActionIds = new Map();
@@ -14554,6 +14605,60 @@ export class MinibiaTargetBot {
     });
   }
 
+  getRouteSafetyChaseSegment(snapshot = this.lastSnapshot) {
+    if (!Array.isArray(this.options?.waypoints) || !this.options.waypoints.length) {
+      return null;
+    }
+
+    const currentIndex = Math.max(
+      0,
+      Math.min(Math.trunc(Number(this.routeIndex) || 0), this.options.waypoints.length - 1),
+    );
+    let waypoint = this.options.waypoints[currentIndex] || null;
+    let index = currentIndex;
+
+    if (waypoint && this.isWaypointReached(snapshot?.playerPosition, waypoint)) {
+      const nextIndex = currentIndex + 1 < this.options.waypoints.length
+        ? currentIndex + 1
+        : (this.options.autowalkLoop ? 0 : currentIndex);
+      if (nextIndex !== currentIndex || this.options.autowalkLoop) {
+        waypoint = this.options.waypoints[nextIndex] || waypoint;
+        index = nextIndex;
+      }
+    }
+
+    return waypoint ? { waypoint, destination: waypoint, index } : null;
+  }
+
+  routeSegmentHasLocalSafetyConstraint(snapshot = this.lastSnapshot, segment = null) {
+    if (!snapshot?.ready || !segment?.waypoint) {
+      return false;
+    }
+
+    if (this.isNoGoWaypointType(segment.waypoint) || this.isFloorTransitionWaypointType(segment.waypoint)) {
+      return true;
+    }
+
+    if (
+      this.hasNoGoWaypointOnRouteSegment(snapshot, segment)
+      || this.hasAvoidTileRuleOnRouteSegment(snapshot, segment)
+      || this.hasActiveNonFloorTransitionHazardOnRouteSegment(snapshot, segment)
+    ) {
+      return true;
+    }
+
+    const playerZ = Number(snapshot?.playerPosition?.z);
+    if (!Number.isFinite(playerZ)) {
+      return false;
+    }
+
+    return (Array.isArray(snapshot?.hazardTiles) ? snapshot.hazardTiles : []).some((entry) => (
+      this.isFloorTransitionHazard(entry)
+      && Math.trunc(Number(entry?.position?.z)) === Math.trunc(playerZ)
+      && this.isFloorTransitionDangerZoneNearRouteEndpoints(snapshot, entry.position, segment)
+    ));
+  }
+
   hasReachableCombatFocus(snapshot = this.lastSnapshot) {
     if (!snapshot?.ready) {
       return false;
@@ -14562,6 +14667,9 @@ export class MinibiaTargetBot {
     const playerPosition = snapshot.playerPosition || null;
     const currentTarget = snapshot.currentTarget || null;
     const currentTargetId = Number(currentTarget?.id);
+    const stickyCurrentTarget = this.getStickyCurrentTargetCandidate(snapshot, [], {
+      allowPriorityBreak: false,
+    });
     const isUsableCombatEntry = (entry = null) => Boolean(
       entry
       && !this.isEscapeEntry(entry)
@@ -14569,6 +14677,10 @@ export class MinibiaTargetBot {
       && this.isEntryWithinCombatWindow(entry, playerPosition)
       && this.isEntryReachableForCombat(entry)
     );
+
+    if (stickyCurrentTarget) {
+      return true;
+    }
 
     if (isUsableCombatEntry(currentTarget)) {
       return true;
@@ -14582,17 +14694,59 @@ export class MinibiaTargetBot {
       || this.getReachAttackCandidates(snapshot).length > 0;
   }
 
+  hasActiveDirectionalDodgeRisk(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready) {
+      return false;
+    }
+
+    const playerPosition = snapshot.playerPosition || null;
+    if (!playerPosition) {
+      return false;
+    }
+
+    const entries = [
+      snapshot.currentTarget,
+      ...(Array.isArray(snapshot?.candidates) ? snapshot.candidates : []),
+      ...this.getVisibleThreats(snapshot),
+    ];
+    const seen = new Set();
+
+    return entries.some((entry) => {
+      const key = Number.isFinite(Number(entry?.id))
+        ? `id:${Number(entry.id)}`
+        : this.getPositionKey(entry?.position);
+      if (!key || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+
+      const profile = this.getTargetProfile(entry?.name);
+      if (!profile || (!profile.avoidBeam && !profile.avoidWave)) {
+        return false;
+      }
+      if (!this.isEntryWithinCombatWindow(entry, playerPosition) || !this.isEntryReachableForCombat(entry)) {
+        return false;
+      }
+
+      return Boolean(
+        (profile.avoidBeam && this.hasBeamExposure(entry, playerPosition))
+        || (profile.avoidWave && this.hasWaveExposure(entry, playerPosition)),
+      );
+    });
+  }
+
   shouldKeepNativeChaseStandingForRouteSafety(snapshot = this.lastSnapshot) {
     if (!this.isAutowalkRouteActiveForSafety(snapshot)) {
       return false;
     }
 
+    const segment = this.getRouteSafetyChaseSegment(snapshot);
+    if (!this.routeSegmentHasLocalSafetyConstraint(snapshot, segment)) {
+      return false;
+    }
+
     return !this.hasReachableCombatFocus(snapshot)
-      && (
-        this.routeHasSafetySensitiveWaypoints()
-        || this.routeHasAvoidTileRules()
-        || this.snapshotHasRouteSafetyHazards(snapshot)
-      );
+      || this.hasActiveDirectionalDodgeRisk(snapshot);
   }
 
   getRouteSafeNativeChaseModeValue(snapshot = this.lastSnapshot, preferredChaseMode = null) {
@@ -14768,15 +14922,29 @@ export class MinibiaTargetBot {
   }
 
   getSharedSpawnTrustedPlayerKeys(snapshot = this.lastSnapshot) {
-    const trusted = new Set(
-      [
-        this.getTrainerPartnerName(snapshot),
-        ...normalizeTextList(this.options?.partyFollowMembers),
-        ...normalizeTextList(this.options?.partyFollowManualPlayers),
-      ]
-        .map((name) => this.getNameKey(name))
-        .filter(Boolean),
-    );
+    const trusted = new Set();
+    const addName = (value) => {
+      const key = this.getNameKey(value);
+      if (key) {
+        trusted.add(key);
+      }
+    };
+
+    addName(this.getTrainerPartnerName(snapshot));
+    normalizeTextList(this.options?.partyFollowMembers).forEach(addName);
+    normalizeTextList(this.options?.partyFollowManualPlayers).forEach(addName);
+    normalizeTextList(this.runtimeLoad?.localPlayerNames).forEach(addName);
+
+    for (const member of this.getRouteSpacingMembers()) {
+      addName(member?.characterName);
+      addName(member?.title);
+    }
+
+    for (const member of this.getFollowTrainCoordinationMembers()) {
+      addName(member?.characterName);
+      addName(member?.title);
+    }
+
     const selfKey = this.getNameKey(snapshot?.playerName);
     if (selfKey) {
       trusted.add(selfKey);
@@ -14858,6 +15026,40 @@ export class MinibiaTargetBot {
         const id = entry?.id == null ? "" : String(entry.id).trim();
         return !id || !trustedIds.has(id);
       });
+  }
+
+  getSharedSpawnTrustedPlayers(snapshot = this.lastSnapshot, { includeSelf = true } = {}) {
+    const trustedNames = this.getSharedSpawnTrustedPlayerKeys(snapshot);
+    const selfNameKey = this.getNameKey(snapshot?.playerName);
+    const selfId = snapshot?.playerId == null ? "" : String(snapshot.playerId).trim();
+    const trustedIds = new Set(selfId ? [selfId] : []);
+    const entries = [];
+    const seen = new Set();
+
+    for (const entry of Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : []) {
+      const nameKey = this.getNameKey(entry?.name);
+      if (!nameKey || !trustedNames.has(nameKey)) {
+        continue;
+      }
+
+      const id = entry?.id == null ? "" : String(entry.id).trim();
+      if (id) {
+        trustedIds.add(id);
+      }
+
+      if (!includeSelf && ((selfNameKey && nameKey === selfNameKey) || (selfId && id === selfId))) {
+        continue;
+      }
+
+      const key = id ? `id:${id}` : `name:${nameKey}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      entries.push(entry);
+    }
+
+    return { entries, ids: trustedIds, names: trustedNames };
   }
 
   hasVisibleForeignPlayers(snapshot = this.lastSnapshot) {
@@ -14953,6 +15155,89 @@ export class MinibiaTargetBot {
       return true;
     }
     return engagedIds.some((id) => !trustedIds.has(id));
+  }
+
+  isEntryEngagedByTrustedPlayer(entry, snapshot = this.lastSnapshot, { includeSelf = false } = {}) {
+    if (!entry) {
+      return false;
+    }
+
+    const trustedPlayers = this.getSharedSpawnTrustedPlayers(snapshot, { includeSelf: true });
+    const selfNameKey = this.getNameKey(snapshot?.playerName);
+    const selfId = snapshot?.playerId == null ? "" : String(snapshot.playerId).trim();
+    const isTrustedName = (nameKey) => Boolean(
+      nameKey
+      && trustedPlayers.names.has(nameKey)
+      && (includeSelf || nameKey !== selfNameKey)
+    );
+    const isTrustedId = (id) => Boolean(
+      id
+      && trustedPlayers.ids.has(id)
+      && (includeSelf || id !== selfId)
+    );
+
+    const engagedNames = Array.isArray(entry?.engagedPlayerNames)
+      ? entry.engagedPlayerNames
+        .map((value) => this.getNameKey(value))
+        .filter(Boolean)
+      : [];
+    if (engagedNames.some(isTrustedName)) {
+      return true;
+    }
+
+    const engagedIds = Array.isArray(entry?.engagedPlayerIds)
+      ? entry.engagedPlayerIds
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+      : [];
+    return engagedIds.some(isTrustedId);
+  }
+
+  getTrustedPlayerClaimForEntry(entry, snapshot = this.lastSnapshot) {
+    if (!entry?.position) {
+      return null;
+    }
+
+    const trustedPlayers = this.getSharedSpawnTrustedPlayers(snapshot, { includeSelf: false }).entries;
+    const playerPosition = snapshot?.playerPosition || null;
+    const selfDistance = this.getPositionDistance(entry.position, playerPosition);
+    const healthPercent = Number(entry?.healthPercent);
+    let bestClaim = null;
+
+    for (const trustedPlayer of trustedPlayers) {
+      const distance = this.getPositionDistance(entry.position, trustedPlayer?.position);
+      if (!Number.isFinite(distance)) {
+        continue;
+      }
+
+      const adjacentClaim = distance <= SHARED_SPAWN_ADJACENT_CLAIM_DISTANCE;
+      const nearbyClaim = distance <= SHARED_SPAWN_NEARBY_CLAIM_DISTANCE
+        && (
+          !Number.isFinite(selfDistance)
+          || distance < selfDistance
+          || (Number.isFinite(healthPercent) && healthPercent < SHARED_SPAWN_DAMAGED_HEALTH_PERCENT)
+        );
+      if (!adjacentClaim && !nearbyClaim) {
+        continue;
+      }
+
+      if (!bestClaim || distance < bestClaim.distance) {
+        bestClaim = {
+          player: trustedPlayer,
+          distance,
+          reason: adjacentClaim ? "adjacent" : "nearby",
+        };
+      }
+    }
+
+    return bestClaim;
+  }
+
+  isSharedSessionAssistTarget(entry, snapshot = this.lastSnapshot) {
+    return Boolean(
+      this.isEntryEngagedByTrustedPlayer(entry, snapshot, { includeSelf: false })
+      || this.getTrustedPlayerClaimForEntry(entry, snapshot)
+    );
   }
 
   isEntryBlockedBySharedSpawn(entry, snapshot = this.lastSnapshot) {
@@ -15118,9 +15403,17 @@ export class MinibiaTargetBot {
     return backwardOffset <= sector.backwardAllowance;
   }
 
+  isEntryAllowedByRouteSpacingForCombat(entry, snapshot = this.lastSnapshot) {
+    return Boolean(
+      this.isEntryInsideRouteSpacingSector(entry, snapshot)
+      || this.isCurrentTargetEntry(entry, snapshot)
+      || this.isSharedSessionAssistTarget(entry, snapshot)
+    );
+  }
+
   filterEntriesByRouteSpacingSector(entries, snapshot = this.lastSnapshot) {
     return Array.isArray(entries)
-      ? entries.filter((entry) => this.isEntryInsideRouteSpacingSector(entry, snapshot))
+      ? entries.filter((entry) => this.isEntryAllowedByRouteSpacingForCombat(entry, snapshot))
       : [];
   }
 
@@ -16720,6 +17013,646 @@ export class MinibiaTargetBot {
 
     return this.getFollowTrainCoordinationMembers()
       .find((member) => this.getNameKey(member.characterName) === requestedKey) || null;
+  }
+
+  getPkAssistMode() {
+    return normalizePkAssistMode(this.options?.pkAssistMode);
+  }
+
+  canPkAssistEvade() {
+    const mode = this.getPkAssistMode();
+    return mode === "evade-and-assist" || mode === "evade-only";
+  }
+
+  canPkAssistAttack() {
+    const mode = this.getPkAssistMode();
+    return mode === "evade-and-assist" || mode === "assist-only";
+  }
+
+  getPkAssistRadiusSqm() {
+    return Math.max(1, Math.trunc(Number(this.options?.pkAssistRadiusSqm) || DEFAULTS.pkAssistRadiusSqm));
+  }
+
+  getPkAssistRetreatHealthPercent() {
+    const threshold = Number(this.options?.pkAssistRetreatHealthPercent);
+    return Number.isFinite(threshold) ? Math.max(0, Math.min(100, threshold)) : 0;
+  }
+
+  getPkAssistCooldownMs() {
+    return Math.max(250, Math.trunc(Number(this.options?.pkAssistCooldownMs) || DEFAULTS.pkAssistCooldownMs));
+  }
+
+  getPkAssistTrustedPlayerKeys(snapshot = this.lastSnapshot) {
+    const trusted = new Set(this.getSharedSpawnTrustedPlayerKeys(snapshot));
+    const addName = (value) => {
+      const key = this.getNameKey(value);
+      if (key) {
+        trusted.add(key);
+      }
+    };
+
+    addName(snapshot?.playerName);
+    normalizeTextList(this.options?.pkAssistAllies).forEach(addName);
+    normalizeTextList(this.runtimeLoad?.localPlayerNames).forEach(addName);
+
+    for (const member of this.getRouteSpacingMembers()) {
+      addName(member?.characterName);
+    }
+
+    for (const member of this.getFollowTrainCoordinationMembers()) {
+      addName(member?.characterName);
+    }
+
+    for (const member of this.getPkAssistCoordinationMembers({ includeStaleIncidents: true })) {
+      addName(member?.characterName);
+    }
+
+    return trusted;
+  }
+
+  isPkAssistTrustedPlayerName(name = "", snapshot = this.lastSnapshot) {
+    const key = this.getNameKey(name);
+    return Boolean(key && this.getPkAssistTrustedPlayerKeys(snapshot).has(key));
+  }
+
+  isPkAssistAllowedAllyName(name = "") {
+    const allies = normalizeTextList(this.options?.pkAssistAllies);
+    if (!allies.length) {
+      return true;
+    }
+
+    const key = this.getNameKey(name);
+    return Boolean(key && allies.some((ally) => this.getNameKey(ally) === key));
+  }
+
+  isPkAssistHostileSkull(entry = null) {
+    const skullKey = String(entry?.skull?.key || entry?.skull || "").trim().toLowerCase();
+    return PK_ASSIST_HOSTILE_SKULL_KEYS.has(skullKey);
+  }
+
+  isPkAssistTrustedPlayerEntry(entry = null, snapshot = this.lastSnapshot) {
+    return this.isPkAssistTrustedPlayerName(entry?.name, snapshot);
+  }
+
+  getPkAssistVisibleAggressors(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready) {
+      return [];
+    }
+
+    const playerPosition = snapshot.playerPosition || null;
+    const currentTargetId = Number(snapshot?.currentTarget?.id);
+    const currentTargetKey = this.getNameKey(snapshot?.currentTarget?.name);
+    return (Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : [])
+      .filter((entry) => {
+        if (!entry?.name || !entry?.position || this.isPkAssistTrustedPlayerEntry(entry, snapshot)) {
+          return false;
+        }
+
+        const entryId = Number(entry?.id);
+        const entryKey = this.getNameKey(entry?.name);
+        const isCurrentTarget = (
+          (Number.isFinite(entryId) && Number.isFinite(currentTargetId) && entryId === currentTargetId)
+          || (entryKey && currentTargetKey && entryKey === currentTargetKey)
+        );
+        return entry.isTargetingSelf === true
+          || (isCurrentTarget && this.isPkAssistHostileSkull(entry));
+      })
+      .map((entry) => ({
+        ...entry,
+        distance: this.getPositionDistance(playerPosition, entry.position),
+      }))
+      .sort((left, right) => (
+        Number(right.isTargetingSelf === true) - Number(left.isTargetingSelf === true)
+        || Number(this.isPkAssistHostileSkull(right)) - Number(this.isPkAssistHostileSkull(left))
+        || (Number(left.distance) || Number.POSITIVE_INFINITY) - (Number(right.distance) || Number.POSITIVE_INFINITY)
+        || String(left.name || "").localeCompare(String(right.name || ""))
+      ));
+  }
+
+  buildPkAssistIncidentFromAggressor(snapshot = this.lastSnapshot, aggressor = null, {
+    source = "local",
+    now = this.getNow(),
+  } = {}) {
+    if (!snapshot?.ready || !aggressor?.name) {
+      return null;
+    }
+
+    return {
+      active: true,
+      source,
+      victimName: String(snapshot.playerName || "").trim(),
+      victimPosition: snapshot.playerPosition || null,
+      victimHealthPercent: Number.isFinite(Number(snapshot.playerStats?.healthPercent))
+        ? Number(snapshot.playerStats.healthPercent)
+        : null,
+      aggressorId: Number.isFinite(Number(aggressor.id)) ? Number(aggressor.id) : null,
+      aggressorName: String(aggressor.name || "").trim(),
+      aggressorPosition: aggressor.position || null,
+      aggressorHealthPercent: Number.isFinite(Number(aggressor.healthPercent))
+        ? Number(aggressor.healthPercent)
+        : null,
+      aggressorSkull: aggressor.skull || null,
+      targetingSelf: aggressor.isTargetingSelf === true,
+      updatedAt: now,
+    };
+  }
+
+  getPkAssistLocalIncident(snapshot = this.lastSnapshot, {
+    now = this.getNow(),
+  } = {}) {
+    const aggressor = this.getPkAssistVisibleAggressors(snapshot)[0] || null;
+    return this.buildPkAssistIncidentFromAggressor(snapshot, aggressor, { source: "local", now });
+  }
+
+  normalizePkAssistIncident(rawIncident = null, {
+    now = this.getNow(),
+  } = {}) {
+    if (!rawIncident || typeof rawIncident !== "object") {
+      return null;
+    }
+
+    const aggressorName = String(rawIncident.aggressorName || rawIncident.aggressor?.name || "").trim();
+    const victimName = String(rawIncident.victimName || rawIncident.victim?.name || "").trim();
+    if (!aggressorName || !victimName) {
+      return null;
+    }
+
+    const updatedAt = Number(rawIncident.updatedAt) || 0;
+    return {
+      active: rawIncident.active !== false && (!updatedAt || now - updatedAt <= PK_ASSIST_INCIDENT_TTL_MS),
+      source: String(rawIncident.source || "shared").trim() || "shared",
+      victimName,
+      victimPosition: normalizePosition(rawIncident.victimPosition || rawIncident.victim?.position),
+      victimHealthPercent: Number.isFinite(Number(rawIncident.victimHealthPercent))
+        ? Number(rawIncident.victimHealthPercent)
+        : null,
+      aggressorId: Number.isFinite(Number(rawIncident.aggressorId ?? rawIncident.aggressor?.id))
+        ? Number(rawIncident.aggressorId ?? rawIncident.aggressor?.id)
+        : null,
+      aggressorName,
+      aggressorPosition: normalizePosition(rawIncident.aggressorPosition || rawIncident.aggressor?.position),
+      aggressorHealthPercent: Number.isFinite(Number(rawIncident.aggressorHealthPercent))
+        ? Number(rawIncident.aggressorHealthPercent)
+        : null,
+      aggressorSkull: rawIncident.aggressorSkull || rawIncident.aggressor?.skull || null,
+      targetingSelf: rawIncident.targetingSelf === true,
+      updatedAt,
+    };
+  }
+
+  getPkAssistCoordinationMembers({
+    includeStaleIncidents = false,
+  } = {}) {
+    if (!this.pkAssistCoordinationState?.selfInstanceId || !Array.isArray(this.pkAssistCoordinationState.members)) {
+      return [];
+    }
+
+    const now = this.getNow();
+    return this.pkAssistCoordinationState.members
+      .map((member) => {
+        const characterName = String(member?.characterName || "").trim();
+        const instanceId = String(member?.instanceId || "").trim();
+        const playerPosition = normalizePosition(member?.playerPosition);
+        if (!instanceId || !characterName || !playerPosition) {
+          return null;
+        }
+
+        const incident = this.normalizePkAssistIncident(member?.incident, { now });
+        return {
+          instanceId,
+          characterName,
+          enabled: member?.enabled === true,
+          mode: normalizePkAssistMode(member?.mode),
+          playerPosition,
+          healthPercent: Number.isFinite(Number(member?.healthPercent)) ? Number(member.healthPercent) : null,
+          incident: includeStaleIncidents || incident?.active ? incident : null,
+          updatedAt: Number(member?.updatedAt) || 0,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  findVisiblePkAssistAggressor(snapshot = this.lastSnapshot, incident = null) {
+    const aggressorId = Number(incident?.aggressorId);
+    const aggressorKey = this.getNameKey(incident?.aggressorName);
+    return (Array.isArray(snapshot?.visiblePlayers) ? snapshot.visiblePlayers : [])
+      .find((entry) => {
+        if (!entry?.name || this.isPkAssistTrustedPlayerEntry(entry, snapshot)) {
+          return false;
+        }
+
+        const entryId = Number(entry?.id);
+        if (Number.isFinite(aggressorId) && Number.isFinite(entryId) && entryId === aggressorId) {
+          return true;
+        }
+
+        return Boolean(aggressorKey && this.getNameKey(entry.name) === aggressorKey);
+      }) || null;
+  }
+
+  getPkAssistSharedIncident(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready || !this.options?.pkAssistEnabled) {
+      return null;
+    }
+
+    const selfKey = this.getNameKey(snapshot?.playerName);
+    const playerPosition = snapshot?.playerPosition || null;
+    const radius = this.getPkAssistRadiusSqm();
+    const incidents = [];
+    for (const member of this.getPkAssistCoordinationMembers()) {
+      const memberKey = this.getNameKey(member.characterName);
+      if (!member.enabled || !member.incident?.active || (selfKey && memberKey === selfKey)) {
+        continue;
+      }
+      if (!this.isPkAssistAllowedAllyName(member.characterName)) {
+        continue;
+      }
+
+      const victimDistance = this.getPositionDistance(playerPosition, member.incident.victimPosition || member.playerPosition);
+      const aggressorDistance = this.getPositionDistance(playerPosition, member.incident.aggressorPosition);
+      const distance = Math.min(
+        Number.isFinite(victimDistance) ? victimDistance : Number.POSITIVE_INFINITY,
+        Number.isFinite(aggressorDistance) ? aggressorDistance : Number.POSITIVE_INFINITY,
+      );
+      if (!Number.isFinite(distance) || distance > radius) {
+        continue;
+      }
+
+      const visibleAggressor = this.findVisiblePkAssistAggressor(snapshot, member.incident);
+      incidents.push({
+        ...member.incident,
+        source: "shared",
+        victimName: member.incident.victimName || member.characterName,
+        victimPosition: member.incident.victimPosition || member.playerPosition,
+        visibleAggressor,
+        distance,
+        member,
+      });
+    }
+
+    incidents.sort((left, right) => (
+      (Number(left.victimHealthPercent) || 101) - (Number(right.victimHealthPercent) || 101)
+      || left.distance - right.distance
+      || String(left.victimName || "").localeCompare(String(right.victimName || ""))
+    ));
+    return incidents[0] || null;
+  }
+
+  getPkAssistActiveIncident(snapshot = this.lastSnapshot) {
+    if (!this.options?.pkAssistEnabled) {
+      return null;
+    }
+    return this.getPkAssistLocalIncident(snapshot) || this.getPkAssistSharedIncident(snapshot);
+  }
+
+  isPkAssistSameAggressor(entry = null, incident = null) {
+    if (!entry || !incident) {
+      return false;
+    }
+
+    const entryId = Number(entry?.id);
+    const incidentId = Number(incident?.aggressorId);
+    if (Number.isFinite(entryId) && Number.isFinite(incidentId) && entryId === incidentId) {
+      return true;
+    }
+
+    const entryKey = this.getNameKey(entry?.name);
+    const incidentKey = this.getNameKey(incident?.aggressorName);
+    return Boolean(entryKey && incidentKey && entryKey === incidentKey);
+  }
+
+  isPkAssistCurrentAggressor(snapshot = this.lastSnapshot) {
+    const incident = this.getPkAssistActiveIncident(snapshot);
+    return Boolean(
+      snapshot?.currentTarget
+      && incident
+      && this.isPkAssistSameAggressor(snapshot.currentTarget, incident)
+    );
+  }
+
+  choosePkAssistEscape(snapshot = this.lastSnapshot, incident = null) {
+    if (!snapshot?.ready || !incident || snapshot.isMoving || snapshot.pathfinderAutoWalking) {
+      return null;
+    }
+
+    const playerPosition = snapshot.playerPosition || null;
+    const healthPercent = Number(snapshot.playerStats?.healthPercent);
+    const threshold = this.getPkAssistRetreatHealthPercent();
+    if (!playerPosition || threshold <= 0 || !Number.isFinite(healthPercent) || healthPercent <= 0 || healthPercent > threshold) {
+      return null;
+    }
+
+    const cooldownMs = this.getPkAssistCooldownMs();
+    const now = this.getNow();
+    if (now - this.getLastModuleActionAt("pkAssist", 0) < cooldownMs) {
+      return null;
+    }
+
+    const visibleAggressor = incident.visibleAggressor || this.findVisiblePkAssistAggressor(snapshot, incident);
+    const focusTarget = visibleAggressor || {
+      id: incident.aggressorId,
+      name: incident.aggressorName,
+      position: incident.aggressorPosition,
+      healthPercent: incident.aggressorHealthPercent,
+      isShootable: true,
+      reachableForCombat: true,
+      withinCombatWindow: true,
+    };
+    const currentDistance = this.getEntryDistance(focusTarget, playerPosition);
+    if (!focusTarget?.position || !Number.isFinite(currentDistance)) {
+      return null;
+    }
+
+    const maxDistance = Math.max(2, Math.trunc(Number(this.options.pkAssistRetreatDistance) || DEFAULTS.pkAssistRetreatDistance));
+    const dynamicMinDistance = Math.max(2, currentDistance + 1);
+    const minDistance = Math.min(dynamicMinDistance, maxDistance);
+    const rule = normalizeDistanceKeeperRule({
+      enabled: true,
+      label: "PK retreat",
+      minTargetDistance: minDistance,
+      maxTargetDistance: Math.max(minDistance, maxDistance),
+      minMonsterCount: 1,
+      cooldownMs,
+      behavior: "escape",
+      dodgeBeams: true,
+      dodgeWaves: true,
+      requireTarget: false,
+    }, DEFAULT_DISTANCE_KEEPER_RULE);
+    const threats = [focusTarget];
+    const currentRiskSummary = this.getThreatRiskSummary(playerPosition, threats);
+    const currentShootableBlockers = this.getScreenBlockerCountBetweenPositions(
+      playerPosition,
+      focusTarget.position,
+      snapshot,
+      { excludeIds: [focusTarget.id] },
+    );
+    const scoredPositions = [];
+
+    for (const position of this.getDistanceKeeperCandidatePositions(snapshot, playerPosition)) {
+      const scored = this.scoreDistanceKeeperPosition({
+        snapshot,
+        position,
+        currentPosition: playerPosition,
+        focusTarget,
+        focusProfile: null,
+        threats,
+        rule,
+        currentDistance,
+        currentRiskSummary,
+        currentShootableBlockers,
+      });
+
+      if (!scored) continue;
+      scoredPositions.push({
+        position,
+        ...scored,
+      });
+    }
+
+    if (!scoredPositions.length) {
+      return null;
+    }
+
+    const escapeCandidates = scoredPositions.some((entry) => entry.nextDistance > currentDistance)
+      ? scoredPositions.filter((entry) => entry.nextDistance > currentDistance)
+      : scoredPositions;
+    escapeCandidates.sort((left, right) => (
+      right.score - left.score
+      || right.nextDistance - left.nextDistance
+      || left.nextRisk - right.nextRisk
+      || Math.abs(left.position.x - playerPosition.x) + Math.abs(left.position.y - playerPosition.y)
+      - (Math.abs(right.position.x - playerPosition.x) + Math.abs(right.position.y - playerPosition.y))
+    ));
+
+    const best = escapeCandidates[0];
+    if (
+      best.position.x === playerPosition.x
+      && best.position.y === playerPosition.y
+      && best.position.z === playerPosition.z
+    ) {
+      return null;
+    }
+
+    return {
+      type: "pk-assist-escape",
+      moduleKey: "pkAssist",
+      ruleIndex: 0,
+      label: "PK retreat",
+      destination: best.position,
+      target: focusTarget,
+      currentDistance,
+      nextDistance: best.nextDistance,
+      healthPercent,
+      threshold,
+      reason: "escape",
+      incident,
+    };
+  }
+
+  choosePkAssistRegroup(snapshot = this.lastSnapshot, incident = null) {
+    if (!snapshot?.ready || !incident?.victimPosition || snapshot.isMoving || snapshot.pathfinderAutoWalking) {
+      return null;
+    }
+
+    const playerPosition = snapshot.playerPosition || null;
+    const victimPosition = incident.victimPosition;
+    const currentDistance = this.getPositionDistance(playerPosition, victimPosition);
+    if (!Number.isFinite(currentDistance) || currentDistance <= 2 || currentDistance > this.getPkAssistRadiusSqm()) {
+      return null;
+    }
+
+    const cooldownMs = this.getPkAssistCooldownMs();
+    const now = this.getNow();
+    if (now - this.getLastModuleActionAt("pkAssist", 2) < cooldownMs) {
+      return null;
+    }
+
+    const tileMap = this.getDistanceKeeperTileMap(snapshot);
+    const connectedTileKeys = tileMap.size ? this.getConnectedTileKeys(tileMap, playerPosition) : new Set();
+    const occupiedTileKeys = this.getDistanceKeeperOccupiedTileKeys(snapshot, playerPosition);
+    const candidates = this.getDistanceKeeperCandidatePositions(snapshot, playerPosition)
+      .filter((position) => {
+        const key = this.getPositionKey(position);
+        if (!key) return false;
+        if (tileMap.size && !connectedTileKeys.has(key)) return false;
+        if (occupiedTileKeys.has(key)) return false;
+        if (this.shouldAvoidPosition(snapshot, position)) return false;
+        return !this.isRecentlyBlockedWalkDestination(position);
+      })
+      .map((position) => ({
+        position,
+        victimDistance: this.getPositionDistance(position, victimPosition),
+        selfDistance: this.getPositionDistance(position, playerPosition),
+      }))
+      .filter((entry) => Number.isFinite(entry.victimDistance));
+
+    if (!candidates.length) {
+      return null;
+    }
+
+    candidates.sort((left, right) => (
+      left.victimDistance - right.victimDistance
+      || left.selfDistance - right.selfDistance
+      || left.position.x - right.position.x
+      || left.position.y - right.position.y
+    ));
+
+    if (candidates[0].victimDistance >= currentDistance) {
+      return null;
+    }
+
+    return {
+      type: "pk-assist-regroup",
+      moduleKey: "pkAssist",
+      ruleIndex: 2,
+      label: "PK assist regroup",
+      destination: candidates[0].position,
+      target: {
+        name: incident.victimName,
+        position: victimPosition,
+      },
+      currentDistance,
+      nextDistance: candidates[0].victimDistance,
+      reason: "assist-regroup",
+      incident,
+    };
+  }
+
+  choosePkAssistAction(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready || !this.options?.pkAssistEnabled) {
+      return null;
+    }
+
+    const confidenceGate = this.getDecisionGateForOwner("pkAssist", snapshot);
+    if (!confidenceGate.ok) {
+      this.recordSnapshotBlockedDecision("pkAssist", confidenceGate);
+      return null;
+    }
+
+    const localIncident = this.getPkAssistLocalIncident(snapshot);
+    const sharedIncident = this.getPkAssistSharedIncident(snapshot);
+    const incident = localIncident || sharedIncident;
+    if (!incident) {
+      return null;
+    }
+
+    if (localIncident && this.canPkAssistEvade()) {
+      const escapeAction = this.choosePkAssistEscape(snapshot, localIncident);
+      if (escapeAction) {
+        return escapeAction;
+      }
+    }
+
+    if (!this.canPkAssistAttack()) {
+      return null;
+    }
+
+    const visibleAggressor = incident.visibleAggressor || this.findVisiblePkAssistAggressor(snapshot, incident);
+    if (visibleAggressor?.position) {
+      const distance = this.getPositionDistance(snapshot.playerPosition, visibleAggressor.position);
+      if (!Number.isFinite(distance) || distance > this.getPkAssistRadiusSqm()) {
+        return null;
+      }
+
+      if (this.isPkAssistSameAggressor(snapshot.currentTarget, incident)) {
+        return null;
+      }
+
+      const cooldownMs = this.getPkAssistCooldownMs();
+      if (this.getNow() - this.getLastModuleActionAt("pkAssist", 1) < cooldownMs) {
+        return null;
+      }
+
+      return {
+        type: "pk-assist-target",
+        moduleKey: "pkAssist",
+        ruleIndex: 1,
+        label: visibleAggressor.name,
+        selection: {
+          chosen: visibleAggressor,
+          candidates: [visibleAggressor],
+          signature: String(visibleAggressor.id ?? visibleAggressor.name ?? ""),
+          targetSource: "pk-assist",
+          refresh: false,
+        },
+        incident,
+        reason: localIncident ? "self-attacked" : "ally-attacked",
+      };
+    }
+
+    if (sharedIncident) {
+      return this.choosePkAssistRegroup(snapshot, sharedIncident);
+    }
+
+    return null;
+  }
+
+  getPkAssistSupportTarget(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready || !this.options?.pkAssistEnabled) {
+      return null;
+    }
+
+    const incident = this.getPkAssistSharedIncident(snapshot);
+    if (!incident?.victimName) {
+      return null;
+    }
+
+    return this.getVisiblePlayerByName(snapshot, incident.victimName);
+  }
+
+  getPkAssistStatus(snapshot = this.lastSnapshot) {
+    const localIncident = this.getPkAssistLocalIncident(snapshot);
+    const sharedIncident = this.options?.pkAssistEnabled ? this.getPkAssistSharedIncident(snapshot) : null;
+    const incident = localIncident || sharedIncident;
+    const visibleAggressor = incident
+      ? (incident.visibleAggressor || this.findVisiblePkAssistAggressor(snapshot, incident))
+      : null;
+
+    return {
+      enabled: Boolean(this.options?.pkAssistEnabled),
+      mode: this.getPkAssistMode(),
+      active: Boolean(this.options?.pkAssistEnabled && incident),
+      source: incident?.source || null,
+      victimName: incident?.victimName || "",
+      aggressorName: incident?.aggressorName || "",
+      aggressorVisible: Boolean(visibleAggressor),
+      allyCount: this.getPkAssistCoordinationMembers().filter((member) => member.enabled).length,
+      radiusSqm: this.getPkAssistRadiusSqm(),
+      retreatHealthPercent: this.getPkAssistRetreatHealthPercent(),
+      updatedAt: incident?.updatedAt || 0,
+    };
+  }
+
+  async attemptPkAssist(snapshot = this.lastSnapshot) {
+    const action = this.choosePkAssistAction(snapshot);
+    if (!action) {
+      return { action: null, result: null };
+    }
+
+    if (action.type === "pk-assist-target") {
+      const result = await this.target(action.selection, {
+        sharedSpawnMode: "attack-all",
+        trustedPlayerNames: Array.from(this.getPkAssistTrustedPlayerKeys(snapshot)),
+        foreignPlayers: [],
+      });
+      if (result?.ok) {
+        this.markModuleAction("pkAssist", 1, this.getNow());
+      }
+      return { action, result };
+    }
+
+    if (action.destination) {
+      const result = await this.reposition(action);
+      if (result?.ok) {
+        this.markModuleAction("pkAssist", action.ruleIndex || null, this.getNow());
+      }
+      return { action, result };
+    }
+
+    return {
+      action,
+      result: { ok: false, reason: "unsupported pk assist action" },
+    };
   }
 
   isFollowTrainCoordinationMemberTemporarilyDisabled(member = null, chainIndex = -1) {
@@ -20449,6 +21382,7 @@ export class MinibiaTargetBot {
       ? adapter
       : null;
     this.routeCoordinationState = null;
+    this.pkAssistCoordinationState = null;
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
     this.lastRouteCoordinationSyncAt = 0;
@@ -20460,6 +21394,13 @@ export class MinibiaTargetBot {
       ? adapter
       : null;
     this.followTrainCoordinationState = null;
+  }
+
+  setPkAssistCoordinationAdapter(adapter = null) {
+    this.pkAssistCoordinationAdapter = adapter && typeof adapter.sync === "function"
+      ? adapter
+      : null;
+    this.pkAssistCoordinationState = null;
   }
 
   hasLiveAuxiliarySnapshotContext(snapshot = this.lastSnapshot) {
@@ -20561,6 +21502,25 @@ export class MinibiaTargetBot {
     return this.followTrainCoordinationState;
   }
 
+  async syncPkAssistCoordination(snapshot = this.lastSnapshot, {
+    now = this.getNow(),
+  } = {}) {
+    if (!this.pkAssistCoordinationAdapter) {
+      this.pkAssistCoordinationState = null;
+      return null;
+    }
+
+    const state = await this.pkAssistCoordinationAdapter.sync({
+      options: this.options,
+      snapshot,
+      running: this.running,
+      now,
+    });
+
+    this.pkAssistCoordinationState = state || null;
+    return this.pkAssistCoordinationState;
+  }
+
   async releaseRouteCoordination() {
     this.routeCoordinationState = null;
     this.routeSpacingHold = null;
@@ -20583,6 +21543,16 @@ export class MinibiaTargetBot {
     }
 
     return this.followTrainCoordinationAdapter.release();
+  }
+
+  async releasePkAssistCoordination() {
+    this.pkAssistCoordinationState = null;
+
+    if (!this.pkAssistCoordinationAdapter || typeof this.pkAssistCoordinationAdapter.release !== "function") {
+      return null;
+    }
+
+    return this.pkAssistCoordinationAdapter.release();
   }
 
   getRouteSpacingWindow(activeCount = 0) {
@@ -21074,9 +22044,18 @@ export class MinibiaTargetBot {
   shouldHoldForRouteSpacing(candidateIndex = this.routeIndex) {
     const advice = this.getRouteSpacingAdvice(candidateIndex);
     const now = this.getNow();
-    this.pruneRouteSpacingBypass(now);
+    const activeBypass = this.pruneRouteSpacingBypass(now);
     if (!advice?.hold) {
       this.routeSpacingHold = null;
+      return false;
+    }
+
+    const blockingPeerId = String(advice.blockingPeer?.instanceId || "");
+    if (
+      activeBypass
+      && activeBypass.routeIndex === this.routeIndex
+      && activeBypass.peerInstanceId === blockingPeerId
+    ) {
       return false;
     }
 
@@ -21113,6 +22092,34 @@ export class MinibiaTargetBot {
         peerProgressKey,
         lastPeerProgressAt: now,
       };
+
+    const heldMs = now - (Number(nextHold.startedAt) || now);
+    const peerStaleMs = now - (Number(nextHold.lastPeerProgressAt) || Number(nextHold.startedAt) || now);
+    const selfMemberForBypass = advice.selfMember || this.getRouteSpacingSelfMember(advice.members);
+    const selfHasBypassPriority = Boolean(
+      selfMemberForBypass
+      && advice.blockingPeer
+      && this.compareRouteSpacingPriority(selfMemberForBypass, advice.blockingPeer) < 0
+    );
+    if (
+      blockingPeerId
+      && selfHasBypassPriority
+      && heldMs >= ROUTE_SPACING_HOLD_BYPASS_MS
+      && peerStaleMs >= ROUTE_SPACING_HOLD_BYPASS_MS
+    ) {
+      this.routeSpacingBypass = {
+        routeIndex: this.routeIndex,
+        peerInstanceId: blockingPeerId,
+        createdAt: now,
+        until: now + ROUTE_SPACING_HOLD_BYPASS_WINDOW_MS,
+      };
+      this.routeSpacingHold = null;
+      this.log(
+        `Autowalk bypassing stale route spacing at waypoint ${this.routeIndex + 1}`
+        + ` after ${Math.max(1, Math.round(heldMs / 1000))}s`,
+      );
+      return false;
+    }
 
     if (now - nextHold.lastLogAt >= ROUTE_SPACING_LOG_COOLDOWN_MS) {
       const peerLabel = this.getRouteSpacingPeerLabel(advice.blockingPeer);
@@ -23168,6 +24175,7 @@ export class MinibiaTargetBot {
     this.stop();
     await this.releaseRouteCoordination().catch(() => { });
     await this.releaseFollowTrainCoordination().catch(() => { });
+    await this.releasePkAssistCoordination().catch(() => { });
 
     if (this.cdp) {
       try {
@@ -23451,6 +24459,7 @@ export class MinibiaTargetBot {
           now,
         }).catch(() => null),
         this.syncFollowTrainCoordination(snapshot, { now }).catch(() => null),
+        this.syncPkAssistCoordination(snapshot, { now }).catch(() => null),
         this.syncWaypointOverlay(snapshot, {
           throttle: this.running,
           now,
@@ -23524,6 +24533,101 @@ export class MinibiaTargetBot {
     );
   }
 
+  isChaseToKillProfile(profile = null) {
+    if (!profile || profile.stickToTarget === false || this.isEscapeTargetProfile(profile)) {
+      return false;
+    }
+
+    const profileChaseMode = normalizeChaseModeOption(profile.chaseMode, "auto");
+    if (profileChaseMode === "chase" || profileChaseMode === "aggressive") {
+      return true;
+    }
+
+    const behavior = String(profile.behavior || "").trim().toLowerCase();
+    const configuredChaseMode = this.getConfiguredChaseMode();
+    return behavior === "hold"
+      && (configuredChaseMode === "chase" || configuredChaseMode === "aggressive");
+  }
+
+  isEntrySameFloorAsPlayer(entry = null, playerPosition = null) {
+    const position = entry?.position || null;
+    if (!position || !playerPosition) {
+      return false;
+    }
+
+    const entryZ = Number(position.z);
+    const playerZ = Number(playerPosition.z);
+    return Number.isFinite(entryZ)
+      && Number.isFinite(playerZ)
+      && entryZ === playerZ;
+  }
+
+  getStickyCurrentTargetCandidate(snapshot, candidates = [], {
+    allowPriorityBreak = true,
+  } = {}) {
+    const currentTarget = snapshot?.currentTarget || null;
+    if (!currentTarget || this.isEscapeEntry(currentTarget)) {
+      return null;
+    }
+
+    const profile = this.getTargetProfile(currentTarget?.name);
+    if (!profile || profile.stickToTarget === false) {
+      return null;
+    }
+
+    const chaseToKill = this.isChaseToKillProfile(profile);
+    const currentTargetId = Number(currentTarget?.id);
+    const matchedCandidate = Number.isFinite(currentTargetId)
+      ? (Array.isArray(candidates) ? candidates : [])
+        .find((candidate) => Number(candidate?.id) === currentTargetId) || null
+      : null;
+    const stickyCandidate = matchedCandidate || currentTarget;
+    const playerPosition = snapshot?.playerPosition || null;
+    const insideConfiguredCombatWindow = this.isEntryInsideConfiguredCombatWindow(stickyCandidate, playerPosition);
+
+    if (this.isEntryBlockedBySharedSpawn(stickyCandidate, snapshot)) {
+      return null;
+    }
+    if (!this.isEntryAllowedByRouteSpacingForCombat(stickyCandidate, snapshot)) {
+      return null;
+    }
+
+    if (chaseToKill) {
+      if (!this.isEntrySameFloorAsPlayer(stickyCandidate, playerPosition)) {
+        return null;
+      }
+      if (insideConfiguredCombatWindow && !this.isEntryReachableForCombat(stickyCandidate)) {
+        return null;
+      }
+    } else {
+      if (!this.isEntryWithinCombatWindow(stickyCandidate, playerPosition)) {
+        return null;
+      }
+      if (!this.isEntryReachableForCombat(stickyCandidate)) {
+        return null;
+      }
+    }
+
+    const topCandidate = Array.isArray(candidates) && candidates.length ? candidates[0] : null;
+    const topCandidateId = Number(topCandidate?.id);
+    if (
+      allowPriorityBreak
+      && !chaseToKill
+      && topCandidate
+      && Number.isFinite(topCandidateId)
+      && Number.isFinite(currentTargetId)
+      && topCandidateId !== currentTargetId
+    ) {
+      const currentScore = this.getTargetPriorityScore(stickyCandidate, playerPosition, snapshot);
+      const topScore = this.getTargetPriorityScore(topCandidate, playerPosition, snapshot);
+      if (Number.isFinite(topScore) && Number.isFinite(currentScore) && topScore > currentScore) {
+        return null;
+      }
+    }
+
+    return stickyCandidate;
+  }
+
   chooseTarget(snapshot) {
     if (!snapshot?.ready) return null;
     const confidenceGate = this.getDecisionGateForOwner("targeter", snapshot);
@@ -23575,6 +24679,12 @@ export class MinibiaTargetBot {
 
     if (!candidates.length) {
       this.buildTargetScoreReport(snapshot);
+      return null;
+    }
+
+    const stickyCurrentTarget = this.getStickyCurrentTargetCandidate(snapshot, candidates);
+    if (stickyCurrentTarget) {
+      this.buildTargetScoreReport(snapshot, { selection: stickyCurrentTarget });
       return null;
     }
 
@@ -24015,7 +25125,7 @@ export class MinibiaTargetBot {
     if (this.isEntryBlockedBySharedSpawn(entry, snapshot)) {
       reasons.push("shared spawn reserved");
     }
-    if (!this.isEntryInsideRouteSpacingSector(entry, snapshot)) {
+    if (!this.isEntryAllowedByRouteSpacingForCombat(entry, snapshot)) {
       reasons.push("route spacing lane");
     }
     if (!this.isEntryWithinCombatWindow(entry, playerPosition)) {
@@ -24269,10 +25379,7 @@ export class MinibiaTargetBot {
       : [];
   }
 
-  isEntryWithinCombatWindow(entry, playerPosition = null) {
-    if (entry?.withinCombatWindow === true) return true;
-    if (entry?.withinCombatWindow === false) return false;
-
+  isEntryInsideConfiguredCombatWindow(entry, playerPosition = null) {
     const position = entry?.position;
     if (!position || !playerPosition) return false;
 
@@ -24290,6 +25397,13 @@ export class MinibiaTargetBot {
 
     return dx <= Number(this.options.rangeX)
       && dy <= Number(this.options.rangeY);
+  }
+
+  isEntryWithinCombatWindow(entry, playerPosition = null) {
+    if (entry?.withinCombatWindow === true) return true;
+    if (entry?.withinCombatWindow === false) return false;
+
+    return this.isEntryInsideConfiguredCombatWindow(entry, playerPosition);
   }
 
   isEntryWithinCombatBox(entry, playerPosition = null) {
@@ -24509,6 +25623,13 @@ export class MinibiaTargetBot {
     if (!snapshot?.ready) return false;
 
     const playerPosition = snapshot.playerPosition || null;
+    const stickyCurrentTarget = this.getStickyCurrentTargetCandidate(snapshot, [], {
+      allowPriorityBreak: false,
+    });
+    if (stickyCurrentTarget) {
+      return true;
+    }
+
     const visibleTargets = this.getCombatCandidates(snapshot);
     const reachTargets = this.getReachCombatCandidates(snapshot);
     const trackedTargets = this.getTrackedTargets(snapshot);
@@ -24527,7 +25648,7 @@ export class MinibiaTargetBot {
     if (Number.isFinite(currentTargetId)) {
       if (
         !this.isEntryBlockedBySharedSpawn(snapshot.currentTarget, snapshot)
-        && this.isEntryInsideRouteSpacingSector(snapshot.currentTarget, snapshot)
+        && this.isEntryAllowedByRouteSpacingForCombat(snapshot.currentTarget, snapshot)
       ) {
         const trackedCurrentTarget = this.findTrackedTargetById(snapshot, currentTargetId);
         if (trackedCurrentTarget
@@ -25622,7 +26743,7 @@ export class MinibiaTargetBot {
   }
 
   getCombatFloorTransitionNoGoAt(snapshot, position) {
-    if (!snapshot?.ready || !position || !this.shouldHoldRouteForCombat(snapshot)) {
+    if (!position || !this.shouldGuardCombatFloorTransitions(snapshot)) {
       return null;
     }
 
@@ -25695,8 +26816,18 @@ export class MinibiaTargetBot {
     )) || null;
   }
 
+  shouldGuardCombatFloorTransitions(snapshot = this.lastSnapshot) {
+    return Boolean(
+      snapshot?.ready
+      && (
+        this.shouldHoldRouteForCombat(snapshot)
+        || this.hasActiveDirectionalDodgeRisk(snapshot)
+      )
+    );
+  }
+
   getCombatFloorTransitionDangerZoneAt(snapshot, position, options = {}) {
-    if (!snapshot?.ready || !position || !this.shouldHoldRouteForCombat(snapshot)) {
+    if (!position || !this.shouldGuardCombatFloorTransitions(snapshot)) {
       return null;
     }
 
@@ -28699,6 +29830,18 @@ export class MinibiaTargetBot {
       return visiblePartner;
     }
 
+    const pkAssistSupportTarget = this.getPkAssistSupportTarget(snapshot);
+    if (pkAssistSupportTarget?.name && this.isPkAssistTrustedPlayerEntry(pkAssistSupportTarget, snapshot)) {
+      return pkAssistSupportTarget;
+    }
+
+    const trustedVisiblePlayers = visiblePlayers
+      .filter((entry) => this.isPkAssistTrustedPlayerEntry(entry, snapshot))
+      .sort((left, right) => (
+        (Number(left.healthPercent) || 101) - (Number(right.healthPercent) || 101)
+        || String(left.name || "").localeCompare(String(right.name || ""))
+      ));
+
     const currentTarget = snapshot?.currentTarget || null;
     const currentTargetVisiblePlayer = currentTarget?.name
       ? visiblePlayers.find((entry) => this.getNameKey(entry?.name) === this.getNameKey(currentTarget.name)) || null
@@ -28706,11 +29849,16 @@ export class MinibiaTargetBot {
     if (
       currentTargetVisiblePlayer?.name
       && Number.isFinite(Number(currentTargetVisiblePlayer.healthPercent))
+      && this.isPkAssistTrustedPlayerEntry(currentTargetVisiblePlayer, snapshot)
     ) {
       return currentTargetVisiblePlayer;
     }
 
-    return visiblePlayers.length === 1 ? visiblePlayers[0] : null;
+    if (trustedVisiblePlayers.length) {
+      return trustedVisiblePlayers[0];
+    }
+
+    return null;
   }
 
   getHealerRuleRuntimeContext(rule = {}, snapshot = this.lastSnapshot, supportTarget = null) {
@@ -31403,6 +32551,9 @@ export class MinibiaTargetBot {
       ...(Array.isArray(snapshot?.waypointAutoAvoidHazards) ? snapshot.waypointAutoAvoidHazards : []),
       ...(Array.isArray(snapshot?.elementalFields) ? snapshot.elementalFields : []),
     ];
+    const floorTransitionDestinationKey = this.isFloorTransitionWaypointType(waypoint)
+      ? this.getPositionKey(destination)
+      : "";
 
     return hazards.some((entry) => {
       if (
@@ -31410,6 +32561,10 @@ export class MinibiaTargetBot {
         || Math.trunc(Number(entry.position.z)) !== Math.trunc(playerZ)
         || !this.hasActiveNonFloorTransitionHazard(entry)
       ) {
+        return false;
+      }
+
+      if (floorTransitionDestinationKey && this.getPositionKey(entry.position) !== floorTransitionDestinationKey) {
         return false;
       }
 
@@ -33611,7 +34766,11 @@ export class MinibiaTargetBot {
     return null;
   }
 
-  async target(selection) {
+  async target(selection, {
+    sharedSpawnMode = this.getSharedSpawnMode(),
+    trustedPlayerNames = Array.from(this.getSharedSpawnTrustedPlayerKeys(this.lastSnapshot)),
+    foreignPlayers = this.getSharedSpawnForeignPlayers(this.lastSnapshot),
+  } = {}) {
     if (!selection) return null;
 
     let chosen = selection.chosen || selection;
@@ -33649,10 +34808,10 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, target: chosen, candidates };
     }
 
-    const result = await this.cdp.evaluate(buildTargetExpression(candidates.map((candidate) => candidate.id), {
-      sharedSpawnMode: this.getSharedSpawnMode(),
-      trustedPlayerNames: Array.from(this.getSharedSpawnTrustedPlayerKeys(this.lastSnapshot)),
-      foreignPlayers: this.getSharedSpawnForeignPlayers(this.lastSnapshot),
+    const result = await this.cdp.evaluate(buildTargetExpression([chosen.id], {
+      sharedSpawnMode,
+      trustedPlayerNames,
+      foreignPlayers,
     }));
 
     if (result?.ok) {
@@ -36044,34 +37203,7 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
-    const acceptedClickStalled = this.isAcceptedWalkStalled(this.lastSnapshot, walkKey, destination, now, {
-      minDelayMs: FOLLOW_TRAIN_ACCEPTED_WALK_STALL_MS,
-    });
-    if (acceptedClickStalled) {
-      const nativeResult = await executeNativeFollowTrainWalk("stalled viewport click");
-      if (nativeResult?.ok) {
-        return { ...nativeResult, destination };
-      }
-
-      this.setLastWalkAttempt(walkKey, origin, {
-        destination,
-        glideTargetIndex,
-        now,
-        pendingProgress: false,
-        preserveFailures: true,
-      });
-      this.noteWalkFailure(walkKey, { origin });
-      this.log(`Follow chain client path failed toward ${targetName}: ${nativeResult?.reason || "unknown error"}`);
-      return nativeResult;
-    }
-
-    const clickResult = await this.clickViewportWalk(destination);
-    if (clickResult?.ok) {
-      recordAcceptedFollowTrainWalk("viewport-click");
-      return { ...clickResult, destination };
-    }
-
-    const nativeResult = await executeNativeFollowTrainWalk(clickResult?.reason || "viewport click failed");
+    const nativeResult = await executeNativeFollowTrainWalk();
     if (nativeResult?.ok) {
       return { ...nativeResult, destination };
     }
@@ -36083,13 +37215,12 @@ export class MinibiaTargetBot {
       preserveFailures: true,
     });
     this.noteWalkFailure(walkKey, { origin });
-    const failureReason = nativeResult?.reason || clickResult?.reason || "unknown error";
+    const failureReason = nativeResult?.reason || "unknown error";
     this.log(`Follow chain move failed toward ${targetName}: ${failureReason}`);
     return nativeResult?.reason ? {
-      ...clickResult,
-      nativeResult,
+      ...nativeResult,
       reason: failureReason,
-    } : clickResult;
+    } : nativeResult;
   }
 
   async followTrainFollowCreature(action = {}) {
@@ -37059,7 +38190,11 @@ export class MinibiaTargetBot {
         }
       }
 
-      if (snapshot.currentTarget && this.isEntryBlockedBySharedSpawn(snapshot.currentTarget, snapshot)) {
+      if (
+        snapshot.currentTarget
+        && !this.isPkAssistCurrentAggressor(snapshot)
+        && this.isEntryBlockedBySharedSpawn(snapshot.currentTarget, snapshot)
+      ) {
         const clearAggroResult = await this.clearAggro().catch(() => null);
         if (clearAggroResult?.ok) {
           snapshot = {
@@ -37069,7 +38204,11 @@ export class MinibiaTargetBot {
         }
       }
 
-      if (snapshot.currentTarget && !this.isEntryInsideRouteSpacingSector(snapshot.currentTarget, snapshot)) {
+      if (
+        snapshot.currentTarget
+        && !this.isPkAssistCurrentAggressor(snapshot)
+        && !this.isEntryAllowedByRouteSpacingForCombat(snapshot.currentTarget, snapshot)
+      ) {
         const clearAggroResult = await this.clearAggro().catch(() => null);
         if (clearAggroResult?.ok) {
           snapshot = {
@@ -37080,6 +38219,19 @@ export class MinibiaTargetBot {
       }
 
       this.refreshFollowTrainRuntime(snapshot);
+
+      const pkAssistAttempt = await this.attemptPkAssist(snapshot);
+      if (pkAssistAttempt.result?.ok) {
+        this.recordDecision({
+          owner: "pkAssist",
+          action: pkAssistAttempt.action,
+          result: pkAssistAttempt.result,
+          state: "acted",
+          reason: pkAssistAttempt.action?.reason || pkAssistAttempt.action?.type || "pk assist",
+          suppressedOwners: ["route", "targeter"],
+        });
+        return snapshot;
+      }
 
       const pausedCavebotResult = await this.handlePausedCavebotTick(snapshot, {
         healingPriorityActive,
@@ -37548,6 +38700,7 @@ export class MinibiaTargetBot {
     this.clearReconnectDeathBlock();
     void this.releaseRouteCoordination().catch(() => { });
     void this.releaseFollowTrainCoordination().catch(() => { });
+    void this.releasePkAssistCoordination().catch(() => { });
     void this.syncWaypointOverlay(this.lastSnapshot).catch(() => { });
     this.log("Bot stopped");
   }

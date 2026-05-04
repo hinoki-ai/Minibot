@@ -150,8 +150,9 @@ Do not document backlog-only route fields as current runtime schema.
   explicit names, generic slot requests, or vendored item metadata.
 - Looting uses keep lists, skip lists, and preferred container routing rather
   than one-off corpse scripts.
-- Follow chain uses `partyFollow*` keys. Slot 1 leads; each later member follows
-  the name directly above it.
+- Follow chain uses `partyFollow*` keys. Multiple independent chains may run at
+  once. Slot 1 leads; each later member follows the name directly above it.
+- Follow chain members may be live tabs, seen players, or manual player names.
 - Follow chain supports `follow-and-fight` and `follow-only` plus per-member
   tactical roles such as `front-guard`, `assist-dps`, `sio-healer`,
   `party-buffer`, `rearguard`, and `scout`.

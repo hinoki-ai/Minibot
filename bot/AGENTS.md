@@ -67,7 +67,11 @@ Rules:
 6. Delete stale duplicate documentation once canon is updated.
 7. Runtime behavior belongs in `lib/`; renderer event handlers should stay
    presentation-oriented.
-8. Run `npm run check:structure` after changing repository layout, canonical
+8. When a live Minibia session is available and safe to exercise, validate
+   against that live session first. Use mocked, fake-user, or synthetic tests
+   only after the live path is impossible, unsafe, or already covered for
+   regression.
+9. Run `npm run check:structure` after changing repository layout, canonical
    documentation, package entry points, or portable storage boundaries.
 
 ## Task Entry Points
