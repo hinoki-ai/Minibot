@@ -2,7 +2,8 @@
   "cavebotName": "a/b",
   "creatureLedger": {
     "monsters": [],
-    "players": []
+    "players": [],
+    "npcs": []
   },
   "cavebotPaused": false,
   "stopAggroHold": false

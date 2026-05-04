@@ -5,7 +5,8 @@
   "monster": "Rotworm",
   "creatureLedger": {
     "monsters": [],
-    "players": []
+    "players": [],
+    "npcs": []
   },
   "targetProfiles": [],
   "intervalMs": 250,

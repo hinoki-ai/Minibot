@@ -446,6 +446,7 @@ test("tick lets the migrated healer rune tier outrank sustain health potions", a
     healerEmergencyHealthPercent: 0,
     healerRuneName: "Ultimate Healing Rune",
     healerRuneHealthPercent: 35,
+    preferHotbarConsumables: false,
   });
   const usedItems = [];
 
@@ -482,8 +483,18 @@ test("tick lets the migrated healer rune tier outrank sustain health potions", a
       manaPercent: 75,
     },
     hotbar: {
-      slotCount: 0,
-      slots: [],
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 6,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 6 },
+          enabled: true,
+        },
+      ],
     },
     containers: [
       {
@@ -552,8 +563,18 @@ test("tick fires the migrated healer rune hotkey before sustain or covered spell
       manaPercent: 75,
     },
     hotbar: {
-      slotCount: 0,
-      slots: [],
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 6,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 6 },
+          enabled: true,
+        },
+      ],
     },
     containers: [],
     visibleCreatures: [],
@@ -586,6 +607,94 @@ test("tick fires the migrated healer rune hotkey before sustain or covered spell
   assert.equal(pressedHotkeys[0]?.ruleIndex, 0);
   assert.equal(pressedHotkeys[0]?.hotkey, "F5");
   assert.equal(pressedHotkeys[0]?.target, "self");
+});
+
+test("tick keeps emergency healing after an unconfirmed rune hotkey", async () => {
+  const bot = createBot({
+    vocation: "knight",
+    healerEnabled: true,
+    healerEmergencyHealthPercent: 60,
+    healerRules: [
+      {
+        enabled: true,
+        label: "UH",
+        words: "Ultimate Healing Rune",
+        hotkey: "F5",
+        minHealthPercent: 0,
+        maxHealthPercent: 85,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 250,
+      },
+      {
+        enabled: true,
+        label: "exura",
+        words: "exura",
+        minHealthPercent: 0,
+        maxHealthPercent: 95,
+        minMana: 80,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+  });
+  const events = [];
+
+  installRefresh(bot, {
+    ready: true,
+    playerStats: {
+      health: 130,
+      maxHealth: 300,
+      healthPercent: 43,
+      mana: 90,
+      maxMana: 120,
+      manaPercent: 75,
+    },
+    hotbar: {
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 6,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 6 },
+          enabled: true,
+        },
+      ],
+    },
+    containers: [],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    hasLightCondition: true,
+  });
+
+  bot.attemptSustain = async () => {
+    events.push({ kind: "sustain" });
+    return { action: null, result: null };
+  };
+  bot.useHotkey = async (action) => {
+    events.push({ kind: "hotkey", action });
+    return { ok: true, transport: "keyboard-hotkey", hotkey: action.hotkey };
+  };
+  bot.castWords = async (action) => {
+    events.push({ kind: "cast", action });
+    bot.markModuleAction(action.moduleKey, action.ruleIndex, Date.now());
+    return { ok: true, words: action.words };
+  };
+
+  const snapshot = await bot.tick();
+
+  assert.equal(snapshot?.ready, true);
+  assert.deepEqual(events.map((event) => event.kind), ["hotkey", "cast"]);
+  assert.equal(events[0]?.action?.moduleKey, "healer");
+  assert.equal(events[0]?.action?.hotkey, "F5");
+  assert.equal(events[1]?.action?.moduleKey, "healer");
+  assert.equal(events[1]?.action?.words, "exura");
 });
 
 test("tick loots opened corpse containers before resuming route movement", async () => {

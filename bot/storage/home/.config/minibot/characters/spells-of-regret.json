@@ -123,7 +123,8 @@
       "Captain Sinbeard",
       "Shaaku"
     ],
-    "players": []
+    "players": [],
+    "npcs": []
   },
   "cavebotPaused": false,
   "stopAggroHold": false,

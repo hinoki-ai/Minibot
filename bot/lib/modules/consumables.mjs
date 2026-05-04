@@ -27,13 +27,23 @@ function normalizeText(value = "") {
   return String(value ?? "").trim();
 }
 
+function hasHotbarConsumableSupply(slot = {}) {
+  const rawCount = slot?.count ?? slot?.item?.count;
+  if (rawCount == null || rawCount === "") {
+    return true;
+  }
+
+  const count = Number(rawCount);
+  return !Number.isFinite(count) || count > 0;
+}
+
 export function findConsumableEntry(snapshotLike = {}, selector = {}, { preferHotbar = true } = {}) {
   const snapshot = toSnapshot(snapshotLike);
   const normalizedSelector = normalizeItemSelector(selector);
 
   if (preferHotbar) {
     const hotbarSlot = findHotbarSlot(snapshot, normalizedSelector);
-    if (hotbarSlot) {
+    if (hotbarSlot && hasHotbarConsumableSupply(hotbarSlot)) {
       return {
         ownerType: "hotbar",
         slotIndex: hotbarSlot.index,

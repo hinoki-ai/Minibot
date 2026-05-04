@@ -19,7 +19,6 @@ export const CANONICAL_BOT_MARKDOWN = Object.freeze([
   "README.md",
   "CANONICAL.md",
   "docs/ARCHITECTURE.md",
-  "docs/BOT_MASTERARCHIVE.md",
   "docs/MODULES.md",
   "docs/MINIBIA_RUNTIME_SURFACE.md",
   "docs/MINIBIA_ACTION_PRIMITIVES.md",

@@ -26,9 +26,7 @@
     "players": [
       "Zlocimir Wielkoportf",
       "Lady Larva",
-      "Minibia — Free Browser Tibia MMORPG",
       "Lord Larva",
-      "Sign in - Google Accounts",
       "Hi Agustin",
       "Holy Rat",
       "Dark Knight",
@@ -59,14 +57,19 @@
       "Kenny",
       "Deadlyek",
       "Kennie",
-      "minibia.com | 522: Connection timed out",
       "Lisura",
-      "Mia"
+      "Mia",
+      "Mclovin Doom Mage",
+      "Zeus",
+      "Los Bandoleros",
+      "Big Slug",
+      "Mercenario",
+      "Scouse Goebbels"
     ],
     "npcs": []
   },
   "cavebotPaused": false,
-  "alarmsEnabled": true,
+  "alarmsEnabled": false,
   "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false

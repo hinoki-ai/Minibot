@@ -734,7 +734,7 @@
   "deathHealHealthPercent": 20,
   "deathHealCooldownMs": 900,
   "healerEnabled": true,
-  "healerWords": "Ultimate Healing Rune",
+  "healerWords": "exura vita",
   "healerHealthPercent": 50,
   "healerEmergencyHealthPercent": 30,
   "healerRuneName": "",
@@ -814,6 +814,18 @@
   "autoEatCooldownMs": 55000,
   "autoEatRequireNoTargets": true,
   "autoEatRequireStationary": true,
+  "hasteEnabled": false,
+  "hasteWords": "utani hur",
+  "hasteHotkey": "",
+  "hasteMinMana": 60,
+  "hasteMinManaPercent": 0,
+  "hasteCooldownMs": 1500,
+  "hasteRequireNoTargets": false,
+  "hasteRequireStationary": false,
+  "hasteManaFluidEnabled": true,
+  "hasteManaFluidName": "Mana Fluid",
+  "hasteManaFluidHotkey": "",
+  "hasteManaFluidCooldownMs": 900,
   "ringAutoReplaceEnabled": false,
   "ringAutoReplaceItemName": "stealth ring",
   "ringAutoReplaceCooldownMs": 1000,
@@ -858,7 +870,7 @@
     {
       "enabled": true,
       "label": "",
-      "words": "Ultimate Healing Rune",
+      "words": "exura vita",
       "hotkey": "",
       "minHealthPercent": 0,
       "maxHealthPercent": 50,
@@ -867,7 +879,7 @@
       "cooldownMs": 900
     },
     {
-      "enabled": true,
+      "enabled": false,
       "label": "",
       "words": "exura",
       "hotkey": "",
@@ -880,7 +892,7 @@
   ],
   "healerTiers": [
     {
-      "words": "Ultimate Healing Rune",
+      "words": "exura vita",
       "healthPercent": 50,
       "minMana": 0,
       "minManaPercent": 0

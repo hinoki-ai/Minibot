@@ -151,6 +151,8 @@ const summaryFields = {
   manaWords: document.getElementById("summary-mana-words"),
   autoEat: document.getElementById("summary-auto-eat"),
   autoEatDetail: document.getElementById("summary-auto-eat-detail"),
+  haste: document.getElementById("summary-haste"),
+  hasteDetail: document.getElementById("summary-haste-detail"),
   ammo: document.getElementById("summary-ammo"),
   ammoDetail: document.getElementById("summary-ammo-detail"),
   ringAmuletAutoReplace: document.getElementById("summary-ring-amulet-auto-replace"),
@@ -190,6 +192,7 @@ const compactPanelFields = {
   deathHeal: document.getElementById("compact-death-heal-summary"),
   mana: document.getElementById("compact-mana-summary"),
   autoEat: document.getElementById("compact-auto-eat-summary"),
+  haste: document.getElementById("compact-haste-summary"),
   ammo: document.getElementById("compact-ammo-summary"),
   ringAmuletAutoReplace: document.getElementById("compact-ring-amulet-auto-replace-summary"),
   rune: document.getElementById("compact-rune-summary"),
@@ -227,6 +230,7 @@ const quickButtons = {
   deathHeal: document.getElementById("quick-toggle-death-heal"),
   manaTrainer: document.getElementById("quick-toggle-mana-trainer"),
   autoEat: document.getElementById("quick-toggle-auto-eat"),
+  haste: document.getElementById("quick-toggle-haste"),
   ammo: document.getElementById("quick-toggle-ammo"),
   ringAmuletAutoReplace: document.getElementById("quick-toggle-ring-amulet-auto-replace"),
   runeMaker: document.getElementById("quick-toggle-rune-maker"),
@@ -254,6 +258,7 @@ const compactQuickButtons = {
   deathHeal: document.getElementById("compact-toggle-death-heal"),
   manaTrainer: document.getElementById("compact-toggle-mana-trainer"),
   autoEat: document.getElementById("compact-toggle-auto-eat"),
+  haste: document.getElementById("compact-toggle-haste"),
   ammo: document.getElementById("compact-toggle-ammo"),
   ringAmuletAutoReplace: document.getElementById("compact-toggle-ring-amulet-auto-replace"),
   runeMaker: document.getElementById("compact-toggle-rune-maker"),
@@ -727,6 +732,17 @@ const POTION_HEALER_ITEM_OPTIONS = Object.freeze([
   { value: "Great Health Potion", label: "Great Health Potion / self" },
   { value: "Strong Health Potion", label: "Strong Health Potion / self" },
   { value: "Health Potion", label: "Health Potion / self" },
+]);
+const HASTE_SPELL_OPTIONS = Object.freeze([
+  { value: "utani hur", label: "Haste / utani hur" },
+  { value: "utani gran hur", label: "Strong Haste / utani gran hur" },
+]);
+const HASTE_MANA_FLUID_OPTIONS = Object.freeze([
+  { value: "Mana Fluid", label: "Mana Fluid" },
+  { value: "manafluid", label: "manafluid" },
+  { value: "Mana Potion", label: "Mana Potion" },
+  { value: "Strong Mana Potion", label: "Strong Mana Potion" },
+  { value: "Great Mana Potion", label: "Great Mana Potion" },
 ]);
 const CONDITION_HEALER_TRIGGER_OPTIONS = Object.freeze([
   { value: "poisoned", label: "Poisoned / cure poison" },
@@ -1267,6 +1283,23 @@ const MODULE_RULE_SCHEMAS = {
       },
     ],
   },
+  haste: {
+    enabledKey: "hasteEnabled",
+    allowRules: false,
+    moduleFields: [
+      { key: "hasteWords", label: "Haste spell", type: "select", options: HASTE_SPELL_OPTIONS },
+      { key: "hasteHotkey", label: "Hotkey", type: "text", placeholder: "F11" },
+      { key: "hasteMinMana", label: "Mana min", type: "number" },
+      { key: "hasteMinManaPercent", label: "MP min %", type: "number" },
+      { key: "hasteCooldownMs", label: "Retry ms", type: "number" },
+      { key: "hasteManaFluidEnabled", label: "Drink mana fluid", type: "checkbox" },
+      { key: "hasteManaFluidName", label: "Mana fluid", type: "select", options: HASTE_MANA_FLUID_OPTIONS },
+      { key: "hasteManaFluidHotkey", label: "Fluid hotkey", type: "text", placeholder: "F12" },
+      { key: "hasteManaFluidCooldownMs", label: "Fluid retry ms", type: "number" },
+      { key: "hasteRequireNoTargets", label: "Only with no target", type: "checkbox" },
+      { key: "hasteRequireStationary", label: "Only while idle", type: "checkbox" },
+    ],
+  },
   ammo: {
     enabledKey: "ammoEnabled",
     allowRules: false,
@@ -1599,6 +1632,7 @@ const COMPACT_MODULE_MODAL_KEYS = new Set([
   "antiIdle",
   "reconnect",
   "trainer",
+  "haste",
   "ringAutoReplace",
   "amuletAutoReplace",
   "banking",
@@ -1785,6 +1819,14 @@ const MODULE_RULE_UI = {
     note: "Live food sources can be sorted into Eat First and Never Eat. Hotbar, equipment, and open containers all feed the same picker.",
     settingsOnly: false,
   },
+  haste: {
+    ...HEADLESS_SETTINGS_UI,
+    modalTitle: "Haste",
+    modalMeta: "speed upkeep",
+    cardTitle: "Haste",
+    note: "Casts only when live condition detection says haste is missing. If mana is too low, it can drink a mana fluid first.",
+    settingsOnly: false,
+  },
   ammo: {
     ...HEADLESS_SETTINGS_UI,
     modalTitle: "Ammunition",
@@ -1890,6 +1932,17 @@ const MODULE_RULE_FIELD_LABELS = {
   autoEatCooldownMs: "Eat every ms",
   autoEatRequireNoTargets: "Only with no target",
   autoEatRequireStationary: "Only while idle",
+  hasteWords: "Haste spell",
+  hasteHotkey: "Hotkey",
+  hasteMinMana: "Mana min",
+  hasteMinManaPercent: "MP min %",
+  hasteCooldownMs: "Retry ms",
+  hasteRequireNoTargets: "Only with no target",
+  hasteRequireStationary: "Only while idle",
+  hasteManaFluidEnabled: "Drink mana fluid",
+  hasteManaFluidName: "Mana fluid",
+  hasteManaFluidHotkey: "Fluid hotkey",
+  hasteManaFluidCooldownMs: "Fluid retry ms",
   ammoPreferredNames: "Preferred ammo",
   ammoMinimumCount: "Minimum carried",
   ammoWarningCount: "Restock to",
@@ -7535,6 +7588,25 @@ function formatRuleParts(parts = []) {
   return parts.filter(Boolean).join(", ");
 }
 
+function formatHasteSpellLabel(words = "") {
+  const normalized = String(words || "").trim().toLowerCase();
+  return HASTE_SPELL_OPTIONS.find((option) => option.value === normalized)?.label || (normalized || "utani hur");
+}
+
+function formatHasteDetail(options = state?.options || {}) {
+  const spellLabel = formatHasteSpellLabel(options?.hasteWords).replace(/\s+\/\s+/, " ");
+  const gates = [
+    `mana ${Math.max(0, Math.trunc(Number(options?.hasteMinMana) || 0))}+`,
+    Number(options?.hasteMinManaPercent) > 0 ? `MP ${formatPercent(options.hasteMinManaPercent)}+` : "",
+    options?.hasteManaFluidEnabled !== false
+      ? `drink ${String(options?.hasteManaFluidName || "Mana Fluid").trim() || "Mana Fluid"}`
+      : "no mana fluid",
+    options?.hasteRequireNoTargets ? "no target" : "target ok",
+    options?.hasteRequireStationary ? "idle only" : "move ok",
+  ].filter(Boolean);
+  return `${spellLabel} / ${gates.join(" / ")} / retry ${formatMs(options?.hasteCooldownMs)}`;
+}
+
 function formatModuleRuleLine(moduleKey, rule = {}) {
   switch (moduleKey) {
     case "healer":
@@ -8009,6 +8081,10 @@ function formatModuleCurrentLine(moduleKey, rules = [], modulesState = null) {
           ? `Eat ${foodName} every ${formatMs(sourceState.autoEatCooldownMs)} / ${gates}${blocked}`
           : `Auto eat off / ${foodName}${blocked}`;
       }
+      case "haste":
+        return sourceState?.hasteEnabled
+          ? formatHasteDetail(sourceState)
+          : `Haste off / ${formatHasteDetail(sourceState)}`;
       case "ammo": {
         const summary = buildAmmoSummary(sourceState);
         if (sourceState?.ammoEnabled === false) {
@@ -8265,6 +8341,18 @@ function cloneModuleOptions(options = {}) {
     autoEatCooldownMs: Number(options.autoEatCooldownMs) || 0,
     autoEatRequireNoTargets: options.autoEatRequireNoTargets !== false,
     autoEatRequireStationary: options.autoEatRequireStationary !== false,
+    hasteEnabled: Boolean(options.hasteEnabled),
+    hasteWords: String(options.hasteWords || "utani hur").trim(),
+    hasteHotkey: String(options.hasteHotkey || "").trim(),
+    hasteMinMana: Number(options.hasteMinMana) || 0,
+    hasteMinManaPercent: Number(options.hasteMinManaPercent) || 0,
+    hasteCooldownMs: Number(options.hasteCooldownMs) || 0,
+    hasteRequireNoTargets: options.hasteRequireNoTargets === true,
+    hasteRequireStationary: options.hasteRequireStationary === true,
+    hasteManaFluidEnabled: options.hasteManaFluidEnabled !== false,
+    hasteManaFluidName: String(options.hasteManaFluidName || "Mana Fluid").trim(),
+    hasteManaFluidHotkey: String(options.hasteManaFluidHotkey || "").trim(),
+    hasteManaFluidCooldownMs: Number(options.hasteManaFluidCooldownMs) || 0,
     ammoEnabled: options.ammoEnabled !== false,
     ammoPreferredNames: cloneValue(options.ammoPreferredNames || []),
     ammoMinimumCount: Number(options.ammoMinimumCount) || 0,
@@ -10044,6 +10132,7 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
     ammo: "ammoEnabled",
     healer: "healerEnabled",
     deathHeal: "deathHealEnabled",
+    haste: "hasteEnabled",
     autoEat: "autoEatEnabled",
     trainer: "trainerEnabled",
     reconnect: "reconnectEnabled",
@@ -10155,6 +10244,11 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
       return {
         ...baseState,
         detail: rawEnabled ? "Food cadence armed" : "Food cadence off",
+      };
+    case "haste":
+      return {
+        ...baseState,
+        detail: rawEnabled ? "Haste upkeep armed" : "Haste upkeep off",
       };
     case "ammo": {
       const summary = buildAmmoSummary(options, sourceState);
@@ -11586,7 +11680,7 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
   const statusLine = schema.allowRules === false
     ? (moduleKey === "ringAutoReplace"
       ? getEquipmentReplaceCombinedStatus(modulesState).activeLabel
-      : ["trainer", "reconnect", "antiIdle", "autoEat", "ammo", "partyFollow", "deathHeal"].includes(moduleKey)
+      : ["trainer", "reconnect", "antiIdle", "autoEat", "haste", "ammo", "partyFollow", "deathHeal"].includes(moduleKey)
         ? formatEffectiveModuleStatusLine(effectiveState, [], { settingsOnly, plainWhenEmpty: !settingsOnly })
         : (settingsOnly ? `${enabled ? "On" : "Off"} - settings only` : (enabled ? "On" : "Off")))
     : ["healer", "distanceKeeper"].includes(moduleKey)
@@ -13275,6 +13369,7 @@ function renderCompactPanel() {
   setTextContent(compactPanelFields.deathHeal, summaryFields.deathHeal?.textContent || "-");
   setTextContent(compactPanelFields.mana, summaryFields.mana?.textContent || "-");
   setTextContent(compactPanelFields.autoEat, summaryFields.autoEat?.textContent || "-");
+  setTextContent(compactPanelFields.haste, summaryFields.haste?.textContent || "-");
   setTextContent(compactPanelFields.ammo, summaryFields.ammo?.textContent || "-");
   setTextContent(compactPanelFields.ringAmuletAutoReplace, summaryFields.ringAmuletAutoReplace?.textContent || "-");
   setTextContent(compactPanelFields.rune, summaryFields.rune?.textContent || "-");
@@ -15544,6 +15639,14 @@ function renderSummarySheets() {
         ? `${autoEatFoodName} / hotbar + equipment + containers${autoEatBlockedChoices.length ? ` / block ${autoEatBlockedChoices.join(", ")}` : ""}`
         : `${autoEatFoodName} ready`,
   );
+  setTextContent(
+    summaryFields.haste,
+    options.hasteEnabled ? "On" : "Off",
+  );
+  setTextContent(
+    summaryFields.hasteDetail,
+    formatHasteDetail(options),
+  );
   const ammoSummary = buildAmmoSummary(options, state);
   const ammoPowerOn = options?.ammoEnabled !== false;
   setTextContent(
@@ -15856,6 +15959,7 @@ function renderDashboard() {
   setEffectiveModuleTileState("deathHeal", getModuleEffectiveState("deathHeal", options, state));
   setMirroredTileState("manaTrainer", options.manaTrainerEnabled);
   setEffectiveModuleTileState("autoEat", getModuleEffectiveState("autoEat", options, state));
+  setEffectiveModuleTileState("haste", getModuleEffectiveState("haste", options, state));
   setEffectiveModuleTileState("ammo", getModuleEffectiveState("ammo", options, state));
   setMirroredTileState("ringAmuletAutoReplace", options.ringAutoReplaceEnabled || options.amuletAutoReplaceEnabled);
   setMirroredTileState("runeMaker", options.runeMakerEnabled);
@@ -18204,6 +18308,18 @@ function modulesPayload() {
     autoEatCooldownMs: draft.autoEatCooldownMs,
     autoEatRequireNoTargets: draft.autoEatRequireNoTargets,
     autoEatRequireStationary: draft.autoEatRequireStationary,
+    hasteEnabled: draft.hasteEnabled,
+    hasteWords: draft.hasteWords,
+    hasteHotkey: draft.hasteHotkey,
+    hasteMinMana: draft.hasteMinMana,
+    hasteMinManaPercent: draft.hasteMinManaPercent,
+    hasteCooldownMs: draft.hasteCooldownMs,
+    hasteRequireNoTargets: draft.hasteRequireNoTargets,
+    hasteRequireStationary: draft.hasteRequireStationary,
+    hasteManaFluidEnabled: draft.hasteManaFluidEnabled,
+    hasteManaFluidName: draft.hasteManaFluidName,
+    hasteManaFluidHotkey: draft.hasteManaFluidHotkey,
+    hasteManaFluidCooldownMs: draft.hasteManaFluidCooldownMs,
     ammoEnabled: draft.ammoEnabled,
     ammoPreferredNames: normalizeTextListSummary(draft.ammoPreferredNames),
     ammoMinimumCount: draft.ammoMinimumCount,
@@ -20068,6 +20184,7 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
   { button: quickButtons.deathHeal, optionKey: "deathHealEnabled", label: "Death heal" },
   { button: quickButtons.manaTrainer, optionKey: "manaTrainerEnabled", label: "Mana module" },
   { button: quickButtons.autoEat, optionKey: "autoEatEnabled", label: "Auto eat" },
+  { button: quickButtons.haste, optionKey: "hasteEnabled", label: "Haste" },
   { button: quickButtons.ammo, optionKey: "ammoEnabled", label: "Ammo" },
   {
     button: quickButtons.ringAmuletAutoReplace,

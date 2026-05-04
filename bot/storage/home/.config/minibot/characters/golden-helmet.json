@@ -1,5 +1,5 @@
 {
-  "cavebotName": "RookRats",
+  "cavebotName": "RotwormsFibula",
   "creatureLedger": {
     "monsters": [
       "Rat",
@@ -10,7 +10,9 @@
       "Alpha Rat",
       "Dog",
       "Wolf",
-      "Bear"
+      "Bear",
+      "Poison Spider",
+      "Rotworm"
     ],
     "players": [
       "Zlocimir Wielkoportf",
@@ -28,7 +30,9 @@
     ],
     "npcs": []
   },
-  "cavebotPaused": true,
+  "cavebotPaused": false,
+  "alarmsEnabled": true,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
-  "stopAggroHold": true
+  "stopAggroHold": false
 }

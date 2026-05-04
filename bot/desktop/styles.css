@@ -1303,13 +1303,13 @@ button {
 .compact-split-card {
   position: relative;
   display: grid;
-  min-height: 66px;
-  aspect-ratio: 1.85 / 1;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
   padding: 0;
   border: 1px solid rgba(112, 93, 64, 0.7);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 44%),
-    rgba(16, 12, 8, 0.9);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 44%),
+    linear-gradient(180deg, rgba(25, 19, 13, 0.96), rgba(11, 8, 6, 0.98));
   overflow: hidden;
   box-shadow: var(--shadow-card);
   transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
@@ -1317,8 +1317,8 @@ button {
 
 .compact-split-card-route {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 44%),
-    linear-gradient(180deg, rgba(58, 39, 18, 0.88), rgba(15, 11, 8, 0.94));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 44%),
+    linear-gradient(180deg, rgba(58, 39, 18, 0.9), rgba(15, 11, 8, 0.96));
 }
 
 .compact-split-card-single {
@@ -1330,49 +1330,47 @@ button {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 9px 8px 8px;
+  padding: 8px;
   border: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 40%),
-    rgba(14, 11, 9, 0.72);
+  background: transparent;
   color: var(--text);
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.42);
+  box-shadow: none;
   cursor: pointer;
   transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 .compact-split-card:not(.compact-split-card-single) .compact-card-open {
-  padding-bottom: 25px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .compact-card-open span {
   color: #f4e7ca;
-  font-size: 9px;
-  line-height: 1.05;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: var(--weight-strong);
+  line-height: 1.08;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .compact-card-open strong {
-  color: var(--muted);
-  max-width: 100%;
-  font-size: 8px;
-  line-height: 1.08;
+  display: none;
 }
 
-.compact-card-open:hover:not(:disabled) {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 40%),
-    rgba(22, 17, 12, 0.82);
+.compact-split-card:has(.compact-card-open:hover:not(:disabled)),
+.compact-split-card:has(.compact-card-toggle:hover:not(:disabled)) {
+  border-color: rgba(247, 213, 138, 0.54);
   box-shadow:
     inset 1px 1px 0 rgba(255, 255, 255, 0.08),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.5);
+    inset -1px -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(247, 213, 138, 0.1);
   transform: var(--control-lift-hover);
 }
 
-.compact-card-open:active:not(:disabled),
-.compact-card-open[data-pressed="true"]:not(:disabled) {
+.compact-split-card:has(.compact-card-open:active:not(:disabled)),
+.compact-split-card:has(.compact-card-toggle:active:not(:disabled)) {
   box-shadow:
     inset 0 1px 1px rgba(0, 0, 0, 0.42),
     inset 0 0 0 999px rgba(0, 0, 0, 0.08);
@@ -1383,61 +1381,55 @@ button {
 .compact-command-button:focus-visible,
 .compact-card-toggle:focus-visible {
   outline: none;
-  box-shadow: var(--control-shadow-hover), var(--focus-ring);
+  box-shadow: var(--focus-ring);
 }
 
 .compact-card-toggle {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  z-index: 2;
-  width: auto;
-  min-width: 28px;
-  max-width: calc(100% - 10px);
-  min-height: 16px;
-  padding: 2px 6px;
+  grid-area: 1 / 1;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(169, 141, 99, 0.48);
-  border-radius: 3px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%),
-    rgba(30, 23, 15, 0.92);
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.36);
-  color: var(--muted);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
   text-align: center;
   cursor: pointer;
   transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
-.compact-card-toggle:hover:not(:disabled) {
-  border-color: rgba(247, 213, 138, 0.64);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.11), transparent 45%),
-    rgba(42, 32, 20, 0.96);
-  transform: translateY(-1px);
+.compact-split-card .btn.compact-card-toggle,
+.compact-split-card .btn.compact-card-toggle.active,
+.compact-split-card .btn.compact-card-toggle:hover:not(:disabled),
+.compact-split-card .btn.compact-card-toggle:active:not(:disabled),
+.compact-split-card .btn.compact-card-toggle[data-pressed="true"]:not(:disabled) {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+  transform: none;
 }
 
-.compact-card-toggle:active:not(:disabled),
-.compact-card-toggle[data-pressed="true"]:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.compact-card-toggle span {
+.compact-card-toggle span,
+.compact-card-toggle strong {
   display: none;
 }
 
-.compact-card-toggle strong {
-  color: var(--muted);
-  font-size: 8px;
-  line-height: 1;
-  white-space: nowrap;
+.compact-split-card-single .compact-card-open {
+  z-index: 1;
+  justify-content: center;
 }
 
-.compact-split-card-single .compact-card-open {
-  justify-content: center;
+.compact-card-open.danger span {
+  color: #fff0ec;
 }
 
 #compact-close-window {
@@ -2492,15 +2484,9 @@ select[data-feedback="error"] {
 .quick-module-card[data-state="off"] .quick-module-open small,
 .route-toggle-card[data-state="off"] .route-toggle-open strong,
 .route-toggle-card[data-state="off"] .route-toggle-open small,
+.compact-split-card[data-state="off"] .compact-card-open span,
 .compact-split-card[data-state="off"] .compact-card-open strong {
   color: #e3c29a;
-}
-
-.compact-split-card[data-state="off"] .compact-card-toggle {
-  border-color: rgba(150, 103, 58, 0.6);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%),
-    rgba(47, 31, 18, 0.94);
 }
 
 .route-add-button {
@@ -2545,19 +2531,8 @@ select[data-feedback="error"] {
 .route-toggle-card[data-state="on"] .route-toggle-open strong,
 .route-toggle-card[data-state="on"] .route-toggle-open small,
 .route-toggle-card[data-state="on"] .route-reset-button strong,
+.compact-split-card[data-state="on"] .compact-card-open span,
 .compact-split-card[data-state="on"] .compact-card-open strong {
-  color: #eff8d3;
-}
-
-.compact-split-card[data-state="on"] .compact-card-toggle {
-  border-color: rgba(143, 190, 100, 0.72);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%),
-    rgba(44, 70, 27, 0.96);
-  color: #eff8d3;
-}
-
-.compact-split-card[data-state="on"] .compact-card-toggle strong {
   color: #eff8d3;
 }
 
@@ -2600,39 +2575,19 @@ select[data-feedback="error"] {
 
 .quick-module-card[data-state="inherited"] .quick-module-open strong,
 .quick-module-card[data-state="inherited"] .quick-module-open small,
+.compact-split-card[data-state="inherited"] .compact-card-open span,
 .compact-split-card[data-state="inherited"] .compact-card-open strong,
 .quick-module-card[data-state="hidden-owner"] .quick-module-open strong,
 .quick-module-card[data-state="hidden-owner"] .quick-module-open small,
+.compact-split-card[data-state="hidden-owner"] .compact-card-open span,
 .compact-split-card[data-state="hidden-owner"] .compact-card-open strong,
 .quick-module-card[data-state="blocked"] .quick-module-open strong,
 .quick-module-card[data-state="blocked"] .quick-module-open small,
 .route-toggle-card[data-state="blocked"] .route-toggle-open strong,
 .route-toggle-card[data-state="blocked"] .route-toggle-open small,
+.compact-split-card[data-state="blocked"] .compact-card-open span,
 .compact-split-card[data-state="blocked"] .compact-card-open strong {
   color: #f4eddc;
-}
-
-.compact-split-card[data-state="inherited"] .compact-card-toggle,
-.compact-split-card[data-state="hidden-owner"] .compact-card-toggle {
-  border-color: rgba(111, 174, 178, 0.68);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%),
-    rgba(24, 58, 64, 0.96);
-  color: #e7fbff;
-}
-
-.compact-split-card[data-state="blocked"] .compact-card-toggle {
-  border-color: rgba(214, 165, 102, 0.7);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%),
-    rgba(64, 42, 19, 0.96);
-  color: #fff4df;
-}
-
-.compact-split-card[data-state="inherited"] .compact-card-toggle strong,
-.compact-split-card[data-state="hidden-owner"] .compact-card-toggle strong,
-.compact-split-card[data-state="blocked"] .compact-card-toggle strong {
-  color: inherit;
 }
 
 .quick-module-card-master-stop {
@@ -10985,13 +10940,13 @@ textarea:focus-visible,
 
 @media (max-width: 480px) {
   .compact-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 380px) {
   .compact-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

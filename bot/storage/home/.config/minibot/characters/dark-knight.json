@@ -17,14 +17,25 @@
       "Centipede",
       "Cave Rat",
       "Spider",
-      "Hydra"
+      "Hydra",
+      "Wolf",
+      "Alpha Wolf",
+      "Bear",
+      "Poison Spider",
+      "Minotaur Guard",
+      "Minotaur Archer",
+      "Minotaur",
+      "Minotaur Mage",
+      "Dragon Lord",
+      "Skeleton",
+      "Rotworm",
+      "Deer"
     ],
     "players": [
       "Lord Larva",
       "Lady Larva",
       "Holy Rat",
       "Dark Knight",
-      "Minibia — Free Browser Tibia MMORPG",
       "Czarnobrat",
       "Zlocimir Wielkoportf",
       "Deadlyek",
@@ -48,8 +59,6 @@
       "Venator",
       "Yind",
       "Yahooz",
-      "minibia.com/play?pwa=1&amp",
-      "session=1777086731281",
       "Dark Shadow",
       "Beowulf",
       "Edd",
@@ -122,11 +131,21 @@
       "Tyr",
       "Comrade Crimson",
       "Chronoq",
-      "Quiver"
+      "Quiver",
+      "Alf",
+      "Maybach",
+      "Qeele",
+      "Bonis",
+      "Tickle My Pickle",
+      "Tooxic",
+      "Medbro",
+      "Hate"
     ],
     "npcs": []
   },
-  "cavebotPaused": true,
+  "cavebotPaused": false,
+  "alarmsEnabled": false,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
-  "stopAggroHold": true
+  "stopAggroHold": false
 }

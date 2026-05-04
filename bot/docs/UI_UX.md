@@ -51,6 +51,7 @@ Current summary cards and quick toggles cover:
 - death heal
 - mana trainer
 - auto eat
+- haste
 - ring and amulet auto replace
 - rune maker
 - spell caster
@@ -69,7 +70,7 @@ Not every card opens the shared module modal:
 
 - `Hunt` opens the dedicated Hunt Studio modal
 - `Field Safe` and waypoint overlay controls point into route-focused surfaces
-- healer, death heal, trainer, mana trainer, auto eat, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, and follow chain use the shared module modal
+- healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, and follow chain use the shared module modal
 
 ### Center Column
 
@@ -125,6 +126,7 @@ The shared module editor is reused for:
 - trainer
 - mana trainer
 - auto eat
+- haste
 - ring and amulet auto replace
 - rune maker
 - spell caster
@@ -153,7 +155,7 @@ Current ownership split:
 
 - route builder modal: route file, route-local vocation and sustain settings, waypoints, tile rules, route-persisted waypoint overlay preference, route danger actions, and route-context Hunt Studio entry points
 - Hunt Studio modal: target queue, shared-spawn policy, target profiles, creature registry, player and NPC watch, fallback combat motion, once, dry-run, and presets
-- shared module modal: healer, death heal, trainer, mana trainer, auto eat, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, follow chain
+- shared module modal: healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, follow chain
 - accounts modal: account registry records, login method, stored secret policy, preferred character, character list, reconnect policy, and notes
 
 ### Session Model
@@ -206,6 +208,7 @@ Current ownership split:
 - Healer messaging must preserve the downward-safe coverage model instead of implying isolated HP bands.
 - Trainer messaging must make clear that it reuses anti-idle, auto-eat, healer, death-heal, and reconnect policy from their owning modules while keeping trainer-only partner, trainer mana, reconnect-while-training, and escape controls in the Trainer modal.
 - Auto eat messaging must make clear that it can source food from hotbar, equipped slots, or open containers, and it should outrank anti-idle when both are ready.
+- Haste messaging must show the selected haste spell and whether mana-fluid support is armed; the editor stays compact and uses the shared module modal.
 - Ring and amulet replacement messaging must summarize both slot targets plus their repeat margin and combat or movement gates.
 - Anti-idle messaging must make clear that it fires only after real inactivity crosses the configured delay and may use a non-visible keepalive path before any input-style fallback.
 - Follow chain messaging must make the chain order clear: each member follows the name directly above it, and the default role can still be overridden per member.

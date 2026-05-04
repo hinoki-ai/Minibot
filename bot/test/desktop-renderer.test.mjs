@@ -32,6 +32,7 @@ const SHARED_MODULE_MODAL_NAMES = new Set([
   "antiIdle",
   "alarms",
   "autoEat",
+  "haste",
   "ammo",
   "ringAutoReplace",
   "looting",
@@ -2120,6 +2121,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-looting").closest(".quick-module-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-banking").closest(".quick-module-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-auto-eat").closest(".quick-module-card") !== null, true);
+  assert.equal(document.getElementById("quick-toggle-haste").closest(".quick-module-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-ring-amulet-auto-replace").closest(".quick-module-card") !== null, true);
   assert.equal(document.getElementById("route-reconnect-panel").closest(".route-toggle-card") !== null, true);
   assert.equal(document.getElementById("route-stop-aggro-panel").closest(".route-toggle-card") !== null, true);
@@ -2155,6 +2157,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.querySelectorAll(".compact-grid").length, 2);
   assert.equal(document.getElementById("compact-open-targeting").closest(".compact-grid") !== null, true);
   assert.equal(document.getElementById("compact-toggle-healer").closest(".compact-split-card") !== null, true);
+  assert.equal(document.getElementById("compact-toggle-haste").closest(".compact-split-card") !== null, true);
   assert.equal(document.getElementById("compact-toggle-ring-amulet-auto-replace").closest(".compact-split-card") !== null, true);
   assert.ok(document.getElementById("open-logs"));
   assert.equal(document.getElementById("compact-open-logs").dataset.openModal, "logs");
@@ -2207,7 +2210,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(currentState().binding.characterName, "Scout Beta");
   assert.equal(document.querySelector('[data-session-select="page-2"]').getAttribute("aria-selected"), "true");
 
-  for (const name of ["targeting", "autowalk", "healer", "trainer", "manaTrainer", "autoEat", "ammo", "ringAutoReplace", "runeMaker", "spellCaster", "autoLight", "autoConvert", "looting", "banking", "accounts", "presets", "logs"]) {
+  for (const name of ["targeting", "autowalk", "healer", "trainer", "manaTrainer", "autoEat", "haste", "ammo", "ringAutoReplace", "runeMaker", "spellCaster", "autoLight", "autoConvert", "looting", "banking", "accounts", "presets", "logs"]) {
     document.querySelector(`[data-open-modal="${name}"]`).click();
     await flush();
 
@@ -2277,6 +2280,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     ["quick-toggle-trainer", "trainerEnabled"],
     ["quick-toggle-mana-trainer", "manaTrainerEnabled"],
     ["quick-toggle-auto-eat", "autoEatEnabled"],
+    ["quick-toggle-haste", "hasteEnabled"],
     ["quick-toggle-ammo", "ammoEnabled"],
     ["quick-toggle-ring-amulet-auto-replace", "ringAutoReplaceEnabled"],
     ["quick-toggle-rune-maker", "runeMakerEnabled"],
@@ -6797,6 +6801,67 @@ test("light module renders live detail lines and saves edited light rules", asyn
   assert.match(document.getElementById("summary-light-detail").textContent, /dark only/i);
   assert.doesNotMatch(document.getElementById("summary-light-detail").textContent, /no target/i);
   assert.doesNotMatch(document.getElementById("summary-light-detail").textContent, /idle only/i);
+});
+
+test("haste module renders a compact settings modal and saves mana-fluid options", async () => {
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        hasteEnabled: true,
+        hasteWords: "utani hur",
+        hasteHotkey: "",
+        hasteMinMana: 60,
+        hasteMinManaPercent: 0,
+        hasteCooldownMs: 1500,
+        hasteManaFluidEnabled: true,
+        hasteManaFluidName: "Mana Fluid",
+        hasteManaFluidHotkey: "",
+        hasteManaFluidCooldownMs: 900,
+      },
+    }),
+  });
+  const { document, window, calls, currentState } = desk;
+
+  assert.equal(document.getElementById("summary-haste").textContent.trim(), "On");
+  assert.match(document.getElementById("summary-haste-detail").textContent, /utani hur/i);
+  assert.match(document.getElementById("summary-haste-detail").textContent, /drink Mana Fluid/i);
+
+  document.querySelector('[data-open-modal="haste"]').click();
+  await flush();
+
+  const modal = document.getElementById("modal-module");
+  assert.equal(modal.classList.contains("module-modal-compact"), true);
+  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Haste");
+
+  const spellSelect = document.querySelector('[data-module-key="haste"][data-module-option-field="hasteWords"]');
+  const hotkeyInput = document.querySelector('[data-module-key="haste"][data-module-option-field="hasteHotkey"]');
+  const manaInput = document.querySelector('[data-module-key="haste"][data-module-option-field="hasteMinMana"]');
+  const fluidSelect = document.querySelector('[data-module-key="haste"][data-module-option-field="hasteManaFluidName"]');
+  const fluidHotkeyInput = document.querySelector('[data-module-key="haste"][data-module-option-field="hasteManaFluidHotkey"]');
+
+  spellSelect.value = "utani gran hur";
+  spellSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+  hotkeyInput.value = "F8";
+  hotkeyInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+  manaInput.value = "100";
+  manaInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+  fluidSelect.value = "Mana Potion";
+  fluidSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+  fluidHotkeyInput.value = "F9";
+  fluidHotkeyInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await flush();
+
+  document.querySelector("#modal-module [data-save-modules]").click();
+  await flush();
+
+  const payload = calls.updateOptions.at(-1);
+  assert.equal(payload.hasteEnabled, true);
+  assert.equal(payload.hasteWords, "utani gran hur");
+  assert.equal(payload.hasteHotkey, "F8");
+  assert.equal(payload.hasteMinMana, 100);
+  assert.equal(payload.hasteManaFluidName, "Mana Potion");
+  assert.equal(payload.hasteManaFluidHotkey, "F9");
+  assert.equal(currentState().options.hasteWords, "utani gran hur");
 });
 
 test("gold transform renders live detail lines and saves edited coin rules", async () => {

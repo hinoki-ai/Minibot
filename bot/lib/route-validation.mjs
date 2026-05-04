@@ -149,6 +149,9 @@ function isKnownItemName(value = "") {
   if (!key || ITEM_CATEGORY_TOKENS.has(key)) {
     return true;
   }
+  if (key === "mana fluid" || key === "manafluid") {
+    return true;
+  }
   return KNOWN_ITEM_NAME_KEYS.size ? KNOWN_ITEM_NAME_KEYS.has(key) : true;
 }
 
@@ -172,6 +175,7 @@ function collectConfiguredItemNames(source = {}) {
   names.push(...collectTextList(source.ammoPreferredNames));
   names.push(...collectTextList(source.autoEatFoodName));
   names.push(...collectTextList(source.autoEatForbiddenFoodNames));
+  names.push(...collectTextList(source.hasteManaFluidName));
   names.push(...collectTextList(source.ringAutoReplaceItemName));
   names.push(...collectTextList(source.amuletAutoReplaceItemName));
 

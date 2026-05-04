@@ -67,6 +67,7 @@ import {
   deleteAccount,
   buildCharacterKey,
   deleteRouteProfile,
+  describeRouteSpacingGroup,
   exportRouteProfilePack,
   claimCharacter,
   describeRouteProfile,
@@ -481,6 +482,48 @@ async function flushSessionStateSave() {
   await sessionStateSaveChain.catch(() => null);
 }
 
+function getRouteSpacingParticipantCount(routeGroup = null) {
+  const expectedRouteKey = String(routeGroup?.routeKey || routeGroup || "");
+  const expectedRouteName = String(routeGroup?.routeName || "").trim().toLowerCase();
+  const expectedWaypointCount = Math.max(0, Math.trunc(Number(routeGroup?.waypointCount) || 0));
+  if (!expectedRouteKey && !expectedRouteName) {
+    return 0;
+  }
+
+  let count = 0;
+  for (const peer of sessions.values()) {
+    if (!canSyncSession(peer) || !peer?.bot?.running) {
+      continue;
+    }
+
+    const options = peer.bot?.options || peer.config || {};
+    if (
+      options.autowalkEnabled !== true
+      || peer.bot?.isCavebotPaused?.()
+      || peer.bot?.isRouteResetActive?.()
+    ) {
+      continue;
+    }
+
+    const peerRouteGroup = describeRouteSpacingGroup(options);
+    const peerRouteKey = peerRouteGroup?.routeKey || "";
+    const peerRouteName = String(peerRouteGroup?.routeName || "").trim().toLowerCase();
+    const peerWaypointCount = Math.max(0, Math.trunc(Number(peerRouteGroup?.waypointCount) || 0));
+    if (
+      peerRouteKey === expectedRouteKey
+      || (
+        expectedRouteName
+        && peerRouteName === expectedRouteName
+        && peerWaypointCount === expectedWaypointCount
+      )
+    ) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 function createRouteSpacingAdapter(session) {
   let activeRouteKey = null;
   let activeInstanceId = null;
@@ -499,6 +542,7 @@ function createRouteSpacingAdapter(session) {
       }
 
       const snapshot = context.snapshot || session?.bot?.lastSnapshot || null;
+      const routeGroup = describeRouteSpacingGroup(context.options);
       const result = await syncRouteSpacingLease({
         options: context.options,
         previousRouteKey: activeRouteKey,
@@ -531,6 +575,10 @@ function createRouteSpacingAdapter(session) {
         selfInstanceId: session.claimOwnerId,
         routeKey: result.routeKey,
         members: result.members,
+        activeCount: Math.max(
+          Array.isArray(result.members) ? result.members.length : 0,
+          getRouteSpacingParticipantCount(routeGroup || result.routeKey),
+        ),
       };
     },
     async release() {

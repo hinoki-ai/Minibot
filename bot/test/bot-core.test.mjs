@@ -48,7 +48,12 @@ class IdentityWebSocket {
   send(payload) {
     const message = JSON.parse(payload);
 
-    if (message.method === "Runtime.enable") {
+    if (
+      message.method === "Runtime.enable"
+      || message.method === "Page.enable"
+      || message.method === "Page.addScriptToEvaluateOnNewDocument"
+      || message.method === "Browser.setPermission"
+    ) {
       queueMicrotask(() => {
         this.onmessage?.({
           data: JSON.stringify({
@@ -267,6 +272,11 @@ test("normalizeOptions defaults the route recorder to 3 SQM and shows waypoint o
   assert.equal(options.autoEatCooldownMs, 55000);
   assert.equal(options.autoEatRequireNoTargets, false);
   assert.equal(options.autoEatRequireStationary, true);
+  assert.equal(options.hasteEnabled, false);
+  assert.equal(options.hasteWords, "utani hur");
+  assert.equal(options.hasteMinMana, 60);
+  assert.equal(options.hasteManaFluidEnabled, true);
+  assert.equal(options.hasteManaFluidName, "Mana Fluid");
   assert.equal(options.corpseReturnEnabled, true);
   assert.equal(options.ringAutoReplaceEnabled, false);
   assert.equal(options.ringAutoReplaceItemName, "stealth ring");
@@ -385,6 +395,7 @@ test("refresh inspects auxiliary snapshot state concurrently", async () => {
 test("multi-session runtime load backs off stable loops but keeps critical health fast", () => {
   const bot = new MinibiaTargetBot({
     intervalMs: 250,
+    healerHealthPercent: 85,
     healerEmergencyHealthPercent: 30,
   });
 
@@ -398,6 +409,24 @@ test("multi-session runtime load backs off stable loops but keeps critical healt
     ready: true,
     playerStats: {
       healthPercent: 25,
+    },
+  };
+  const combatSnapshot = {
+    ready: true,
+    playerStats: {
+      healthPercent: 100,
+    },
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+      },
+    ],
+  };
+  const healBandSnapshot = {
+    ready: true,
+    playerStats: {
+      healthPercent: 82,
     },
   };
 
@@ -414,6 +443,66 @@ test("multi-session runtime load backs off stable loops but keeps critical healt
   assert.equal(bot.getLoopJitterMs(stableSnapshot), 20);
   assert.equal(bot.getLoopDelayMs(criticalSnapshot), 250);
   assert.equal(bot.getLoopJitterMs(criticalSnapshot), 0);
+  assert.equal(bot.getLoopDelayMs(combatSnapshot), 75);
+  assert.equal(bot.getLoopJitterMs(combatSnapshot), 0);
+  assert.equal(bot.getLoopDelayMs(healBandSnapshot), 250);
+  assert.equal(bot.getLoopJitterMs(healBandSnapshot), 0);
+});
+
+test("combat activity uses a fast loop delay for quick next-target pickup", () => {
+  const bot = new MinibiaTargetBot({
+    intervalMs: 1000,
+    monsterNames: ["Larva"],
+  });
+  const lowRetargetBot = new MinibiaTargetBot({
+    intervalMs: 1000,
+    retargetMs: 25,
+    monsterNames: ["Larva"],
+  });
+  const closeCombatSnapshot = {
+    ready: true,
+    playerStats: {
+      healthPercent: 100,
+    },
+    candidates: [
+      {
+        id: 10,
+        name: "Larva",
+      },
+    ],
+  };
+
+  assert.equal(bot.getLoopDelayMs(closeCombatSnapshot), 75);
+  assert.equal(lowRetargetBot.getLoopDelayMs(closeCombatSnapshot), 25);
+
+  assert.equal(bot.getLoopDelayMs({
+    ready: true,
+    playerStats: {
+      healthPercent: 100,
+    },
+    playerPosition: { x: 100, y: 100, z: 8 },
+    allMatches: [
+      {
+        id: 11,
+        name: "Larva",
+        position: { x: 103, y: 100, z: 8 },
+        reachableForCombat: true,
+      },
+    ],
+  }), 75);
+
+  assert.equal(bot.getLoopDelayMs({
+    ready: true,
+    playerStats: {
+      healthPercent: 100,
+    },
+    currentTarget: {
+      id: 22,
+      name: "Knight Alpha",
+    },
+    candidates: [],
+    allMatches: [],
+  }), 1000);
 });
 
 test("normalizeOptions clamps alarm ranges and splits blacklist names into exact entries", () => {
@@ -730,6 +819,29 @@ test("normalizeOptions keeps player archive names out of monster archive", () =>
   assert.deepEqual(options.playerArchive, ["Knight Alpha"]);
   assert.deepEqual(options.npcArchive, ["Rashid", "Scout Beta"]);
   assert.deepEqual(options.monsterArchive, ["Larva"]);
+});
+
+test("normalizeOptions strips browser session noise from creature ledgers", () => {
+  const options = normalizeOptions({
+    creatureLedger: {
+      monsters: ["Larva", "minibia.com/play?pwa=1&amp"],
+      players: [
+        "Knight Alpha",
+        "minibia.com/play?pwa=1&amp",
+        "session=1777757210074",
+        "Just a moment...",
+        "Minibia - Free Browser Tibia MMORPG",
+      ],
+      npcs: [
+        "Rashid",
+        "minibia.com | 522: Connection timed out",
+      ],
+    },
+  });
+
+  assert.deepEqual(options.monsterArchive, ["Larva"]);
+  assert.deepEqual(options.playerArchive, ["Knight Alpha"]);
+  assert.deepEqual(options.npcArchive, ["Rashid"]);
 });
 
 test("normalizeOptions keeps only official monsters and alpha variants in target queues", () => {
@@ -5964,6 +6076,60 @@ test("chooseHeal falls through to lower tiers when a higher rune tier has no usa
   assert.equal(action?.ruleIndex, 1);
 });
 
+test("chooseHeal ignores empty hotbar rune slots and expands spell fallback downward", () => {
+  const bot = new MinibiaTargetBot({
+    healerEnabled: true,
+    healerRules: [
+      {
+        enabled: true,
+        words: "Ultimate Healing Rune",
+        hotkey: "F5",
+        minHealthPercent: 0,
+        maxHealthPercent: 85,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 250,
+      },
+      {
+        enabled: true,
+        words: "exura",
+        minHealthPercent: 86,
+        maxHealthPercent: 95,
+        minMana: 20,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+  });
+
+  const action = bot.chooseHeal(createModuleSnapshot({
+    playerStats: {
+      healthPercent: 43,
+      mana: 220,
+      manaPercent: 90,
+    },
+    hotbar: {
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 0,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 0 },
+          enabled: true,
+        },
+      ],
+    },
+    containers: [],
+  }));
+
+  assert.equal(action?.type, "heal");
+  assert.equal(action?.words, "exura");
+  assert.equal(action?.ruleIndex, 1);
+});
+
 test("chooseHeal uses the default UH rune tier at fifty percent before potion healing", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
@@ -6066,8 +6232,18 @@ test("chooseHeal migrates the configured legacy rune hotkey into a healer tier",
       manaPercent: 90,
     },
     hotbar: {
-      slotCount: 0,
-      slots: [],
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 8,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 8 },
+          enabled: true,
+        },
+      ],
     },
     containers: [],
   }));
@@ -6104,6 +6280,20 @@ test("chooseHeal prioritizes the migrated rune tier before covered spell tiers",
       healthPercent: 43,
       mana: 220,
       manaPercent: 90,
+    },
+    hotbar: {
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 8,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 8 },
+          enabled: true,
+        },
+      ],
     },
     containers: [],
   }));
@@ -6636,6 +6826,121 @@ test("tick lets the healer tier stack run before vocation sustain during healing
 
   assert.equal(result, snapshot);
   assert.equal(healCalled, true);
+});
+
+test("death heal can press a configured emergency hotkey without a spell match or hotbar confidence", async () => {
+  const bot = new MinibiaTargetBot({
+    deathHealEnabled: true,
+    deathHealHotkey: "F5",
+    deathHealHealthPercent: 45,
+    deathHealCooldownMs: 0,
+  });
+  const snapshot = createModuleSnapshot({
+    playerStats: {
+      healthPercent: 38,
+      mana: 0,
+      manaPercent: 0,
+    },
+    confidence: {
+      families: {
+        self: { status: "confident" },
+        hotbar: { status: "unknown", reason: "hotbar snapshot stale" },
+      },
+    },
+  });
+  let hotkeyAction = null;
+
+  bot.useHotkey = async (action) => {
+    hotkeyAction = action;
+    return { ok: true };
+  };
+
+  const attempt = await bot.attemptDeathHeal(snapshot, null);
+
+  assert.equal(attempt.result?.ok, true);
+  assert.equal(attempt.result?.unconfirmed, true);
+  assert.equal(attempt.terminal, false);
+  assert.equal(hotkeyAction?.type, "death-heal");
+  assert.equal(hotkeyAction?.hotkey, "F5");
+  assert.equal(hotkeyAction?.moduleKey, "deathHeal");
+});
+
+test("tick keeps targeting ahead of loot after a non-emergency self heal", async () => {
+  const bot = new MinibiaTargetBot({
+    healerEnabled: true,
+    healerEmergencyHealthPercent: 45,
+    monsterNames: ["Dragon"],
+    lootingEnabled: true,
+  });
+  const dragon = {
+    id: 42,
+    name: "Dragon",
+    position: { x: 101, y: 100, z: 8 },
+    dx: 1,
+    dy: 0,
+    dz: 0,
+    distance: 1,
+    chebyshevDistance: 1,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    reachableForCombat: true,
+  };
+  const snapshot = createModuleSnapshot({
+    playerStats: {
+      healthPercent: 82,
+      mana: 160,
+      manaPercent: 80,
+    },
+    visibleCreatures: [dragon],
+    candidates: [dragon],
+  });
+  const calls = [];
+
+  bot.refresh = async () => snapshot;
+  bot.handleReconnect = async () => ({ handled: false });
+  bot.getActiveVocationProfile = async () => null;
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+  bot.attemptDeathHeal = async () => ({ result: { ok: false } });
+  bot.choosePreSustainHealActions = () => [{ type: "heal", moduleKey: "healer" }];
+  bot.isHealingPriorityActive = () => false;
+  bot.attemptHeal = async () => {
+    calls.push("heal");
+    return { action: { type: "heal" }, result: { ok: true } };
+  };
+  bot.attemptSustain = async () => ({ result: { ok: false } });
+  bot.refreshProtectorStatus = () => null;
+  bot.chooseNoGoZoneEscape = () => null;
+  bot.handlePausedCavebotTick = async () => ({ handled: false });
+  bot.attemptTrainerEscape = async () => ({ result: { ok: false } });
+  bot.handleRookiller = async () => ({ handled: false });
+  bot.getVisibleEscapeThreats = () => [];
+  bot.chooseFollowTrainSuspendAction = () => null;
+  bot.chooseFollowTrainAction = () => null;
+  bot.attemptAutoEat = async () => ({ result: { ok: false } });
+  bot.attemptEquipmentAutoReplace = async () => ({ result: { ok: false } });
+  bot.attemptAmmoReload = async () => ({ result: { ok: false } });
+  bot.chooseUrgentConvert = () => null;
+  bot.chooseUrgentValueSlotRepair = () => null;
+  bot.attemptAmmoRestock = async () => ({ result: { ok: false } });
+  bot.attemptRefill = async () => ({ result: { ok: false } });
+  bot.attemptLoot = async () => {
+    calls.push("loot");
+    return { result: { ok: true } };
+  };
+  bot.target = async () => {
+    calls.push("target");
+    return { ok: true };
+  };
+  bot.chooseDistanceKeeper = () => null;
+  bot.chooseSpellCaster = () => null;
+  bot.chooseConvert = () => null;
+  bot.chooseRouteAction = () => null;
+  bot.chooseAntiIdle = () => null;
+
+  const result = await bot.tick();
+
+  assert.equal(result, snapshot);
+  assert.deepEqual(calls, ["heal", "target"]);
 });
 
 test("attemptSustain records module cooldown after a successful consumable action", async () => {
@@ -18609,13 +18914,76 @@ test("route spacing window uses the route spread, not a small fixed waypoint cap
   const window = bot.getRouteSpacingWindow(2);
 
   assert.equal(window.targetGap, 50);
-  assert.equal(window.minGap, 45);
-  assert.equal(window.maxGap, 55);
+  assert.equal(window.minGap, 44);
+  assert.equal(window.maxGap, 56);
   assert.equal(window.releaseGap, 50);
-  assert.equal(window.driftGap, 5);
+  assert.equal(window.driftGap, 6);
 });
 
-test("chooseRouteAction holds before it runs more than 10 percent ahead of its predecessor", () => {
+test("route spacing window splits by the coordinated live participant count", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypoints: Array.from({ length: 67 }, (_, index) => ({
+      x: 100 + index,
+      y: 200,
+      z: 8,
+      type: "walk",
+    })),
+  });
+
+  const window = bot.getRouteSpacingWindow(3);
+
+  assert.equal(window.targetGap, 67 / 3);
+  assert.equal(window.minGap, 20);
+  assert.equal(window.maxGap, 25);
+  assert.equal(window.releaseGap, 23);
+});
+
+test("route spacing advice honors expected live sessions beyond the current lease list", () => {
+  const waypoints = Array.from({ length: 67 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypoints,
+  });
+
+  bot.routeIndex = 25;
+  bot.routeCoordinationState = {
+    selfInstanceId: "middle",
+    activeCount: 3,
+    members: [
+      {
+        instanceId: "behind",
+        characterName: "Behind",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 1,
+      },
+      {
+        instanceId: "middle",
+        characterName: "Middle",
+        routeIndex: 25,
+        confirmedIndex: 24,
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const advice = bot.getRouteSpacingAdvice(26);
+
+  assert.equal(advice.hold, true);
+  assert.equal(advice.reason, "drift");
+  assert.equal(advice.targetGap, 67 / 3);
+  assert.equal(advice.maxGap, 25);
+});
+
+test("chooseRouteAction holds after the route spacing leeway past its predecessor", () => {
   const waypoints = Array.from({ length: 90 }, (_, index) => ({
     x: 100 + index,
     y: 200,
@@ -18628,7 +18996,7 @@ test("chooseRouteAction holds before it runs more than 10 percent ahead of its p
     waypoints,
   });
 
-  bot.routeIndex = 33;
+  bot.routeIndex = 34;
   bot.routeCoordinationState = {
     selfInstanceId: "middle",
     members: [
@@ -18642,8 +19010,8 @@ test("chooseRouteAction holds before it runs more than 10 percent ahead of its p
       {
         instanceId: "middle",
         characterName: "Middle",
-        routeIndex: 33,
-        confirmedIndex: 32,
+        routeIndex: 34,
+        confirmedIndex: 33,
         startedAt: 2,
       },
       {
@@ -18658,7 +19026,7 @@ test("chooseRouteAction holds before it runs more than 10 percent ahead of its p
 
   const action = bot.chooseRouteAction({
     ready: true,
-    playerPosition: { x: 133, y: 200, z: 8 },
+    playerPosition: { x: 134, y: 200, z: 8 },
     currentTarget: null,
     visibleCreatures: [],
     candidates: [],

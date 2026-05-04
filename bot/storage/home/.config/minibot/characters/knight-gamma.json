@@ -2,7 +2,8 @@
   "cavebotName": "cyclops-loop",
   "creatureLedger": {
     "monsters": [],
-    "players": []
+    "players": [],
+    "npcs": []
   },
   "cavebotPaused": false,
   "stopAggroHold": false

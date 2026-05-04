@@ -29,8 +29,8 @@
       "keepDistanceMax": 1,
       "finishBelowPercent": 0,
       "killMode": "normal",
-      "chaseMode": "auto",
-      "behavior": "kite",
+      "chaseMode": "aggressive",
+      "behavior": "hold",
       "preferShootable": true,
       "stickToTarget": true,
       "avoidBeam": false,
@@ -211,14 +211,13 @@
   "trainerManaTrainerHotkey": "",
   "trainerManaTrainerManaPercent": 85,
   "trainerManaTrainerMinHealthPercent": 95,
-  "autoLightEnabled": true,
+  "autoLightEnabled": false,
   "autoLightWords": "utevo lux",
   "autoLightMinManaPercent": 25,
   "autoConvertEnabled": true,
   "convertCooldownMs": 4000,
   "antiIdleEnabled": false,
   "antiIdleIntervalMs": 60000,
-  "alarmsEnabled": true,
   "alarmsPlayerEnabled": true,
   "alarmsPlayerRadiusSqm": 8,
   "alarmsPlayerFloorRange": 0,
@@ -254,7 +253,6 @@
   "alarmsFullBackpackEnabled": true,
   "alarmsHighIncomingDamagePercent": 35,
   "alarmsLogEnabled": true,
-  "alarmsSoundEnabled": true,
   "alarmsDesktopNotificationEnabled": false,
   "trainerEnabled": false,
   "trainerConfigured": false,
@@ -302,7 +300,7 @@
   },
   "partyFollowDistance": 1,
   "partyFollowCombatMode": "follow-and-fight",
-  "chaseMode": "auto",
+  "chaseMode": "aggressive",
   "runeMakerEnabled": false,
   "runeMakerRules": [],
   "spellCasterEnabled": false,
@@ -311,7 +309,7 @@
   "aoeSolverRules": [],
   "distanceKeeperEnabled": false,
   "distanceKeeperRules": [],
-  "rookillerEnabled": true,
+  "rookillerEnabled": false,
   "once": false,
   "dryRun": false,
   "healerRules": [
@@ -325,6 +323,17 @@
       "minMana": 80,
       "minManaPercent": 0,
       "cooldownMs": 900
+    },
+    {
+      "enabled": true,
+      "label": "",
+      "words": "exura",
+      "hotkey": "",
+      "minHealthPercent": 0,
+      "maxHealthPercent": 70,
+      "minMana": 25,
+      "minManaPercent": 0,
+      "cooldownMs": 120
     }
   ],
   "healerTiers": [
@@ -332,6 +341,12 @@
       "words": "exura vita",
       "healthPercent": 30,
       "minMana": 80,
+      "minManaPercent": 0
+    },
+    {
+      "words": "exura",
+      "healthPercent": 70,
+      "minMana": 25,
       "minManaPercent": 0
     }
   ],

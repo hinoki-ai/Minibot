@@ -599,7 +599,7 @@ function inferItemFlags(item, slotLabel = "") {
     .toLowerCase();
 
   return {
-    potion: /\bpotion\b/.test(text),
+    potion: /\b(?:potion|fluid)\b/.test(text),
     rune: /\brune\b/.test(text),
     food: FOOD_KEYWORDS.some((keyword) => text.includes(keyword)),
     ammo: /\b(?:ammo|ammunition|quiver|arrow|bolt|dart|spear|throwing)\b/.test(text),
