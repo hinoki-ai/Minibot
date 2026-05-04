@@ -94,6 +94,7 @@ const ROUTE_PACK_SECTION_KEYS = Object.freeze({
     "alarmsRequireAcknowledgement",
   ],
   party: [
+    "teamEnabled",
     "partyFollowEnabled",
     "partyFollowMembers",
     "partyFollowManualPlayers",

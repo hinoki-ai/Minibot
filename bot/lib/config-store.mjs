@@ -88,6 +88,7 @@ const ROUTE_PROFILE_PACK_SECTION_KEYS = Object.freeze({
     "autowalkEnabled",
     "autowalkLoop",
     "routeStrictClear",
+    "routeSpacingEnabled",
     "routeFollowExactWaypoints",
     "routeRecording",
     "routeRecordStep",
@@ -232,6 +233,7 @@ const ROUTE_PROFILE_PACK_SECTION_KEYS = Object.freeze({
     "alarmsHighIncomingDamagePerSecond",
   ],
   party: [
+    "teamEnabled",
     "partyFollowEnabled",
     "partyFollowMembers",
     "partyFollowManualPlayers",
@@ -415,7 +417,8 @@ function buildRouteSpacingSignature(options = {}) {
 export function describeRouteSpacingGroup(options = {}) {
   const normalized = normalizeOptions(options);
   const routeName = String(normalized.cavebotName || "").trim();
-  if (!routeName || normalized.waypoints.length < 2) {
+  const coordinationEnabled = normalized.routeSpacingEnabled !== false || normalized.teamEnabled === true;
+  if (!routeName || normalized.waypoints.length < 2 || !coordinationEnabled) {
     return null;
   }
 

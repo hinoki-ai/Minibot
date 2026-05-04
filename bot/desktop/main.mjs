@@ -64,6 +64,11 @@ import {
   shouldCopyBrowserProfilePath,
 } from "../lib/browser-profile-privacy.mjs";
 import {
+  buildMinibiaHotbarSeedProfileCandidates,
+  buildMinibiaHotbarStorageHydrationExpression,
+  resolveMinibiaHotbarSeed,
+} from "../lib/minibia-hotbar-seed.mjs";
+import {
   deleteAccount,
   buildCharacterKey,
   deleteRouteProfile,
@@ -129,8 +134,11 @@ const IDLE_SESSION_SNAPSHOT_INTERVAL_MS = 12_000;
 const LIVE_STATE_PATCH_INTERVAL_MS = 750;
 const MULTI_SESSION_LIVE_STATE_PATCH_STEP_MS = 350;
 const MULTI_SESSION_LIVE_STATE_PATCH_MAX_MS = 2_500;
+const UNFOCUSED_LIVE_STATE_PATCH_MIN_MS = 1_500;
+const HIDDEN_LIVE_STATE_PATCH_MIN_MS = 5_000;
 const CLAIM_HEARTBEAT_MIN_INTERVAL_MS = 5_000;
 const BROWSER_STORAGE_HYGIENE_INTERVAL_MS = 15 * 60_000;
+const HOTBAR_HYDRATION_RELOAD_SETTLE_MS = 400;
 const RUNNING_SESSION_STALE_MS = 12_000;
 const RUNNING_SESSION_RECOVERY_MS = 20_000;
 const RUNNING_SESSION_RECOVERY_COOLDOWN_MS = 15_000;
@@ -759,6 +767,7 @@ function createSession(instance) {
     saveChain: Promise.resolve(),
     promotedProfileConfig: null,
     pendingRoutePackImport: null,
+    routeValidationCache: null,
     lastClaimHeartbeatAt: 0,
     lastStaleRecoveryAt: 0,
     staleRecoveryInFlight: false,
@@ -922,6 +931,7 @@ function getAutomaticFollowTrainMemberNames(activeSession = null) {
 }
 
 const FOLLOW_TRAIN_OPTION_KEYS = new Set([
+  "teamEnabled",
   "partyFollowEnabled",
   "partyFollowMembers",
   "partyFollowManualPlayers",
@@ -929,6 +939,11 @@ const FOLLOW_TRAIN_OPTION_KEYS = new Set([
   "partyFollowMemberChaseModes",
   "partyFollowDistance",
   "partyFollowCombatMode",
+]);
+
+const TEAM_HUNT_OPTION_KEYS = new Set([
+  "teamEnabled",
+  "partyFollowEnabled",
 ]);
 
 function isFollowTrainOnlyPatch(partial = {}) {
@@ -940,6 +955,18 @@ function isFollowTrainOnlyPatch(partial = {}) {
   return keys.length > 0 && keys.every((key) => FOLLOW_TRAIN_OPTION_KEYS.has(key));
 }
 
+function isTeamHuntOnlyPatch(partial = {}) {
+  if (!partial || typeof partial !== "object") {
+    return false;
+  }
+
+  const keys = Object.keys(partial);
+  return keys.length > 0
+    && Object.prototype.hasOwnProperty.call(partial, "teamEnabled")
+    && partial.teamEnabled === true
+    && keys.every((key) => TEAM_HUNT_OPTION_KEYS.has(key));
+}
+
 function buildFollowTrainOptionsPatch(partial = {}, activeSession = null) {
   const patch = {};
   for (const key of FOLLOW_TRAIN_OPTION_KEYS) {
@@ -949,6 +976,7 @@ function buildFollowTrainOptionsPatch(partial = {}, activeSession = null) {
   }
 
   if (patch.partyFollowEnabled === true) {
+    patch.teamEnabled = false;
     const requestedMembers = mergeMonsterNames(patch.partyFollowMembers || []);
     if (requestedMembers.length < 2) {
       const activeMembers = mergeMonsterNames(activeSession?.config?.partyFollowMembers || []);
@@ -964,6 +992,61 @@ function buildFollowTrainOptionsPatch(partial = {}, activeSession = null) {
   }
 
   return patch;
+}
+
+function getSessionRouteGroupKey(session = null) {
+  const routeGroup = describeRouteSpacingGroup({
+    ...(session?.config || {}),
+    routeSpacingEnabled: true,
+    teamEnabled: false,
+  });
+  return routeGroup?.routeKey || "";
+}
+
+function resolveTeamHuntPersistSessions(activeSession = null) {
+  const routeKey = getSessionRouteGroupKey(activeSession);
+  if (!routeKey) {
+    return activeSession ? [activeSession] : [];
+  }
+
+  const selectedSessions = [...sessions.values()]
+    .filter(canSyncSession)
+    .filter((session) => getSessionRouteGroupKey(session) === routeKey);
+  if (!selectedSessions.length && activeSession) {
+    return [activeSession];
+  }
+
+  return selectedSessions;
+}
+
+async function persistTeamHuntOptionsForLiveSessions(activeSession, partial = {}) {
+  if (activeSession) {
+    await ensureSessionConfig(activeSession);
+  }
+
+  const patch = {
+    teamEnabled: partial.teamEnabled === true,
+    partyFollowEnabled: false,
+  };
+  const selectedSessions = resolveTeamHuntPersistSessions(activeSession);
+
+  for (const session of selectedSessions) {
+    await ensureSessionConfig(session);
+  }
+
+  for (const session of selectedSessions) {
+    await persistSessionConfig(session, mergeOptions(session.config, patch), { emitState: false });
+    pushSessionLog(
+      session,
+      patch.teamEnabled
+        ? "Team hunt enabled."
+        : "Team hunt disabled.",
+    );
+  }
+
+  if (activeSession) {
+    sendEvent("state", { sessionId: activeSession.id, scope: "team-hunt" });
+  }
 }
 
 function getSessionFollowTrainMemberKeys(session = null) {
@@ -1084,7 +1167,9 @@ function applySessionRuntimeLoad() {
 
 function updateWindowTitle() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.setTitle(APP_NAME);
+  if (mainWindow.getTitle() !== APP_NAME) {
+    mainWindow.setTitle(APP_NAME);
+  }
 }
 
 function installAppSessionSecurity() {
@@ -1559,10 +1644,29 @@ function getSessionRouteValidation(session = getActiveSession()) {
   }
 
   const routeProfile = serializeRouteProfile(session.config, session.routeProfile);
-  return validateRouteConfig(session.config, {
-    sourceName: session.config.cavebotName || routeProfile?.name || "",
-    sourcePath: routeProfile?.path || "",
+  const sourceName = session.config.cavebotName || routeProfile?.name || "";
+  const sourcePath = routeProfile?.path || "";
+  const cache = session.routeValidationCache || null;
+  if (
+    cache
+    && cache.config === session.config
+    && cache.sourceName === sourceName
+    && cache.sourcePath === sourcePath
+  ) {
+    return cache.validation;
+  }
+
+  const validation = validateRouteConfig(session.config, {
+    sourceName,
+    sourcePath,
   });
+  session.routeValidationCache = {
+    config: session.config,
+    sourceName,
+    sourcePath,
+    validation,
+  };
+  return validation;
 }
 
 function assertRouteValidationAcknowledged(session) {
@@ -1734,12 +1838,21 @@ function serializeAccountLibrary() {
   }));
 }
 
-function serializeSession(session) {
+function serializeSession(session, {
+  includeDetails = true,
+} = {}) {
   const snapshot = session.bot.lastSnapshot || null;
   const routeResetStatus = session.bot.getRouteResetStatus();
   const snapshotAgeMs = session.bot.getSnapshotAgeMs?.();
   const followTrainStatus = session.bot.getFollowTrainStatus?.(snapshot) || null;
   const routeTelemetry = session.bot.refreshRouteTelemetry?.(snapshot) || null;
+  const protectorStatus = session.bot.getProtectorStatus?.() || snapshot?.protectorStatus || null;
+  const pkAssistStatus = includeDetails
+    ? (session.bot.getPkAssistStatus?.(snapshot) || snapshot?.pkAssistStatus || null)
+    : null;
+  const runtimeDiagnostics = includeDetails
+    ? (session.bot.getRuntimeDiagnostics?.() || snapshot?.runtimeDiagnostics || null)
+    : null;
   const stale = Boolean(
     session.bot.running
     && Number.isFinite(snapshotAgeMs)
@@ -1786,12 +1899,12 @@ function serializeSession(session) {
     routeIndex: session.bot.routeIndex || 0,
     routeComplete: session.bot.routeComplete || false,
     routeState: session.bot.getRouteStateTelemetry?.(snapshot) || null,
-    decisionTrace: session.bot.getDecisionTrace?.() || null,
-    huntLedger: session.bot.getHuntLedger?.() || snapshot?.huntLedger || null,
-    targetScoring: session.bot.getTargetScoreReport?.() || snapshot?.targetScoring || null,
-    protectorStatus: session.bot.getProtectorStatus?.() || snapshot?.protectorStatus || null,
-    pkAssistStatus: session.bot.getPkAssistStatus?.(snapshot) || snapshot?.pkAssistStatus || null,
-    runtimeDiagnostics: session.bot.getRuntimeDiagnostics?.() || snapshot?.runtimeDiagnostics || null,
+    decisionTrace: includeDetails ? (session.bot.getDecisionTrace?.() || null) : null,
+    huntLedger: includeDetails ? (session.bot.getHuntLedger?.() || snapshot?.huntLedger || null) : null,
+    targetScoring: includeDetails ? (session.bot.getTargetScoreReport?.() || snapshot?.targetScoring || null) : null,
+    protectorStatus,
+    pkAssistStatus,
+    runtimeDiagnostics,
     routeResetActive: routeResetStatus.active,
     routeResetPhase: routeResetStatus.phase,
     routeResetTargetIndex: routeResetStatus.targetIndex,
@@ -1813,11 +1926,11 @@ function serializeSession(session) {
       alarmsBlacklistRadiusSqm: session.config?.alarmsBlacklistRadiusSqm,
       alarmsBlacklistFloorRange: session.config?.alarmsBlacklistFloorRange,
     },
-    runtimeTiming: session.bot.getRuntimeTiming?.() || {},
+    runtimeTiming: includeDetails ? (session.bot.getRuntimeTiming?.() || {}) : {},
     overlayFocusIndex: session.bot.overlayFocusIndex ?? null,
     routeName: session.config?.cavebotName || "",
     routeProfile: serializeRouteProfile(session.config, session.routeProfile),
-    routeValidation: getSessionRouteValidation(session),
+    routeValidation: includeDetails ? getSessionRouteValidation(session) : null,
     page: serializePage(session.bot.page),
   };
 }
@@ -1897,15 +2010,19 @@ function serializeLiveState(
   },
   {
     includeLogs = true,
+    slimInactiveSessions = false,
   } = {},
 ) {
   const serializeStartedAt = getMonotonicNowMs();
   ensureActiveSessionId();
   applySessionRuntimeLoad();
+  const activeId = String(activeSession?.id || activeSessionId || "");
 
   const liveState = {
     activeSessionId,
-    sessions: [...sessions.values()].map(serializeSession),
+    sessions: [...sessions.values()].map((session) => serializeSession(session, {
+      includeDetails: !slimInactiveSessions || String(session.id || "") === activeId,
+    })),
     running: activeSession?.bot.running || false,
     routeIndex: activeSession?.bot.routeIndex || 0,
     routeComplete: activeSession?.bot.routeComplete || false,
@@ -1933,6 +2050,7 @@ function serializeLiveState(
 
   recordDesktopRuntimeTiming("serializeLiveState", getMonotonicNowMs() - serializeStartedAt, {
     includeLogs: Boolean(includeLogs),
+    slimInactiveSessions: Boolean(slimInactiveSessions),
     logCount: includeLogs ? Math.max(0, activeSession?.logs?.length || 0) : 0,
     runningSessionCount: getRunningSessionCount(),
     sessionCount: sessions.size,
@@ -1990,14 +2108,22 @@ function getRunningSessionCount() {
 
 function getLiveStatePatchIntervalMs() {
   const runningSessionCount = getRunningSessionCount();
+  const hasExternalSubscribers = externalControlServer?.hasSubscribers?.() === true;
+  const windowPatchFloorMs = !hasExternalSubscribers && mainWindow && !mainWindow.isDestroyed()
+    ? mainWindow.isMinimized() || !mainWindow.isVisible()
+      ? HIDDEN_LIVE_STATE_PATCH_MIN_MS
+      : mainWindow.isFocused()
+        ? LIVE_STATE_PATCH_INTERVAL_MS
+        : UNFOCUSED_LIVE_STATE_PATCH_MIN_MS
+    : LIVE_STATE_PATCH_INTERVAL_MS;
   if (runningSessionCount <= 1) {
-    return LIVE_STATE_PATCH_INTERVAL_MS;
+    return Math.max(LIVE_STATE_PATCH_INTERVAL_MS, windowPatchFloorMs);
   }
 
-  return Math.min(
+  return Math.max(windowPatchFloorMs, Math.min(
     MULTI_SESSION_LIVE_STATE_PATCH_MAX_MS,
     LIVE_STATE_PATCH_INTERVAL_MS + ((runningSessionCount - 1) * MULTI_SESSION_LIVE_STATE_PATCH_STEP_MS),
-  );
+  ));
 }
 
 function clearLiveStatePatchTimer() {
@@ -2018,7 +2144,9 @@ function dispatchEvent(type, payload = {}, {
   if (!dispatchToWindow && !dispatchToExternalControl) return;
 
   const dispatchStartedAt = getMonotonicNowMs();
-  const nextState = state || (statePatch ? serializeLiveState() : serializeState());
+  const nextState = state || (statePatch ? serializeLiveState(undefined, undefined, {
+    slimInactiveSessions: true,
+  }) : serializeState());
   const eventEnvelope = {
     type,
     payload: buildEventPayload(type, payload),
@@ -2055,7 +2183,10 @@ function sendLiveStatePatch() {
   const patchStartedAt = getMonotonicNowMs();
   const activeSession = getActiveSession();
   const includeLogs = shouldIncludeLogsInLivePatch(activeSession);
-  const nextState = serializeLiveState(activeSession, undefined, { includeLogs });
+  const nextState = serializeLiveState(activeSession, undefined, {
+    includeLogs,
+    slimInactiveSessions: true,
+  });
   recordDesktopRuntimeTiming("livePatch", getMonotonicNowMs() - patchStartedAt, {
     includeLogs,
     logCount: includeLogs ? Math.max(0, activeSession?.logs?.length || 0) : 0,
@@ -2069,7 +2200,9 @@ function sendLiveStatePatch() {
 }
 
 function scheduleLiveStatePatch() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
+  const hasWindowConsumer = Boolean(mainWindow && !mainWindow.isDestroyed());
+  const hasExternalConsumer = externalControlServer?.hasSubscribers?.() === true;
+  if (!hasWindowConsumer && !hasExternalConsumer) {
     return;
   }
 
@@ -2916,6 +3049,106 @@ async function resolveOpenManagedBrowserWindowBounds(port) {
   }).catch(() => null);
 }
 
+function getElectronHomeDir() {
+  try {
+    return app.getPath("home");
+  } catch {
+    return "";
+  }
+}
+
+function buildHotbarHydrationProfileCandidates(context = {}, {
+  includeBundledSeedProfile = true,
+  includeDefaultBrowserProfiles = true,
+} = {}) {
+  const preferredProfiles = Array.isArray(context.preferredProfiles)
+    ? context.preferredProfiles
+    : [];
+
+  const bundledSeedProfile = includeBundledSeedProfile && RUNTIME_LAYOUT.portableClientSeedUserDataDir
+    ? [{
+        userDataDir: RUNTIME_LAYOUT.portableClientSeedUserDataDir,
+        profileDirectory: context.targetProfileDirectory || "Default",
+        label: "bundled client profile",
+      }]
+    : [];
+
+  return buildMinibiaHotbarSeedProfileCandidates({
+    preferredProfiles: [...preferredProfiles, ...bundledSeedProfile],
+    env: process.env,
+    homeDir: getElectronHomeDir(),
+    platform: process.platform,
+    includeDefaultBrowserProfiles,
+  });
+}
+
+function formatHotbarSeedSource(seed = {}) {
+  const explicitLabel = String(seed.sourceLabel || "").trim();
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const userDataDir = String(seed.sourceUserDataDir || "").trim();
+  const profileDirectory = String(seed.sourceProfileDirectory || "").trim();
+  if (!userDataDir) {
+    return "browser profile";
+  }
+
+  const baseName = path.basename(userDataDir);
+  return profileDirectory && profileDirectory !== "Default"
+    ? `${baseName}/${profileDirectory}`
+    : baseName;
+}
+
+async function hydrateSessionHotbarFromSeed(session, context = {}) {
+  const wsUrl = session?.instance?.webSocketDebuggerUrl;
+  if (!wsUrl) {
+    return null;
+  }
+
+  let seed = resolveMinibiaHotbarSeed({
+    candidates: buildHotbarHydrationProfileCandidates(context, {
+      includeDefaultBrowserProfiles: false,
+    }),
+    excludeUserDataDirs: [context.targetUserDataDir],
+  });
+
+  if (!seed) {
+    seed = resolveMinibiaHotbarSeed({
+      candidates: buildHotbarHydrationProfileCandidates(
+        { preferredProfiles: [] },
+        { includeBundledSeedProfile: false },
+      ),
+      excludeUserDataDirs: [context.targetUserDataDir],
+    });
+  }
+
+  if (!seed) {
+    return null;
+  }
+
+  const cdp = new CdpPage(wsUrl);
+  try {
+    await cdp.connect();
+    const result = await cdp.evaluate(buildMinibiaHotbarStorageHydrationExpression(seed));
+    if (result?.changed) {
+      pushSessionLog(
+        session,
+        `Restored Minibia hotbar from ${formatHotbarSeedSource(seed)} (${result.sourceSlotCount} slot${result.sourceSlotCount === 1 ? "" : "s"}).`,
+      );
+      await cdp.send("Page.enable").catch(() => {});
+      await cdp.send("Page.reload", { ignoreCache: true }).catch(() => {});
+      await sleep(HOTBAR_HYDRATION_RELOAD_SETTLE_MS);
+    }
+    return result || null;
+  } catch (error) {
+    pushSessionLog(session, `Hotbar restore failed: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  } finally {
+    cdp.close();
+  }
+}
+
 
 async function openManagedSessionTab({ returnSession = false } = {}) {
   const sourceConfig = defaultConfig || normalizeOptions();
@@ -2923,6 +3156,11 @@ async function openManagedSessionTab({ returnSession = false } = {}) {
   let child = null;
   let expectedSessionId = "";
   let preferredWindowBounds = await resolveOpenManagedBrowserWindowBounds(sourceConfig.port);
+  let hotbarHydrationContext = {
+    targetUserDataDir: "",
+    targetProfileDirectory: "Default",
+    preferredProfiles: [],
+  };
 
   if (RUNTIME_LAYOUT.portable) {
     const launchSpec = buildPortableClientLaunchSpec({
@@ -2939,10 +3177,23 @@ async function openManagedSessionTab({ returnSession = false } = {}) {
       },
     });
 
+    const userDataDir = extractCommandArgValue(launchSpec.args, "--user-data-dir=");
+    const profileDirectory = extractCommandArgValue(launchSpec.args, "--profile-directory=") || "Default";
+    hotbarHydrationContext = {
+      targetUserDataDir: userDataDir,
+      targetProfileDirectory: profileDirectory,
+      preferredProfiles: RUNTIME_LAYOUT.portableClientSeedUserDataDir
+        ? [{
+            userDataDir: RUNTIME_LAYOUT.portableClientSeedUserDataDir,
+            profileDirectory,
+            label: "bundled client profile",
+          }]
+        : [],
+    };
     preferredWindowBounds ||= resolvePreferredManagedBrowserWindowBounds({
       pageUrlPrefix: sourceConfig.pageUrlPrefix,
-      userDataDir: extractCommandArgValue(launchSpec.args, "--user-data-dir="),
-      profileDirectory: extractCommandArgValue(launchSpec.args, "--profile-directory=") || "Default",
+      userDataDir,
+      profileDirectory,
       appId: extractCommandArgValue(launchSpec.args, "--app-id="),
     });
     child = spawn(launchSpec.command, launchSpec.args, launchSpec.options);
@@ -2963,6 +3214,7 @@ async function openManagedSessionTab({ returnSession = false } = {}) {
         .then((res) => res.ok, () => false);
 
       const sourceUserDataDir = extractCommandArgValue(appLauncher.args, "--user-data-dir=");
+      const sourceProfileDirectory = extractCommandArgValue(appLauncher.args, "--profile-directory=") || "Default";
       const userDataDir = resolveManagedBrowserLaunchUserDataDir(appLauncher);
 
       if (!browserAlive) {
@@ -2980,10 +3232,22 @@ async function openManagedSessionTab({ returnSession = false } = {}) {
         port: sourceConfig.port,
       });
 
+      const profileDirectory = extractCommandArgValue(launchSpec.args, "--profile-directory=") || sourceProfileDirectory || "Default";
+      hotbarHydrationContext = {
+        targetUserDataDir: userDataDir,
+        targetProfileDirectory: profileDirectory,
+        preferredProfiles: sourceUserDataDir
+          ? [{
+              userDataDir: sourceUserDataDir,
+              profileDirectory: sourceProfileDirectory,
+              label: "Minibia app profile",
+            }]
+          : [],
+      };
       preferredWindowBounds ||= resolvePreferredManagedBrowserWindowBounds({
         pageUrlPrefix: sourceConfig.pageUrlPrefix,
         userDataDir,
-        profileDirectory: extractCommandArgValue(launchSpec.args, "--profile-directory=") || "Default",
+        profileDirectory,
         appId: extractCommandArgValue(launchSpec.args, "--app-id="),
       });
       child = spawn(launchSpec.command, launchSpec.args, launchSpec.options);
@@ -3002,6 +3266,11 @@ async function openManagedSessionTab({ returnSession = false } = {}) {
 
     const userDataDir = getManagedBrowserUserDataDir();
     fs.mkdirSync(userDataDir, { recursive: true });
+    hotbarHydrationContext = {
+      targetUserDataDir: userDataDir,
+      targetProfileDirectory: "Default",
+      preferredProfiles: [],
+    };
 
     const launchSpec = buildManagedBrowserLaunchSpec({
       browserPath,
@@ -3057,6 +3326,8 @@ async function openManagedSessionTab({ returnSession = false } = {}) {
         bounds: targetWindowBounds,
       }).catch(() => false);
     }
+
+    await hydrateSessionHotbarFromSeed(nextSession, hotbarHydrationContext);
 
     activeSessionId = nextSession.id;
     applySessionRuntimeLoad();
@@ -5138,6 +5409,11 @@ handleTrusted("bb:reconnect-session", async (_event, sessionId = null) => {
 handleTrusted("bb:update-options", async (_event, partial) => {
   const session = requireActiveSession();
   await ensureSessionConfig(session);
+
+  if (isTeamHuntOnlyPatch(partial)) {
+    await persistTeamHuntOptionsForLiveSessions(session, partial);
+    return serializeState();
+  }
 
   if (isFollowTrainOnlyPatch(partial)) {
     await persistFollowTrainOptionsForLiveSessions(session, partial);

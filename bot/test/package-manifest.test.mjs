@@ -63,7 +63,7 @@ test("package manifest is valid for packaging", () => {
   });
   assert.equal(typeof packageJson.scripts.pack, "string");
   assert.equal(typeof packageJson.scripts.dist, "string");
-  assert.deepEqual(Object.keys(packageJson.scripts).sort(), [
+  for (const scriptName of [
     "bundle:minibia",
     "check:structure",
     "clean",
@@ -78,7 +78,18 @@ test("package manifest is valid for packaging", () => {
     "refresh:minibia-data",
     "start",
     "test",
-  ]);
+    "test:all",
+    "test:core",
+    "test:desktop",
+    "test:integration",
+    "test:release",
+    "test:smoke",
+    "test:unit",
+  ]) {
+    assert.equal(typeof packageJson.scripts[scriptName], "string", `Missing package script ${scriptName}`);
+  }
+  assert.equal(packageJson.scripts.test, "node scripts/run-tests.mjs smoke");
+  assert.equal(packageJson.scripts["test:all"], "node scripts/run-tests.mjs all");
   for (const file of desktopRuntimePackageFiles) {
     assert.ok(packageJson.files.includes(file), `Missing package file ${file}`);
   }

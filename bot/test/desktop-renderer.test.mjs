@@ -37,7 +37,9 @@ const SHARED_MODULE_MODAL_NAMES = new Set([
   "ringAutoReplace",
   "looting",
   "banking",
+  "team",
   "partyFollow",
+  "pkAssist",
 ]);
 const domCleanups = new Set();
 
@@ -2289,6 +2291,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     ["quick-toggle-convert", "autoConvertEnabled"],
     ["quick-toggle-anti-idle", "antiIdleEnabled"],
     ["quick-toggle-alarms", "alarmsEnabled"],
+    ["quick-toggle-team-hunt", "teamEnabled"],
     ["quick-toggle-party-follow", "partyFollowEnabled"],
   ];
 
@@ -2305,6 +2308,10 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
       assert.equal(currentState().options.amuletAutoReplaceEnabled, !before, `${id} should toggle amuletAutoReplaceEnabled`);
     }
   }
+  const teamPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "teamEnabled") && payload.teamEnabled === true);
+  assert.equal(teamPayload?.partyFollowEnabled, false);
+  const followPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "partyFollowEnabled") && payload.partyFollowEnabled === true);
+  assert.equal(followPayload?.teamEnabled, false);
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "on");
@@ -6198,6 +6205,51 @@ test("hunt studio saves hunt queue, shared spawn mode, and fallback combat state
   assert.equal(document.getElementById("modal-layer").hidden, true);
 });
 
+test("hunt target profiles skip DOM rebuilds for live creature-only patches", async () => {
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        monsterNames: ["Rotworm", "Rat"],
+        targetProfiles: [
+          { name: "Rotworm", priority: 140, dangerLevel: 4 },
+          { name: "Rat", priority: 60, dangerLevel: 1 },
+        ],
+      },
+    }),
+  });
+  const { document, emit } = desk;
+
+  document.querySelector('[data-open-modal="targeting"]').click();
+  await flush();
+
+  const firstRow = document.querySelector("#target-profile-list [data-target-profile-name]");
+  assert.equal(firstRow?.dataset.targetProfileName, "Rotworm");
+
+  emit("state", {}, createState({
+    options: {
+      monsterNames: ["Rotworm", "Rat"],
+      targetProfiles: [
+        { name: "Rotworm", priority: 140, dangerLevel: 4 },
+        { name: "Rat", priority: 60, dangerLevel: 1 },
+      ],
+    },
+    snapshot: {
+      visibleMonsterNames: ["Dragon"],
+      visibleCreatureNames: ["Dragon"],
+      visibleCreatures: [
+        {
+          id: 200,
+          name: "Dragon",
+          position: { x: 103, y: 200, z: 7 },
+        },
+      ],
+    },
+  }), { statePatch: true });
+  await flush();
+
+  assert.equal(document.querySelector("#target-profile-list [data-target-profile-name]"), firstRow);
+});
+
 test("route overview quick save persists route settings without opening the autowalk modal", async () => {
   const desk = await createDesk({
     initialState: createState({
@@ -6500,7 +6552,11 @@ test("hunt workspace keeps registry entries alphabetical and target profiles in 
   );
   assert.equal(
     document.querySelector("#target-profile-list [data-target-profile-name] .target-profile-priority")?.textContent?.trim(),
-    "Priority 1 - Highest",
+    undefined,
+  );
+  assert.equal(
+    document.querySelector("#target-profile-list [data-target-profile-name] .target-profile-name")?.textContent?.trim(),
+    "Swamp Troll",
   );
 });
 
@@ -6641,8 +6697,8 @@ test("hunt workspace saves per-monster target profiles from the target panel", a
   setField("killMode", "last", "change");
   setField("chaseMode", "aggressive", "change");
   setField("behavior", "escape", "change");
-  setField("avoidBeam", true, "change");
-  setField("avoidWave", true, "change");
+  assert.equal(ratRow.querySelector('[data-target-profile-field="avoidWave"]'), null);
+  setField("avoidHazards", true, "change");
   setField("stickToTarget", false, "change");
 
   document.getElementById("targeting-distance-enabled").checked = true;
@@ -8017,6 +8073,7 @@ test("anti-idle saves live keepalive timing and follow chain saves chain members
   await flush();
 
   payload = calls.updateOptions.at(-1);
+  assert.equal(payload.teamEnabled, false);
   assert.equal(payload.partyFollowEnabled, true);
   assert.equal(payload.partyFollowMembers, "Knight Alpha\nGuide Gamma\nScout Beta\nManual Delta");
   assert.equal(payload.partyFollowManualPlayers, "Manual Delta");
@@ -8144,6 +8201,40 @@ test("follow chain surfaces shared HP supply and loot summaries", async () => {
   assert.match(overviewText, /pots 30 \/ runes 8 \/ ammo 120/);
   assert.match(overviewText, /Loot/);
   assert.match(overviewText, /1\.8k gp \/ 5 kills \/ 1 lap/);
+});
+
+test("Team Hunt and Follow Chain quick toggles send mutually exclusive modes", async () => {
+  const desk = await createDesk({
+    initialState: createState({
+      options: {
+        teamEnabled: false,
+        partyFollowEnabled: false,
+        partyFollowMembers: [],
+      },
+    }),
+  });
+  const { document, calls, currentState } = desk;
+
+  assert.equal(document.querySelector("#quick-open-team-hunt span").textContent.trim(), "Team Hunt");
+  assert.equal(document.querySelector("#quick-open-party-follow span").textContent.trim(), "Follow Chain");
+
+  document.getElementById("quick-toggle-team-hunt").click();
+  await flush();
+
+  assert.deepEqual(calls.updateOptions.at(-1), {
+    teamEnabled: true,
+    partyFollowEnabled: false,
+  });
+  assert.equal(currentState().options.teamEnabled, true);
+  assert.equal(currentState().options.partyFollowEnabled, false);
+
+  document.getElementById("quick-toggle-party-follow").click();
+  await flush();
+
+  assert.equal(calls.updateOptions.at(-1).teamEnabled, false);
+  assert.equal(calls.updateOptions.at(-1).partyFollowEnabled, true);
+  assert.equal(currentState().options.teamEnabled, false);
+  assert.equal(currentState().options.partyFollowEnabled, true);
 });
 
 test("follow chain auto-fills live tabs when enabled and refreshes seen players while open", async () => {

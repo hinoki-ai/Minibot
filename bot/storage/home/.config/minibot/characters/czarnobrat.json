@@ -25,7 +25,18 @@
       "Wolf",
       "Scorpion",
       "Rabbit",
-      "Alpha Dragon"
+      "Alpha Dragon",
+      "Deer",
+      "Lion",
+      "Orc Warrior",
+      "Slime",
+      "Spider",
+      "Orc Berserker",
+      "Orc",
+      "Minotaur Archer",
+      "Fire Devil",
+      "Cyclops",
+      "Dog"
     ],
     "players": [
       "Zlocimir Wielkoportf",
@@ -73,7 +84,11 @@
       "Dark Ninja",
       "Master Of The Runes",
       "Grof",
-      "the guard"
+      "the guard",
+      "Smokd",
+      "Flacoo",
+      "Ban",
+      "Herbalist"
     ],
     "npcs": []
   },

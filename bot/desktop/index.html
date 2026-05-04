@@ -243,6 +243,16 @@
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
                   <div class="quick-module-card">
+                    <button id="quick-open-team-hunt" type="button" class="quick-module-open"
+                      data-open-modal="team">
+                      <span>Team Hunt</span>
+                      <strong id="summary-team-hunt">-</strong>
+                      <small id="summary-team-hunt-detail">-</small>
+                    </button>
+                    <button id="quick-toggle-team-hunt" type="button"
+                      class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
+                  </div>
+                  <div class="quick-module-card">
                     <button id="quick-open-party-follow" type="button" class="quick-module-open"
                       data-open-modal="partyFollow">
                       <span>Follow Chain</span>
@@ -698,6 +708,15 @@
                   data-proxy-click="#quick-toggle-alarms"><span>Power</span><strong>Off</strong></button>
               </div>
               <div class="compact-split-card">
+                <button id="compact-open-team-hunt" type="button" class="compact-card-open"
+                  data-open-modal="team">
+                  <span>Team Hunt</span>
+                  <strong id="compact-team-hunt-summary">-</strong>
+                </button>
+                <button id="compact-toggle-team-hunt" type="button" class="btn compact-card-toggle"
+                  data-proxy-click="#quick-toggle-team-hunt"><span>Power</span><strong>Off</strong></button>
+              </div>
+              <div class="compact-split-card">
                 <button id="compact-open-party-follow" type="button" class="compact-card-open"
                   data-open-modal="partyFollow">
                   <span>Follow Chain</span>
@@ -775,6 +794,11 @@
           <div class="route-hunt-head-badge"><span>Plyr</span><strong id="targeting-player-history-count">-</strong>
           </div>
         </div>
+        <label class="route-hunt-search-bar route-hunt-head-search">
+          <span>Search</span>
+          <input id="creature-registry-search" type="search"
+            placeholder="Filter queue, profiles, seen monsters, players, NPCs" spellcheck="false" />
+        </label>
         <div class="modal-head-tools">
           <label class="module-rule-control module-rule-check target-profile-check route-hunt-head-check">
             <input id="targeting-distance-enabled" type="checkbox" />
@@ -784,16 +808,11 @@
         </div>
       </div>
       <div class="modal-body modal-body-targeting route-hunt-workspace route-hunt-workspace-modal">
-        <div class="route-hunt-modal-summary">
+        <div class="route-hunt-modal-summary" hidden>
           <div class="route-hunt-summary-bar">
             <div id="autowalk-shared-spawn-summary" class="route-hunt-inline-note">Waiting for player policy.</div>
             <div id="autowalk-distance-summary" class="route-hunt-inline-note">No fallback combat rules.</div>
           </div>
-          <label class="route-hunt-search-bar">
-            <span>Search</span>
-            <input id="creature-registry-search" type="search"
-              placeholder="Filter queue, profiles, seen monsters, players, NPCs" spellcheck="false" />
-          </label>
         </div>
         <div class="route-hunt-grid route-hunt-grid-3col">
           <section class="target-profile-card target-profile-workbench route-hunt-profile-panel">

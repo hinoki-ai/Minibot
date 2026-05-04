@@ -329,8 +329,21 @@ The test suite currently covers:
 - hunt preset generation
 - sustain, looting, banking, equipment replacement, refill, and shopping helpers
 
-Run the full suite with:
+The default test command is intentionally small:
 
 ```bash
 npm test
 ```
+
+Named lanes keep slow suites explicit:
+
+```bash
+npm run test:unit
+npm run test:core
+npm run test:desktop
+npm run test:integration
+npm run test:release
+npm run test:all
+```
+
+Inspect lane membership with `node scripts/run-tests.mjs --list`.

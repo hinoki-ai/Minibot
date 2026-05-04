@@ -8709,14 +8709,14 @@ select:focus {
 }
 
 .target-profile-row {
-  padding: 5px;
+  padding: 4px;
   border: 1px solid var(--line-soft);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 52%),
     rgba(0, 0, 0, 0.16);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .target-profile-row.off {
@@ -8725,18 +8725,19 @@ select:focus {
 
 .target-profile-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .target-profile-title {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
+  flex: 1 1 112px;
 }
 
 .target-profile-actions {
@@ -8745,7 +8746,7 @@ select:focus {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
 }
 
 .target-profile-priority {
@@ -8769,6 +8770,16 @@ select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.target-profile-name {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.2;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .target-profile-badge {
@@ -8796,28 +8807,30 @@ select:focus {
 .target-profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
 }
 
 .compact-profile-grid {
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
 }
 
 .target-profile-flags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .compact-profile-flags {
-  gap: 4px 8px;
+  --toggle-width: 30px;
+  --toggle-height: 18px;
+  gap: 4px;
 }
 
 .compact-rule-control {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 5px;
 }
 
 .compact-rule-control.module-rule-check,
@@ -8841,11 +8854,25 @@ select:focus {
 .compact-rule-control input[type="checkbox"],
 .compact-rule-control input[type="radio"] {
   flex-grow: 0;
-  width: auto;
+  width: var(--toggle-width);
 }
 
 .target-profile-check {
-  min-height: 20px;
+  min-height: 24px;
+  padding: 3px 5px;
+  gap: 5px;
+}
+
+.compact-profile-flags .target-profile-check {
+  min-width: 0;
+}
+
+.compact-profile-flags .target-profile-check span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 8px;
+  white-space: nowrap;
 }
 
 .modal-panel-presets {
@@ -11481,8 +11508,12 @@ textarea:focus-visible,
 .route-hunt-head-stats {
   display: flex;
   gap: 4px;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   justify-content: flex-start;
+}
+
+.route-hunt-head-search {
+  flex: 1 1 360px;
 }
 
 .route-hunt-head-badge {
@@ -11531,6 +11562,10 @@ textarea:focus-visible,
   min-width: 0;
   display: grid;
   gap: 4px;
+}
+
+#modal-targeting .route-hunt-workspace {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .route-hunt-summary-bar {
@@ -15779,4 +15814,100 @@ input[type="checkbox"]:checked::before {
 #modal-module[data-active-module-key="healer"] .healer-family-rule-list .module-rule-toolbar,
 #modal-module[data-active-module-key="healer"] #module-rule-list .module-rule-toolbar {
   align-items: flex-start;
+}
+
+/* Hunt Studio final audit: monster-style players and quiet toggle chrome. */
+#modal-targeting .player-archive {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-content: flex-start;
+}
+
+#modal-targeting .player-archive .presence-chip,
+#modal-targeting .player-archive .presence-chip.live,
+#modal-targeting .player-archive .presence-chip.history {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 45%),
+    #1a140e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+#modal-targeting .player-archive .presence-chip.live {
+  border-color: rgba(169, 141, 99, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(143, 190, 100, 0.32);
+}
+
+#modal-targeting .player-archive .presence-chip.history {
+  opacity: 0.86;
+}
+
+#modal-targeting .player-archive .presence-chip strong {
+  max-width: min(220px, 100%);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+}
+
+#modal-targeting .player-archive .presence-chip span {
+  display: none;
+}
+
+#modal-targeting .player-archive .presence-chip:hover {
+  border-color: rgba(169, 141, 99, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(247, 213, 138, 0.06);
+}
+
+#modal-targeting .player-archive.drag-drop-target {
+  background:
+    linear-gradient(180deg, rgba(247, 213, 138, 0.07), transparent 30%),
+    rgba(20, 16, 11, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(247, 213, 138, 0.24);
+}
+
+#modal-targeting :is(.checks label, .module-rule-check) {
+  border-color: rgba(201, 169, 112, 0.12);
+  background: transparent;
+  box-shadow: none;
+}
+
+#modal-targeting :is(.checks label, .module-rule-check):hover,
+#modal-targeting :is(.checks label, .module-rule-check):has(input[type="checkbox"]:checked) {
+  border-color: rgba(201, 169, 112, 0.28);
+  background: transparent;
+  box-shadow: none;
+}
+
+#modal-targeting input[type="checkbox"] {
+  border-color: rgba(201, 169, 112, 0.34);
+  background: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+#modal-targeting input[type="checkbox"]:checked {
+  border-color: rgba(247, 213, 138, 0.58);
+  background: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(247, 213, 138, 0.08);
+}
+
+#modal-targeting input[type="checkbox"]:checked::before {
+  background: linear-gradient(180deg, #fff4d7, #c89947);
 }

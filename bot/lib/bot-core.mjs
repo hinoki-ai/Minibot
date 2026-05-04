@@ -459,6 +459,7 @@ export const DEFAULTS = {
   cavebotPaused: false,
   autowalkLoop: true,
   routeStrictClear: false,
+  routeSpacingEnabled: true,
   routeFollowExactWaypoints: true,
   routeRecording: true,
   routeRecordStep: 3,
@@ -619,6 +620,7 @@ export const DEFAULTS = {
   amuletAutoReplaceRequireStationary: false,
   bankingEnabled: false,
   bankingRules: [],
+  teamEnabled: false,
   partyFollowEnabled: false,
   partyFollowMembers: [],
   partyFollowManualPlayers: [],
@@ -715,6 +717,7 @@ const ROUTE_SPACING_BOUNCE_PRESSURE_EXPONENT = 1.35;
 const ROUTE_SPACING_BOUNCE_COOLDOWN_MS = 1_200;
 const ROUTE_SPACING_HOLD_BYPASS_MS = 12_000;
 const ROUTE_SPACING_HOLD_BYPASS_WINDOW_MS = 8_000;
+const TEAM_HUNT_SYNC_LOG_COOLDOWN_MS = 4_000;
 const ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE = 1;
 const COMBAT_FAST_LOOP_DELAY_MS = 75;
 const TARGET_PROFILE_CHASE_MODE_GRACE_MS = 2_000;
@@ -802,6 +805,8 @@ const ANTI_IDLE_INVENTORY_PULSE_SETTLE_MS = 140;
 const ANTI_IDLE_INVENTORY_PULSE_RESTORE_RETRY_MS = 220;
 const RUNNING_AUXILIARY_SNAPSHOT_INTERVAL_MS = 1_000;
 const RUNNING_ROUTE_COORDINATION_SYNC_INTERVAL_MS = 750;
+const RUNNING_FOLLOW_TRAIN_COORDINATION_SYNC_INTERVAL_MS = 250;
+const RUNNING_PK_ASSIST_COORDINATION_SYNC_INTERVAL_MS = 200;
 const RUNNING_WAYPOINT_OVERLAY_SYNC_INTERVAL_MS = 400;
 const MULTI_SESSION_ACTIVE_MIN_INTERVAL_MS = 360;
 const MULTI_SESSION_BACKGROUND_MIN_INTERVAL_MS = 650;
@@ -3363,6 +3368,7 @@ export function normalizeOptions(options = {}) {
   merged.cavebotPaused = Boolean(merged.cavebotPaused);
   merged.autowalkLoop = merged.autowalkLoop !== false;
   merged.routeStrictClear = Boolean(merged.routeStrictClear);
+  merged.routeSpacingEnabled = merged.routeSpacingEnabled !== false;
   merged.routeFollowExactWaypoints = merged.routeFollowExactWaypoints !== false;
   merged.routeRecording = Boolean(merged.routeRecording);
   merged.routeRecordStep = Number(merged.routeRecordStep) || DEFAULTS.routeRecordStep;
@@ -3678,6 +3684,9 @@ export function normalizeOptions(options = {}) {
   merged.amuletAutoReplaceRequireStationary = merged.amuletAutoReplaceRequireStationary === true;
   merged.bankingEnabled = Boolean(merged.bankingEnabled);
   merged.bankingRules = normalizeBankingRules(merged.bankingRules);
+  if (!hasOwn("teamEnabled") && hasOwn("teamHuntEnabled")) {
+    merged.teamEnabled = options.teamHuntEnabled;
+  }
   if (!hasOwn("partyFollowEnabled") && hasOwn("followChainEnabled")) {
     merged.partyFollowEnabled = options.followChainEnabled;
   }
@@ -3715,10 +3724,10 @@ export function normalizeOptions(options = {}) {
   delete merged.followChainMemberChaseModes;
   delete merged.followChainDistance;
   delete merged.followChainCombatMode;
+  delete merged.teamHuntEnabled;
   delete merged.combatChaseMode;
   delete merged.chaseStance;
   delete merged.chaseModePolicy;
-  merged.partyFollowEnabled = Boolean(merged.partyFollowEnabled);
   merged.partyFollowMembers = normalizeTextList(merged.partyFollowMembers);
   merged.partyFollowManualPlayers = normalizeTextList(merged.partyFollowManualPlayers);
   merged.partyFollowMemberRoles = normalizeFollowTrainMemberRoles(
@@ -3734,9 +3743,50 @@ export function normalizeOptions(options = {}) {
     Math.trunc(normalizeNonNegativeNumber(merged.partyFollowDistance, DEFAULTS.partyFollowDistance)),
   );
   merged.partyFollowCombatMode = normalizeFollowTrainCombatMode(merged.partyFollowCombatMode);
+  merged.teamEnabled = Boolean(merged.teamEnabled);
+  merged.partyFollowEnabled = Boolean(merged.partyFollowEnabled);
+  if (merged.teamEnabled && merged.partyFollowEnabled) {
+    const followChainSpecificFields = [
+      "followChainEnabled",
+      "followChainMembers",
+      "followChainManualPlayers",
+      "followChainMemberRoles",
+      "followChainMemberChaseModes",
+      "followChainDistance",
+      "followChainCombatMode",
+      "partyFollowMembers",
+      "partyFollowManualPlayers",
+      "partyFollowMemberRoles",
+      "partyFollowMemberChaseModes",
+      "partyFollowDistance",
+      "partyFollowCombatMode",
+    ];
+    const hasFollowChainSpecificField = followChainSpecificFields.some((key) => {
+      if (!hasOwn(key)) {
+        return false;
+      }
+      const value = options[key];
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      if (value && typeof value === "object") {
+        return Object.keys(value).length > 0;
+      }
+      return value !== undefined && value !== null && value !== "";
+    });
+
+    if (hasFollowChainSpecificField) {
+      merged.teamEnabled = false;
+    } else {
+      merged.partyFollowEnabled = false;
+    }
+  }
   if (merged.partyFollowEnabled) {
     merged.trainerConfigured = merged.trainerConfigured || merged.trainerEnabled;
     merged.trainerEnabled = false;
+  }
+  if (merged.teamEnabled) {
+    merged.routeSpacingEnabled = false;
   }
   merged.pkAssistEnabled = Boolean(merged.pkAssistEnabled);
   merged.pkAssistMode = normalizePkAssistMode(merged.pkAssistMode);
@@ -3809,21 +3859,48 @@ export function normalizeOptions(options = {}) {
 }
 
 export function mergeOptions(baseOptions = {}, nextOptions = {}) {
-  const merged = { ...baseOptions, ...nextOptions };
-  const hasMonster = Object.prototype.hasOwnProperty.call(nextOptions, "monster");
-  const hasMonsterNames = Object.prototype.hasOwnProperty.call(nextOptions, "monsterNames");
-  const hasHealerRules = Object.prototype.hasOwnProperty.call(nextOptions, "healerRules");
-  const hasHealerTiers = Object.prototype.hasOwnProperty.call(nextOptions, "healerTiers");
-  const hasLegacyHealerField = HEALER_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextOptions, key));
-  const hasManaTrainerRules = Object.prototype.hasOwnProperty.call(nextOptions, "manaTrainerRules");
-  const hasLegacyManaTrainerField = MANA_TRAINER_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextOptions, key));
-  const hasTrainerManaTrainerRules = Object.prototype.hasOwnProperty.call(nextOptions, "trainerManaTrainerRules");
+  const nextSource = nextOptions && typeof nextOptions === "object" ? nextOptions : {};
+  const merged = { ...baseOptions, ...nextSource };
+  const nextKeys = Object.keys(nextSource);
+  const teamPatchIndex = Math.max(nextKeys.indexOf("teamEnabled"), nextKeys.indexOf("teamHuntEnabled"));
+  const followPatchIndex = Math.max(nextKeys.indexOf("partyFollowEnabled"), nextKeys.indexOf("followChainEnabled"));
+  if (teamPatchIndex >= 0 || followPatchIndex >= 0) {
+    const teamRequested = teamPatchIndex >= 0
+      ? Boolean(nextSource.teamEnabled ?? nextSource.teamHuntEnabled)
+      : null;
+    const followRequested = followPatchIndex >= 0
+      ? Boolean(nextSource.partyFollowEnabled ?? nextSource.followChainEnabled)
+      : null;
+
+    if (teamRequested === true && followRequested === true) {
+      if (teamPatchIndex > followPatchIndex) {
+        merged.partyFollowEnabled = false;
+      } else {
+        merged.teamEnabled = false;
+      }
+    } else {
+      if (teamRequested === true) {
+        merged.partyFollowEnabled = false;
+      }
+      if (followRequested === true) {
+        merged.teamEnabled = false;
+      }
+    }
+  }
+  const hasMonster = Object.prototype.hasOwnProperty.call(nextSource, "monster");
+  const hasMonsterNames = Object.prototype.hasOwnProperty.call(nextSource, "monsterNames");
+  const hasHealerRules = Object.prototype.hasOwnProperty.call(nextSource, "healerRules");
+  const hasHealerTiers = Object.prototype.hasOwnProperty.call(nextSource, "healerTiers");
+  const hasLegacyHealerField = HEALER_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextSource, key));
+  const hasManaTrainerRules = Object.prototype.hasOwnProperty.call(nextSource, "manaTrainerRules");
+  const hasLegacyManaTrainerField = MANA_TRAINER_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextSource, key));
+  const hasTrainerManaTrainerRules = Object.prototype.hasOwnProperty.call(nextSource, "trainerManaTrainerRules");
   const hasLegacyTrainerManaTrainerField = TRAINER_MANA_TRAINER_LEGACY_FIELDS
-    .some((key) => Object.prototype.hasOwnProperty.call(nextOptions, key));
-  const hasAutoLightRules = Object.prototype.hasOwnProperty.call(nextOptions, "autoLightRules");
-  const hasLegacyAutoLightField = AUTO_LIGHT_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextOptions, key));
-  const hasAutoConvertRules = Object.prototype.hasOwnProperty.call(nextOptions, "autoConvertRules");
-  const hasLegacyAutoConvertField = AUTO_CONVERT_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextOptions, key));
+    .some((key) => Object.prototype.hasOwnProperty.call(nextSource, key));
+  const hasAutoLightRules = Object.prototype.hasOwnProperty.call(nextSource, "autoLightRules");
+  const hasLegacyAutoLightField = AUTO_LIGHT_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextSource, key));
+  const hasAutoConvertRules = Object.prototype.hasOwnProperty.call(nextSource, "autoConvertRules");
+  const hasLegacyAutoConvertField = AUTO_CONVERT_LEGACY_FIELDS.some((key) => Object.prototype.hasOwnProperty.call(nextSource, key));
 
   if (hasMonster && !hasMonsterNames) {
     delete merged.monsterNames;
@@ -7777,6 +7854,7 @@ function buildBackpackEquipmentSlotIndexExpression(
 function buildTargetExpression(targetIds, {
   sharedSpawnMode = DEFAULT_SHARED_SPAWN_MODE,
   trustedPlayerNames = [],
+  trustedPlayerIds = [],
   foreignPlayers = [],
 } = {}) {
   const queuedIds = Array.isArray(targetIds)
@@ -7788,6 +7866,11 @@ function buildTargetExpression(targetIds, {
   const trustedPlayerNameKeys = Array.isArray(trustedPlayerNames)
     ? trustedPlayerNames
       .map((name) => String(name || "").trim().toLowerCase())
+      .filter(Boolean)
+    : [];
+  const trustedPlayerIdKeys = Array.isArray(trustedPlayerIds)
+    ? trustedPlayerIds
+      .map((id) => String(id ?? "").trim())
       .filter(Boolean)
     : [];
   const serializedForeignPlayers = Array.isArray(foreignPlayers)
@@ -7852,7 +7935,10 @@ function buildTargetExpression(targetIds, {
     const playerId = readEntityId(player);
     const trustedNameKeys = new Set(${JSON.stringify(trustedPlayerNameKeys)});
     const snapshotForeignPlayers = ${JSON.stringify(serializedForeignPlayers)};
-    const trustedIds = new Set(playerId ? [playerId] : []);
+    const trustedIds = new Set(${JSON.stringify(trustedPlayerIdKeys)});
+    if (playerId) {
+      trustedIds.add(playerId);
+    }
     const playerNameKey = String(readEntityName(player) || player?.name || "").trim().toLowerCase();
     if (playerNameKey) {
       trustedNameKeys.add(playerNameKey);
@@ -13499,6 +13585,9 @@ export class MinibiaTargetBot {
     this.routeStationaryPositionKey = "";
     this.routeStationarySince = 0;
     this.routeStationaryReanchorAt = 0;
+    this.clientAutoWalkStationaryPositionKey = "";
+    this.clientAutoWalkStationarySince = 0;
+    this.clientAutoWalkStationaryDestinationKey = "";
     this.lastRouteActionAt = 0;
     this.lastRouteActionKey = null;
     this.activeTileRuleWait = null;
@@ -13523,6 +13612,7 @@ export class MinibiaTargetBot {
     this.lastFollowTrainFloorTransition = null;
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
+    this.teamHuntHold = null;
     this.routeResetState = null;
     this.corpseReturnState = null;
     this.rookillerState = null;
@@ -13552,6 +13642,10 @@ export class MinibiaTargetBot {
     this.lastWaypointOverlaySyncAt = 0;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
+    this.lastFollowTrainCoordinationSyncAt = 0;
+    this.lastFollowTrainCoordinationSyncStateKey = "";
+    this.lastPkAssistCoordinationSyncAt = 0;
+    this.lastPkAssistCoordinationSyncStateKey = "";
     this.activeVocation = "";
     this.activeVocationProfile = null;
     this.preferredChaseMode = null;
@@ -14049,7 +14143,7 @@ export class MinibiaTargetBot {
       state = "refill";
     } else if (currentDecision?.owner === "distanceKeeper" && currentDecision?.reason === "escape") {
       state = "escape";
-    } else if (snapshot?.currentTarget || (Array.isArray(snapshot?.visibleCreatures) && snapshot.visibleCreatures.length)) {
+    } else if (this.shouldHoldRouteForCombat(snapshot)) {
       state = "combat-hold";
     } else if (this.options.autowalkEnabled || routeResetStatus.active) {
       state = "routing";
@@ -14740,6 +14834,10 @@ export class MinibiaTargetBot {
       return false;
     }
 
+    if (this.hasExplicitChaseToKillCombatFocus(snapshot)) {
+      return false;
+    }
+
     const segment = this.getRouteSafetyChaseSegment(snapshot);
     if (!this.routeSegmentHasLocalSafetyConstraint(snapshot, segment)) {
       return false;
@@ -15062,6 +15160,77 @@ export class MinibiaTargetBot {
     return { entries, ids: trustedIds, names: trustedNames };
   }
 
+  getSharedSessionPeerEntries(snapshot = this.lastSnapshot, { includeSelf = false } = {}) {
+    const selfNameKey = this.getNameKey(snapshot?.playerName);
+    const selfId = snapshot?.playerId == null ? "" : String(snapshot.playerId).trim();
+    const routeSelfInstanceId = String(this.routeCoordinationState?.selfInstanceId || "").trim();
+    const followSelfInstanceId = String(this.followTrainCoordinationState?.selfInstanceId || "").trim();
+    const entries = [];
+    const seen = new Set();
+    const appendEntry = (entry = null, {
+      source = "visible",
+      instanceId = "",
+    } = {}) => {
+      const position = normalizePosition(entry?.position || entry?.playerPosition);
+      if (!position) {
+        return;
+      }
+
+      const id = entry?.id == null ? "" : String(entry.id).trim();
+      const name = String(entry?.name || entry?.characterName || entry?.title || "").trim();
+      const nameKey = this.getNameKey(name);
+      const normalizedInstanceId = String(instanceId || entry?.instanceId || "").trim();
+
+      if (!includeSelf) {
+        if (selfId && id && id === selfId) {
+          return;
+        }
+        if (selfNameKey && nameKey && nameKey === selfNameKey) {
+          return;
+        }
+        if (source === "route" && routeSelfInstanceId && normalizedInstanceId === routeSelfInstanceId) {
+          return;
+        }
+        if (source === "followTrain" && followSelfInstanceId && normalizedInstanceId === followSelfInstanceId) {
+          return;
+        }
+      }
+
+      const positionKey = this.getPositionKey(position);
+      const key = id
+        ? `id:${id}`
+        : nameKey
+          ? `name:${nameKey}:${positionKey}`
+          : normalizedInstanceId
+            ? `${source}:${normalizedInstanceId}:${positionKey}`
+            : "";
+      if (!key || seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      entries.push({
+        id: id || null,
+        name,
+        position,
+        source,
+        instanceId: normalizedInstanceId || null,
+      });
+    };
+
+    for (const entry of this.getSharedSpawnTrustedPlayers(snapshot, { includeSelf }).entries) {
+      appendEntry(entry, { source: "visible" });
+    }
+    for (const member of this.getRouteSpacingMembers()) {
+      appendEntry(member, { source: "route", instanceId: member.instanceId });
+    }
+    for (const member of this.getFollowTrainCoordinationMembers()) {
+      appendEntry(member, { source: "followTrain", instanceId: member.instanceId });
+    }
+
+    return entries;
+  }
+
   hasVisibleForeignPlayers(snapshot = this.lastSnapshot) {
     return this.getSharedSpawnForeignPlayerMatchers(snapshot).count > 0;
   }
@@ -15198,7 +15367,7 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    const trustedPlayers = this.getSharedSpawnTrustedPlayers(snapshot, { includeSelf: false }).entries;
+    const trustedPlayers = this.getSharedSessionPeerEntries(snapshot, { includeSelf: false });
     const playerPosition = snapshot?.playerPosition || null;
     const selfDistance = this.getPositionDistance(entry.position, playerPosition);
     const healthPercent = Number(entry?.healthPercent);
@@ -15290,7 +15459,8 @@ export class MinibiaTargetBot {
   getRouteSpacingSectorState(snapshot = this.lastSnapshot) {
     const members = this.getRouteSpacingMembers();
     if (
-      !this.hasActiveRouteSpacingPeers(members)
+      !this.isRouteSpacingEnabled()
+      || !this.hasActiveRouteSpacingPeers(members)
       || !this.options.autowalkEnabled
       || this.isCavebotPaused()
       || this.isRouteResetActive()
@@ -16013,6 +16183,7 @@ export class MinibiaTargetBot {
   getFollowTrainAssignment(snapshot = this.lastSnapshot) {
     const legacyTrainerFollowEnabled = Boolean(
       this.options?.trainerEnabled
+      && !this.options?.teamEnabled
       && !this.options?.partyFollowEnabled
       && !String(this.options?.trainerPartnerName || "").trim(),
     );
@@ -19956,12 +20127,19 @@ export class MinibiaTargetBot {
     this.tileRuleApproachLocks = new Map();
     this.tileRuleInsideState = new Map();
     this.routeStallState = null;
+    this.clearClientAutoWalkStationaryState();
   }
 
   clearRouteStationaryState() {
     this.routeStationaryPositionKey = "";
     this.routeStationarySince = 0;
     this.routeStationaryReanchorAt = 0;
+  }
+
+  clearClientAutoWalkStationaryState() {
+    this.clientAutoWalkStationaryPositionKey = "";
+    this.clientAutoWalkStationarySince = 0;
+    this.clientAutoWalkStationaryDestinationKey = "";
   }
 
   getRouteTelemetrySignature(options = this.options) {
@@ -21227,6 +21405,74 @@ export class MinibiaTargetBot {
     };
   }
 
+  getClientAutoWalkStationaryStallMs(snapshot = this.lastSnapshot, now = this.getNow()) {
+    const baseStallMs = this.getAcceptedWalkMovementStallMs(snapshot, now);
+    const hasDestination = Boolean(this.getPositionKey(snapshot?.pathfinderFinalDestination));
+    return hasDestination
+      ? Math.max(baseStallMs * 2, baseStallMs + this.getRecentWalkWindowMs())
+      : baseStallMs;
+  }
+
+  updateClientAutoWalkStationaryState(snapshot = this.lastSnapshot, now = this.getNow()) {
+    const playerKey = this.getPositionKey(snapshot?.playerPosition);
+    const movementClaimed = Boolean(
+      snapshot?.pathfinderAutoWalking
+      || snapshot?.isMoving
+      || snapshot?.pathfinderFinalDestination
+      || Number(snapshot?.autoWalkStepsRemaining) > 0
+    );
+
+    if (!snapshot?.ready || !playerKey || !movementClaimed) {
+      this.clearClientAutoWalkStationaryState();
+      return null;
+    }
+
+    const destinationKey = this.getPositionKey(snapshot.pathfinderFinalDestination);
+    if (
+      this.clientAutoWalkStationaryPositionKey !== playerKey
+      || this.clientAutoWalkStationaryDestinationKey !== destinationKey
+    ) {
+      this.clientAutoWalkStationaryPositionKey = playerKey;
+      this.clientAutoWalkStationaryDestinationKey = destinationKey;
+      this.clientAutoWalkStationarySince = now;
+      return {
+        positionKey: playerKey,
+        destinationKey,
+        stationaryForMs: 0,
+        ready: false,
+      };
+    }
+
+    if (!Number.isFinite(this.clientAutoWalkStationarySince) || this.clientAutoWalkStationarySince <= 0) {
+      this.clientAutoWalkStationarySince = now;
+    }
+
+    const stationaryForMs = Math.max(0, now - this.clientAutoWalkStationarySince);
+    return {
+      positionKey: playerKey,
+      destinationKey,
+      stationaryForMs,
+      ready: stationaryForMs >= this.getClientAutoWalkStationaryStallMs(snapshot, now),
+    };
+  }
+
+  getStaleClientAutoWalkRecoveryAction(snapshot, waypoint, now = this.getNow()) {
+    if (!waypoint || this.lastWalkProgressPending) {
+      return null;
+    }
+
+    const staleState = this.updateClientAutoWalkStationaryState(snapshot, now);
+    if (!staleState?.ready) {
+      return null;
+    }
+
+    return {
+      kind: "hold-route",
+      reason: "stale-client-autowalk",
+      interrupt: true,
+    };
+  }
+
   clearRouteAwarenessState() {
     this.lastConfirmedWaypointIndex = null;
     this.lastConfirmedWaypointAt = 0;
@@ -21385,6 +21631,7 @@ export class MinibiaTargetBot {
     this.pkAssistCoordinationState = null;
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
+    this.teamHuntHold = null;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
   }
@@ -21394,6 +21641,8 @@ export class MinibiaTargetBot {
       ? adapter
       : null;
     this.followTrainCoordinationState = null;
+    this.lastFollowTrainCoordinationSyncAt = 0;
+    this.lastFollowTrainCoordinationSyncStateKey = "";
   }
 
   setPkAssistCoordinationAdapter(adapter = null) {
@@ -21401,6 +21650,8 @@ export class MinibiaTargetBot {
       ? adapter
       : null;
     this.pkAssistCoordinationState = null;
+    this.lastPkAssistCoordinationSyncAt = 0;
+    this.lastPkAssistCoordinationSyncStateKey = "";
   }
 
   hasLiveAuxiliarySnapshotContext(snapshot = this.lastSnapshot) {
@@ -21435,11 +21686,49 @@ export class MinibiaTargetBot {
     return [
       this.running ? 1 : 0,
       this.options.autowalkEnabled === true && !this.isCavebotPaused() ? 1 : 0,
+      this.isRouteCoordinationEnabled() ? 1 : 0,
+      this.isRouteSpacingEnabled() ? 1 : 0,
+      this.isTeamHuntEnabled() ? 1 : 0,
       this.isRouteResetActive() ? 1 : 0,
       String(this.options.cavebotName || ""),
       this.options.waypoints.length,
       String(snapshot?.playerName || "").trim().toLowerCase(),
     ].join("|");
+  }
+
+  getFollowTrainCoordinationSyncStateKey(snapshot = this.lastSnapshot) {
+    return [
+      this.running ? 1 : 0,
+      this.options.teamEnabled === true ? 1 : 0,
+      this.options.partyFollowEnabled === true ? 1 : 0,
+      this.options.trainerEnabled === true ? 1 : 0,
+      this.options.trainerAutoPartyEnabled !== false ? 1 : 0,
+      String(snapshot?.playerName || "").trim().toLowerCase(),
+      normalizeTextList(this.options.partyFollowMembers).join(","),
+      normalizeTextList(this.options.partyFollowManualPlayers).join(","),
+    ].join("|");
+  }
+
+  getPkAssistCoordinationSyncStateKey(snapshot = this.lastSnapshot) {
+    return [
+      this.running ? 1 : 0,
+      this.options.pkAssistEnabled === true ? 1 : 0,
+      String(this.options.pkAssistMode || ""),
+      String(snapshot?.playerName || "").trim().toLowerCase(),
+      normalizeTextList(this.options.pkAssistAllies).join(","),
+    ].join("|");
+  }
+
+  isRouteSpacingEnabled() {
+    return this.options.routeSpacingEnabled !== false;
+  }
+
+  isTeamHuntEnabled() {
+    return this.options.teamEnabled === true && this.options.partyFollowEnabled !== true;
+  }
+
+  isRouteCoordinationEnabled() {
+    return this.isRouteSpacingEnabled() || this.isTeamHuntEnabled();
   }
 
   async syncRouteCoordination(snapshot = this.lastSnapshot, {
@@ -21450,8 +21739,14 @@ export class MinibiaTargetBot {
       this.routeCoordinationState = null;
       this.routeSpacingHold = null;
       this.routeSpacingBypass = null;
+      this.teamHuntHold = null;
       this.lastRouteCoordinationSyncAt = 0;
       this.lastRouteCoordinationSyncStateKey = "";
+      return null;
+    }
+
+    if (!this.isRouteCoordinationEnabled()) {
+      await this.releaseRouteCoordination();
       return null;
     }
 
@@ -21479,16 +21774,27 @@ export class MinibiaTargetBot {
     this.lastRouteCoordinationSyncStateKey = syncStateKey;
     if (!this.routeCoordinationState) {
       this.routeSpacingHold = null;
+      this.teamHuntHold = null;
     }
     return this.routeCoordinationState;
   }
 
   async syncFollowTrainCoordination(snapshot = this.lastSnapshot, {
+    throttle = false,
     now = this.getNow(),
   } = {}) {
     if (!this.followTrainCoordinationAdapter) {
       this.followTrainCoordinationState = null;
+      this.lastFollowTrainCoordinationSyncAt = 0;
+      this.lastFollowTrainCoordinationSyncStateKey = "";
       return null;
+    }
+
+    const syncStateKey = this.getFollowTrainCoordinationSyncStateKey(snapshot);
+    if (throttle
+      && this.lastFollowTrainCoordinationSyncStateKey === syncStateKey
+      && (now - this.lastFollowTrainCoordinationSyncAt) < RUNNING_FOLLOW_TRAIN_COORDINATION_SYNC_INTERVAL_MS) {
+      return this.followTrainCoordinationState;
     }
 
     const state = await this.followTrainCoordinationAdapter.sync({
@@ -21499,15 +21805,27 @@ export class MinibiaTargetBot {
     });
 
     this.followTrainCoordinationState = state || null;
+    this.lastFollowTrainCoordinationSyncAt = now;
+    this.lastFollowTrainCoordinationSyncStateKey = syncStateKey;
     return this.followTrainCoordinationState;
   }
 
   async syncPkAssistCoordination(snapshot = this.lastSnapshot, {
+    throttle = false,
     now = this.getNow(),
   } = {}) {
     if (!this.pkAssistCoordinationAdapter) {
       this.pkAssistCoordinationState = null;
+      this.lastPkAssistCoordinationSyncAt = 0;
+      this.lastPkAssistCoordinationSyncStateKey = "";
       return null;
+    }
+
+    const syncStateKey = this.getPkAssistCoordinationSyncStateKey(snapshot);
+    if (throttle
+      && this.lastPkAssistCoordinationSyncStateKey === syncStateKey
+      && (now - this.lastPkAssistCoordinationSyncAt) < RUNNING_PK_ASSIST_COORDINATION_SYNC_INTERVAL_MS) {
+      return this.pkAssistCoordinationState;
     }
 
     const state = await this.pkAssistCoordinationAdapter.sync({
@@ -21518,6 +21836,8 @@ export class MinibiaTargetBot {
     });
 
     this.pkAssistCoordinationState = state || null;
+    this.lastPkAssistCoordinationSyncAt = now;
+    this.lastPkAssistCoordinationSyncStateKey = syncStateKey;
     return this.pkAssistCoordinationState;
   }
 
@@ -21525,6 +21845,7 @@ export class MinibiaTargetBot {
     this.routeCoordinationState = null;
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
+    this.teamHuntHold = null;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
 
@@ -21537,6 +21858,8 @@ export class MinibiaTargetBot {
 
   async releaseFollowTrainCoordination() {
     this.followTrainCoordinationState = null;
+    this.lastFollowTrainCoordinationSyncAt = 0;
+    this.lastFollowTrainCoordinationSyncStateKey = "";
 
     if (!this.followTrainCoordinationAdapter || typeof this.followTrainCoordinationAdapter.release !== "function") {
       return null;
@@ -21547,6 +21870,8 @@ export class MinibiaTargetBot {
 
   async releasePkAssistCoordination() {
     this.pkAssistCoordinationState = null;
+    this.lastPkAssistCoordinationSyncAt = 0;
+    this.lastPkAssistCoordinationSyncStateKey = "";
 
     if (!this.pkAssistCoordinationAdapter || typeof this.pkAssistCoordinationAdapter.release !== "function") {
       return null;
@@ -21640,7 +21965,7 @@ export class MinibiaTargetBot {
     return Number.isFinite(nearestOffset) && nearestOffset <= offsetLimit;
   }
 
-  getRouteSpacingMembers() {
+  getRouteCoordinationMembers() {
     if (!this.routeCoordinationState?.selfInstanceId || !Array.isArray(this.routeCoordinationState.members)) {
       return [];
     }
@@ -21680,6 +22005,22 @@ export class MinibiaTargetBot {
       .filter((member) => member && member.instanceId);
   }
 
+  getRouteSpacingMembers() {
+    if (!this.isRouteSpacingEnabled()) {
+      return [];
+    }
+
+    return this.getRouteCoordinationMembers();
+  }
+
+  getTeamHuntMembers() {
+    if (!this.isTeamHuntEnabled()) {
+      return [];
+    }
+
+    return this.getRouteCoordinationMembers();
+  }
+
   hasActiveRouteSpacingPeers(members = this.getRouteSpacingMembers()) {
     return Array.isArray(members)
       && members.length > 1
@@ -21699,6 +22040,7 @@ export class MinibiaTargetBot {
       runningSessionCount > 1
       && this.routeCoordinationAdapter
       && this.running
+      && this.isRouteSpacingEnabled()
       && this.options.autowalkEnabled === true
       && !this.isCavebotPaused()
       && !this.isRouteResetActive()
@@ -21909,6 +22251,16 @@ export class MinibiaTargetBot {
   }
 
   getRouteSpacingAdvice(candidateIndex = this.routeIndex) {
+    if (!this.isRouteSpacingEnabled()) {
+      this.routeSpacingHold = null;
+      this.routeSpacingBypass = null;
+      return {
+        hold: false,
+        members: [],
+        selfMember: null,
+      };
+    }
+
     const members = this.getRouteSpacingMembers();
     if (members.length <= 1 || !this.options.autowalkEnabled || this.isCavebotPaused() || this.isRouteResetActive()) {
       return {
@@ -21953,7 +22305,11 @@ export class MinibiaTargetBot {
         && !priorityOpensTiedSplit
         && (
           currentGap === 0
-          || (Number.isFinite(nextGap) && nextGap < minGap)
+          || (
+            Number.isFinite(nextGap)
+            && nextGap < minGap
+            && !(currentGap >= minGap && nextIndex !== currentIndex)
+          )
         )
       ) {
         return {
@@ -21985,7 +22341,11 @@ export class MinibiaTargetBot {
       const currentGap = this.getForwardRouteOffset(currentIndex, peerIndex);
       const nextGap = this.getForwardRouteOffset(nextIndex, peerIndex);
 
-      if (Number.isFinite(nextGap) && nextGap < minGap) {
+      if (
+        Number.isFinite(nextGap)
+        && nextGap < minGap
+        && !(Number.isFinite(currentGap) && currentGap >= minGap && nextIndex !== currentIndex)
+      ) {
         return {
           hold: true,
           reason: "gap",
@@ -22011,7 +22371,16 @@ export class MinibiaTargetBot {
       const currentBackGap = this.getForwardRouteOffset(peerIndex, currentIndex);
       const nextBackGap = this.getForwardRouteOffset(peerIndex, nextIndex);
 
-      if (Number.isFinite(nextBackGap) && nextBackGap > maxGap) {
+      if (
+        Number.isFinite(nextBackGap)
+        && nextBackGap > maxGap
+        && !(
+          members.length >= activeCount
+          && Number.isFinite(currentBackGap)
+          && currentBackGap <= maxGap
+          && nextIndex !== currentIndex
+        )
+      ) {
         return {
           hold: true,
           reason: "drift",
@@ -22317,6 +22686,176 @@ export class MinibiaTargetBot {
     }
 
     return this.getRouteSpacingBounceAction(snapshot);
+  }
+
+  getTeamHuntSelfMember(members = this.getTeamHuntMembers()) {
+    const selfInstanceId = String(this.routeCoordinationState?.selfInstanceId || "");
+    if (!selfInstanceId || !Array.isArray(members)) {
+      return null;
+    }
+
+    return members.find((member) => member.instanceId === selfInstanceId) || null;
+  }
+
+  isTeamHuntPeerBehind(peerIndex, currentIndex) {
+    const total = this.options.waypoints.length;
+    if (total < 2 || !Number.isInteger(peerIndex) || !Number.isInteger(currentIndex)) {
+      return false;
+    }
+
+    if (peerIndex === currentIndex) {
+      return false;
+    }
+
+    if (!this.options.autowalkLoop) {
+      return peerIndex < currentIndex;
+    }
+
+    const forwardFromPeer = this.getForwardRouteOffset(peerIndex, currentIndex);
+    const forwardFromSelf = this.getForwardRouteOffset(currentIndex, peerIndex);
+    return Number.isFinite(forwardFromPeer)
+      && Number.isFinite(forwardFromSelf)
+      && forwardFromPeer < forwardFromSelf;
+  }
+
+  getTeamHuntSyncAdvice(candidateIndex = this.routeIndex) {
+    if (!this.isTeamHuntEnabled()) {
+      this.teamHuntHold = null;
+      return {
+        hold: false,
+        members: [],
+        selfMember: null,
+      };
+    }
+
+    const members = this.getTeamHuntMembers();
+    const selfMember = this.getTeamHuntSelfMember(members);
+    if (
+      members.length <= 1
+      || !selfMember
+      || !this.options.autowalkEnabled
+      || this.isCavebotPaused()
+      || this.isRouteResetActive()
+    ) {
+      return {
+        hold: false,
+        members,
+        selfMember,
+      };
+    }
+
+    const total = this.options.waypoints.length;
+    if (total < 2) {
+      return {
+        hold: false,
+        members,
+        selfMember,
+      };
+    }
+
+    const currentIndex = Math.max(0, Math.min(Math.trunc(Number(this.routeIndex) || 0), total - 1));
+    const nextIndex = Math.max(0, Math.min(Math.trunc(Number(candidateIndex) || 0), total - 1));
+    const isAdvancing = nextIndex !== currentIndex;
+    if (!isAdvancing) {
+      return {
+        hold: false,
+        members,
+        selfMember,
+      };
+    }
+
+    const blockingPeer = members.find((member) => {
+      if (!member || member.instanceId === selfMember.instanceId) {
+        return false;
+      }
+
+      const peerIndex = Number.isInteger(member.confirmedIndex)
+        ? member.confirmedIndex
+        : member.routeIndex;
+      return this.isTeamHuntPeerBehind(peerIndex, currentIndex);
+    });
+
+    if (!blockingPeer) {
+      return {
+        hold: false,
+        members,
+        selfMember,
+      };
+    }
+
+    const peerIndex = Number.isInteger(blockingPeer.confirmedIndex)
+      ? blockingPeer.confirmedIndex
+      : blockingPeer.routeIndex;
+
+    return {
+      hold: true,
+      reason: "progress",
+      blockingPeer,
+      currentIndex,
+      nextIndex,
+      peerIndex,
+      members,
+      selfMember,
+    };
+  }
+
+  shouldHoldForTeamHuntSync(candidateIndex = this.routeIndex) {
+    const advice = this.getTeamHuntSyncAdvice(candidateIndex);
+    const now = this.getNow();
+    if (!advice?.hold) {
+      this.teamHuntHold = null;
+      return false;
+    }
+
+    const peerProgressKey = this.getRouteSpacingMemberProgressKey(advice.blockingPeer);
+    const previousHold = this.teamHuntHold;
+    const nextHold = previousHold?.peerInstanceId === advice.blockingPeer?.instanceId
+      ? {
+        ...previousHold,
+        reason: advice.reason,
+        currentIndex: advice.currentIndex,
+        nextIndex: advice.nextIndex,
+        peerIndex: advice.peerIndex,
+        peerProgressKey,
+        lastPeerProgressAt: previousHold.peerProgressKey === peerProgressKey
+          ? (Number(previousHold.lastPeerProgressAt) || Number(previousHold.startedAt) || now)
+          : now,
+      }
+      : {
+        peerInstanceId: advice.blockingPeer?.instanceId || "",
+        startedAt: now,
+        lastLogAt: 0,
+        reason: advice.reason,
+        currentIndex: advice.currentIndex,
+        nextIndex: advice.nextIndex,
+        peerIndex: advice.peerIndex,
+        peerProgressKey,
+        lastPeerProgressAt: now,
+      };
+
+    if (now - nextHold.lastLogAt >= TEAM_HUNT_SYNC_LOG_COOLDOWN_MS) {
+      const peerLabel = this.getRouteSpacingPeerLabel(advice.blockingPeer);
+      this.log(
+        `Autowalk holding waypoint ${advice.currentIndex + 1} for Team Hunt sync with ${peerLabel}`
+        + ` (peer waypoint ${advice.peerIndex + 1})`,
+      );
+      nextHold.lastLogAt = now;
+    }
+
+    this.teamHuntHold = nextHold;
+    return true;
+  }
+
+  getTeamHuntHoldAction(snapshot = null) {
+    if (!this.teamHuntHold) {
+      return null;
+    }
+
+    return {
+      kind: "hold-route",
+      reason: "team-hunt-sync",
+      interrupt: Boolean(snapshot?.pathfinderAutoWalking || snapshot?.isMoving),
+    };
   }
 
   chooseOrderedRules({
@@ -22651,6 +23190,7 @@ export class MinibiaTargetBot {
     this.routeCoordinationState = null;
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
+    this.teamHuntHold = null;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
 
@@ -24067,18 +24607,19 @@ export class MinibiaTargetBot {
     now = this.getNow(),
   } = {}) {
     if (!this.hasUsableTransport()) return null;
+    if (throttle
+      && this.options.showWaypointOverlay
+      && this.lastWaypointOverlaySyncAt > 0
+      && (now - this.lastWaypointOverlaySyncAt) < RUNNING_WAYPOINT_OVERLAY_SYNC_INTERVAL_MS) {
+      return { ok: true, skipped: true, throttled: true };
+    }
+
     const routeTelemetry = this.options.showWaypointOverlay
       ? this.refreshRouteTelemetry(snapshot, now)
       : null;
     const nextSyncKey = this.getWaypointOverlaySyncKey(snapshot, routeTelemetry);
     if (nextSyncKey === this.lastOverlaySyncKey) {
       return { ok: true, skipped: true };
-    }
-    if (throttle
-      && this.options.showWaypointOverlay
-      && this.lastWaypointOverlaySyncAt > 0
-      && (now - this.lastWaypointOverlaySyncAt) < RUNNING_WAYPOINT_OVERLAY_SYNC_INTERVAL_MS) {
-      return { ok: true, skipped: true, throttled: true };
     }
 
     const result = await this.cdp.evaluate(buildWaypointOverlayExpression({
@@ -24109,6 +24650,10 @@ export class MinibiaTargetBot {
     this.lastAuxiliarySnapshotInspectionAt = 0;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
+    this.lastFollowTrainCoordinationSyncAt = 0;
+    this.lastFollowTrainCoordinationSyncStateKey = "";
+    this.lastPkAssistCoordinationSyncAt = 0;
+    this.lastPkAssistCoordinationSyncStateKey = "";
   }
 
   async connectToPage(page) {
@@ -24349,7 +24894,6 @@ export class MinibiaTargetBot {
     snapshot.page = this.page;
     snapshot.running = this.running;
     snapshot.options = this.options;
-    snapshot.confidence = normalizeSnapshotConfidence(snapshot, { now });
 
     if (snapshot?.ready) {
       this.reconcileWalkProgress(snapshot);
@@ -24458,8 +25002,14 @@ export class MinibiaTargetBot {
           throttle: this.running,
           now,
         }).catch(() => null),
-        this.syncFollowTrainCoordination(snapshot, { now }).catch(() => null),
-        this.syncPkAssistCoordination(snapshot, { now }).catch(() => null),
+        this.syncFollowTrainCoordination(snapshot, {
+          throttle: this.running,
+          now,
+        }).catch(() => null),
+        this.syncPkAssistCoordination(snapshot, {
+          throttle: this.running,
+          now,
+        }).catch(() => null),
         this.syncWaypointOverlay(snapshot, {
           throttle: this.running,
           now,
@@ -24549,6 +25099,56 @@ export class MinibiaTargetBot {
       && (configuredChaseMode === "chase" || configuredChaseMode === "aggressive");
   }
 
+  isExplicitChaseToKillProfile(profile = null) {
+    if (!profile || profile.stickToTarget === false || this.isEscapeTargetProfile(profile)) {
+      return false;
+    }
+
+    const behavior = String(profile.behavior || "").trim().toLowerCase();
+    if (behavior && behavior !== "hold") {
+      return false;
+    }
+
+    const profileChaseMode = normalizeChaseModeOption(profile.chaseMode, "auto");
+    return profile.killMode === "asap"
+      || profileChaseMode === "chase"
+      || profileChaseMode === "aggressive";
+  }
+
+  hasExplicitChaseToKillCombatFocus(snapshot = this.lastSnapshot) {
+    if (!snapshot?.ready) {
+      return false;
+    }
+
+    const playerPosition = snapshot.playerPosition || null;
+    const seen = new Set();
+    const entries = [
+      snapshot.currentTarget,
+      this.getFocusTarget(snapshot),
+      ...this.getAttackCombatCandidates(snapshot),
+      ...this.getReachAttackCandidates(snapshot),
+    ];
+
+    for (const entry of entries) {
+      const key = Number.isFinite(Number(entry?.id))
+        ? `id:${Number(entry.id)}`
+        : `${this.getNameKey(entry?.name)}:${this.getPositionKey(entry?.position)}`;
+      if (!key || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+
+      if (
+        this.isExplicitChaseToKillProfile(this.getTargetProfile(entry?.name))
+        && this.isEntrySameFloorAsPlayer(entry, playerPosition)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   isEntrySameFloorAsPlayer(entry = null, playerPosition = null) {
     const position = entry?.position || null;
     if (!position || !playerPosition) {
@@ -24596,7 +25196,11 @@ export class MinibiaTargetBot {
       if (!this.isEntrySameFloorAsPlayer(stickyCandidate, playerPosition)) {
         return null;
       }
-      if (insideConfiguredCombatWindow && !this.isEntryReachableForCombat(stickyCandidate)) {
+      if (
+        !this.isExplicitChaseToKillProfile(profile)
+        && insideConfiguredCombatWindow
+        && !this.isEntryReachableForCombat(stickyCandidate)
+      ) {
         return null;
       }
     } else {
@@ -24908,6 +25512,7 @@ export class MinibiaTargetBot {
     const reachability = this.isEntryReachableForCombat(entry) ? 0 : -100_000;
     const targetCount = Math.max(0, this.getTargetNameCount(entry, snapshot) - 1) * 18;
     const ownership = this.isEntryBlockedBySharedSpawn(entry, snapshot) ? -100_000 : 0;
+    const sharedAssist = this.isSharedSessionAssistTarget(entry, snapshot) ? 5_000 : 0;
     const routeRole = this.getTargetRouteRoleScore(snapshot, { scanFollowTrainThreats: false });
     const components = {
       profileOrder,
@@ -24924,6 +25529,7 @@ export class MinibiaTargetBot {
       reachability,
       targetCount,
       ownership,
+      sharedAssist,
       routeRole,
       rangePenalty,
       distancePenalty,
@@ -25355,6 +25961,8 @@ export class MinibiaTargetBot {
     const rightThreatScore = this.getMonsterThreatScoreForEntry(right);
     const leftScreenBlockers = this.getEntryScreenBlockerCount(left, snapshot, playerPosition);
     const rightScreenBlockers = this.getEntryScreenBlockerCount(right, snapshot, playerPosition);
+    const leftSharedAssist = this.isSharedSessionAssistTarget(left, snapshot) ? 1 : 0;
+    const rightSharedAssist = this.isSharedSessionAssistTarget(right, snapshot) ? 1 : 0;
     const leftRangeRaw = this.getEntryDistance(left, playerPosition);
     const rightRangeRaw = this.getEntryDistance(right, playerPosition);
     const leftRange = Number.isFinite(leftRangeRaw) ? leftRangeRaw : 999999;
@@ -25362,7 +25970,8 @@ export class MinibiaTargetBot {
     const leftDistance = Number.isFinite(Number(left?.distance)) ? Number(left.distance) : leftRange;
     const rightDistance = Number.isFinite(Number(right?.distance)) ? Number(right.distance) : rightRange;
 
-    return leftScreenBlockers - rightScreenBlockers
+    return rightSharedAssist - leftSharedAssist
+      || leftScreenBlockers - rightScreenBlockers
       || rightProfileDirectiveScore - leftProfileDirectiveScore
       || rightScore - leftScore
       || rightThreatScore - leftThreatScore
@@ -27053,6 +27662,154 @@ export class MinibiaTargetBot {
     return Number.isFinite(distance) && distance <= ROUTE_RESYNC_FORCE_FULL_SWEEP_DISTANCE;
   }
 
+  getLocalFloorTransitionDangerZones(snapshot = this.lastSnapshot, position = snapshot?.playerPosition || null) {
+    if (!position) {
+      return [];
+    }
+
+    const zones = [];
+    const seen = new Set();
+    const appendZone = (center, source) => {
+      const key = this.getPositionKey(center);
+      if (!key || seen.has(key)) {
+        return;
+      }
+      if (!this.matchesFloorTransitionDangerZonePosition(position, center)) {
+        return;
+      }
+      seen.add(key);
+      zones.push({
+        position: {
+          x: Math.trunc(Number(center.x)),
+          y: Math.trunc(Number(center.y)),
+          z: Math.trunc(Number(center.z)),
+        },
+        source,
+      });
+    };
+
+    for (const entry of Array.isArray(snapshot?.hazardTiles) ? snapshot.hazardTiles : []) {
+      if (this.isFloorTransitionHazard(entry)) {
+        appendZone(entry.position, "hazard");
+      }
+    }
+
+    const floorKey = Number.isFinite(Number(position.z)) ? String(Math.trunc(Number(position.z))) : "";
+    for (const waypoint of this.getRouteWaypointCache().floorTransitionWaypointsByFloor.get(floorKey) || []) {
+      appendZone(waypoint, "route");
+    }
+
+    return zones;
+  }
+
+  getRouteNavigationTileMap(snapshot = this.lastSnapshot, {
+    extraFloorTransitionPositions = [],
+  } = {}) {
+    const map = this.getDistanceKeeperTileMap(snapshot);
+    const playerPosition = snapshot?.playerPosition || null;
+    if (!playerPosition || this.shouldGuardCombatFloorTransitions(snapshot)) {
+      return map;
+    }
+
+    const localFloorTransitionHazards = [
+      ...this.getLocalFloorTransitionDangerZones(snapshot, playerPosition),
+    ];
+    const seenFloorTransitionHazards = new Set(
+      localFloorTransitionHazards.map((entry) => this.getPositionKey(entry.position)).filter(Boolean),
+    );
+    for (const position of Array.isArray(extraFloorTransitionPositions) ? extraFloorTransitionPositions : []) {
+      for (const entry of this.getLocalFloorTransitionDangerZones(snapshot, position)) {
+        const key = this.getPositionKey(entry.position);
+        if (!key || seenFloorTransitionHazards.has(key)) continue;
+        seenFloorTransitionHazards.add(key);
+        localFloorTransitionHazards.push(entry);
+      }
+    }
+    if (!localFloorTransitionHazards.length) {
+      return map;
+    }
+
+    const tiles = Array.isArray(snapshot?.reachableWalkableTiles) && snapshot.reachableWalkableTiles.length
+      ? snapshot.reachableWalkableTiles
+      : Array.isArray(snapshot?.walkableTiles) && snapshot.walkableTiles.length
+        ? snapshot.walkableTiles
+        : Array.isArray(snapshot?.reachableTiles) && snapshot.reachableTiles.length
+          ? snapshot.reachableTiles
+          : Array.isArray(snapshot?.safeTiles)
+            ? snapshot.safeTiles
+            : [];
+
+    for (const tile of tiles) {
+      const key = this.getPositionKey(tile);
+      if (!key || map.has(key)) continue;
+      if (this.getFloorTransitionHazardAt(snapshot, tile)) continue;
+      if (this.getRouteFloorTransitionNoGoAt(tile)) continue;
+      if (this.getAutoAvoidHazardAt(snapshot, tile)) continue;
+      if (this.shouldAvoidPosition(snapshot, tile)) continue;
+      if (this.isRecentlyBlockedWalkDestination(tile)) continue;
+      if (!localFloorTransitionHazards.some((entry) => this.matchesFloorTransitionDangerZonePosition(tile, entry.position))) {
+        continue;
+      }
+      map.set(key, {
+        x: Math.trunc(Number(tile.x)),
+        y: Math.trunc(Number(tile.y)),
+        z: Math.trunc(Number(tile.z)),
+      });
+    }
+
+    const playerKey = this.getPositionKey(playerPosition);
+    if (playerKey) {
+      map.set(playerKey, {
+        x: Math.trunc(Number(playerPosition.x)),
+        y: Math.trunc(Number(playerPosition.y)),
+        z: Math.trunc(Number(playerPosition.z)),
+      });
+    }
+
+    return map;
+  }
+
+  shouldDeferRouteSpacingHoldForFloorTransitionExit(snapshot = this.lastSnapshot, waypoint = null) {
+    const playerPosition = snapshot?.playerPosition || null;
+    if (!snapshot?.ready || !playerPosition || !waypoint) {
+      return false;
+    }
+
+    if (
+      this.isRouteResetActive()
+      || this.isCavebotPaused()
+      || this.isTileRuleWaitPending()
+      || this.shouldGuardCombatFloorTransitions(snapshot)
+      || this.isFloorTransitionWaypointType(waypoint)
+    ) {
+      return false;
+    }
+
+    if (Number(playerPosition.z) !== Number(waypoint.z)) {
+      return false;
+    }
+
+    if (!this.getLocalFloorTransitionDangerZones(snapshot, playerPosition).length) {
+      return false;
+    }
+
+    const walkPlan = this.resolveRouteWalkDestination(snapshot, waypoint, {
+      allowGlide: false,
+    });
+    const destination = walkPlan?.destination || null;
+    const destinationKey = this.getPositionKey(destination);
+    return Boolean(
+      destination
+      && destinationKey
+      && destinationKey !== this.getPositionKey(playerPosition)
+      && Number(destination.z) === Number(playerPosition.z)
+      && !this.getRouteFloorTransitionNoGoAt(destination)
+      && !this.shouldAvoidPosition(snapshot, destination)
+      && !this.getWaypointRouteHazardAt(snapshot, destination, waypoint)
+      && !this.isRecentlyBlockedWalkDestination(destination)
+    );
+  }
+
   findVicinityWalkDestination(snapshot, waypoint) {
     const playerPosition = snapshot?.playerPosition || null;
     if (!playerPosition || !waypoint) {
@@ -27060,7 +27817,9 @@ export class MinibiaTargetBot {
     }
 
     const playerPositionKey = this.getPositionKey(playerPosition);
-    const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
+    const reachableTileMap = this.getRouteNavigationTileMap(snapshot, {
+      extraFloorTransitionPositions: [waypoint],
+    });
     const hasKnownReachability = reachableTileMap.size > 0;
     const occupiedTileKeys = this.getDistanceKeeperOccupiedTileKeys(snapshot, playerPosition);
     const routePreferenceTargets = hasKnownReachability
@@ -27128,7 +27887,9 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
+    const reachableTileMap = this.getRouteNavigationTileMap(snapshot, {
+      extraFloorTransitionPositions: [destination, waypoint],
+    });
     const constrainToSafeStep = this.shouldConstrainRouteDestinationToSafeStep(snapshot, {
       destination,
       waypoint,
@@ -27283,7 +28044,7 @@ export class MinibiaTargetBot {
 
   getRouteGlideReachability(snapshot = this.lastSnapshot) {
     const playerPosition = snapshot?.playerPosition || null;
-    const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
+    const reachableTileMap = this.getRouteNavigationTileMap(snapshot);
     const navigation = reachableTileMap.size && playerPosition
       ? this.getConnectedTileNavigation(reachableTileMap, playerPosition)
       : null;
@@ -27351,7 +28112,9 @@ export class MinibiaTargetBot {
 
     const reachableTileMap = reachability?.reachableTileMap instanceof Map
       ? reachability.reachableTileMap
-      : this.getDistanceKeeperTileMap(snapshot);
+      : this.getRouteNavigationTileMap(snapshot, {
+        extraFloorTransitionPositions: [candidate],
+      });
     if (reachableTileMap.size) {
       const navigation = reachability?.navigation
         || this.getConnectedTileNavigation(reachableTileMap, playerPosition);
@@ -27400,6 +28163,9 @@ export class MinibiaTargetBot {
       if (this.shouldHoldForRouteSpacing(nextIndex)) {
         break;
       }
+      if (this.getTeamHuntSyncAdvice(nextIndex).hold) {
+        break;
+      }
 
       const candidate = this.options.waypoints[nextIndex];
       const candidateDistance = this.getPositionDistance(playerPosition, candidate);
@@ -27435,7 +28201,9 @@ export class MinibiaTargetBot {
       allowUnsafeExactDestination = false,
     } = {}) => {
       const destinationKey = this.getPositionKey(destination);
-      const reachableTileMap = this.getDistanceKeeperTileMap(snapshot);
+      const reachableTileMap = this.getRouteNavigationTileMap(snapshot, {
+        extraFloorTransitionPositions: [destination, waypoint],
+      });
       const destinationKnownReachable = Boolean(
         destinationKey
         && reachableTileMap.size
@@ -28466,6 +29234,10 @@ export class MinibiaTargetBot {
     now = Date.now(),
     exactReached = false,
   } = {}) {
+    if (!this.isRouteSpacingEnabled()) {
+      return false;
+    }
+
     const members = this.getRouteSpacingMembers();
     const activeCount = this.getRouteSpacingRecoveryActiveCount(members);
     if (activeCount <= 1) {
@@ -34561,7 +35333,15 @@ export class MinibiaTargetBot {
           ? (this.getWaypointActionTargetIndex(waypoint) ?? this.routeIndex)
           : (Number.isInteger(naturalNextIndex) ? naturalNextIndex : this.routeIndex);
         if (this.shouldHoldForRouteSpacing(spacingCandidateIndex)) {
-          return this.getRouteSpacingHoldAction(snapshot);
+          const spacingWaypoint = Number.isInteger(spacingCandidateIndex)
+            ? this.options.waypoints[spacingCandidateIndex]
+            : waypoint;
+          if (!this.shouldDeferRouteSpacingHoldForFloorTransitionExit(snapshot, spacingWaypoint)) {
+            return this.getRouteSpacingHoldAction(snapshot);
+          }
+        }
+        if (this.shouldHoldForTeamHuntSync(spacingCandidateIndex)) {
+          return this.getTeamHuntHoldAction(snapshot);
         }
 
         if (routeResetActive && this.routeResetState.phase === "returning" && !followsRouteResetStep) {
@@ -34648,7 +35428,9 @@ export class MinibiaTargetBot {
       }
 
       if (this.shouldHoldForRouteSpacing(this.routeIndex)) {
-        return this.getRouteSpacingHoldAction(snapshot);
+        if (!this.shouldDeferRouteSpacingHoldForFloorTransitionExit(snapshot, waypoint)) {
+          return this.getRouteSpacingHoldAction(snapshot);
+        }
       }
 
       const now = Date.now();
@@ -34658,6 +35440,11 @@ export class MinibiaTargetBot {
       }
 
       const movementInProgress = Boolean(snapshot.pathfinderAutoWalking || snapshot.isMoving);
+      const staleClientAutoWalkAction = this.getStaleClientAutoWalkRecoveryAction(snapshot, waypoint, now);
+      if (staleClientAutoWalkAction) {
+        return staleClientAutoWalkAction;
+      }
+
       if (movementInProgress && !advancedWaypointThisPass) {
         return null;
       }
@@ -34769,6 +35556,7 @@ export class MinibiaTargetBot {
   async target(selection, {
     sharedSpawnMode = this.getSharedSpawnMode(),
     trustedPlayerNames = Array.from(this.getSharedSpawnTrustedPlayerKeys(this.lastSnapshot)),
+    trustedPlayerIds = Array.from(this.getSharedSpawnTrustedPlayers(this.lastSnapshot).ids),
     foreignPlayers = this.getSharedSpawnForeignPlayers(this.lastSnapshot),
   } = {}) {
     if (!selection) return null;
@@ -34811,6 +35599,7 @@ export class MinibiaTargetBot {
     const result = await this.cdp.evaluate(buildTargetExpression([chosen.id], {
       sharedSpawnMode,
       trustedPlayerNames,
+      trustedPlayerIds,
       foreignPlayers,
     }));
 
@@ -37824,6 +38613,7 @@ export class MinibiaTargetBot {
       }
 
       const result = await this.interruptAutoWalk();
+      this.clearClientAutoWalkStationaryState();
       if (result?.interruptedWalk) {
         this.lastWalkAt = 0;
         this.clearLastWalkProgressPending();

@@ -604,6 +604,40 @@ test("normalizeOptions accepts follow-chain alias option names", () => {
   assert.equal(Object.hasOwn(options, "followChainCombatMode"), false);
 });
 
+test("normalizeOptions keeps Team Hunt separate from Follow Chain", () => {
+  const team = normalizeOptions({
+    teamEnabled: true,
+    routeSpacingEnabled: true,
+  });
+  assert.equal(team.teamEnabled, true);
+  assert.equal(team.partyFollowEnabled, false);
+  assert.equal(team.routeSpacingEnabled, false);
+
+  const follow = normalizeOptions({
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+  });
+  assert.equal(follow.teamEnabled, false);
+  assert.equal(follow.partyFollowEnabled, true);
+});
+
+test("normalizeOptions resolves old configs with both team modes enabled", () => {
+  const teamFallback = normalizeOptions({
+    teamEnabled: true,
+    partyFollowEnabled: true,
+  });
+  assert.equal(teamFallback.teamEnabled, true);
+  assert.equal(teamFallback.partyFollowEnabled, false);
+
+  const followFallback = normalizeOptions({
+    teamEnabled: true,
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+  });
+  assert.equal(followFallback.teamEnabled, false);
+  assert.equal(followFallback.partyFollowEnabled, true);
+});
+
 test("normalizeOptions normalizes PK assist module settings", () => {
   const options = normalizeOptions({
     pkAssistEnabled: true,
@@ -11815,6 +11849,71 @@ test("target command refuses a stale foreign-engaged target before sending the l
   assert.equal(bot.lastRetargetId, null);
 });
 
+test("target command allows a same-session engaged target by trusted player id", async () => {
+  const bot = new MinibiaTargetBot({
+    monsterNames: ["Larva"],
+    sharedSpawnMode: "attack-all",
+  });
+  bot.setRuntimeLoad({
+    localPlayerNames: ["Own Knight", "Own Druid"],
+  });
+  const player = {
+    id: 1,
+    name: "Own Knight",
+  };
+  const monster = {
+    id: 10,
+    name: "Larva",
+    __position: { x: 101, y: 100, z: 8 },
+    target: {
+      id: 900,
+    },
+  };
+  let targetCalls = 0;
+  const context = {
+    window: {
+      gameClient: {
+        player,
+        world: {
+          activeCreatures: new Map([
+            [1, player],
+            [10, monster],
+          ]),
+          targetMonster() {
+            targetCalls += 1;
+          },
+        },
+      },
+    },
+  };
+
+  bot.lastSnapshot = {
+    ready: true,
+    playerName: "Own Knight",
+    playerId: 1,
+    visiblePlayers: [
+      {
+        id: 900,
+        name: "Own Druid",
+        position: { x: 101, y: 101, z: 8 },
+      },
+    ],
+  };
+  bot.cdp = {
+    evaluate: async (expression) => vm.runInNewContext(expression, context),
+  };
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+
+  const result = await bot.target({
+    chosen: { id: 10, name: "Larva" },
+    candidates: [{ id: 10, name: "Larva" }],
+  });
+
+  assert.equal(result?.ok, true);
+  assert.equal(targetCalls, 1);
+  assert.equal(bot.lastRetargetId, 10);
+});
+
 test("target command refuses a stale proximity-claimed target before sending the live click", async () => {
   const bot = new MinibiaTargetBot({
     monsterNames: ["Larva"],
@@ -13306,7 +13405,7 @@ test("chooseTarget keeps a chase-to-kill current target outside the combat windo
   assert.equal(bot.lastTargetScoreReport?.selectedTargetId, 11);
 });
 
-test("chooseTarget can retarget a chase-to-kill current target trapped inside the combat window", () => {
+test("chooseTarget keeps an explicit chase-to-kill current target inside the combat window", () => {
   const bot = new MinibiaTargetBot({
     monsterNames: ["Dragon"],
     rangeX: 7,
@@ -13364,8 +13463,8 @@ test("chooseTarget can retarget a chase-to-kill current target trapped inside th
     candidates: [freshDragon],
   });
 
-  assert.equal(selection?.chosen?.id, 10);
-  assert.deepEqual(selection?.candidates.map((candidate) => candidate.id), [10]);
+  assert.equal(selection, null);
+  assert.equal(bot.lastTargetScoreReport?.selectedTargetId, 11);
 });
 
 test("shouldHoldRouteForCombat holds chase-to-kill current targets outside the combat window", () => {
@@ -15969,6 +16068,278 @@ test("chooseRouteAction ignores long walk repath cooldowns after 2 seconds stati
   } finally {
     Date.now = realDateNow;
   }
+});
+
+test("chooseRouteAction interrupts stale client autowalk when no bot walk is pending", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    walkRepathMs: 1200,
+    waypoints: [
+      { x: 5, y: 0, z: 8, type: "walk" },
+    ],
+  });
+
+  let now = 1_000;
+  const realDateNow = Date.now;
+  Date.now = () => now;
+  bot.getNow = () => now;
+  bot.resetRoute(0);
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 0, y: 0, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: true,
+    pathfinderFinalDestination: null,
+    autoWalkStepsRemaining: 1,
+  };
+
+  try {
+    assert.equal(bot.chooseRouteAction(snapshot), null);
+
+    now += 2_401;
+
+    const action = bot.chooseRouteAction(snapshot);
+    assert.equal(action?.kind, "hold-route");
+    assert.equal(action?.reason, "stale-client-autowalk");
+    assert.equal(action?.interrupt, true);
+  } finally {
+    Date.now = realDateNow;
+  }
+});
+
+test("chooseRouteAction keeps waiting when claimed client autowalk is still changing tiles", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    walkRepathMs: 1200,
+    waypoints: [
+      { x: 5, y: 0, z: 8, type: "walk" },
+    ],
+  });
+
+  let now = 1_000;
+  const realDateNow = Date.now;
+  Date.now = () => now;
+  bot.getNow = () => now;
+  bot.resetRoute(0);
+
+  const baseSnapshot = {
+    ready: true,
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: true,
+    pathfinderFinalDestination: null,
+    autoWalkStepsRemaining: 1,
+  };
+
+  try {
+    assert.equal(bot.chooseRouteAction({
+      ...baseSnapshot,
+      playerPosition: { x: 0, y: 0, z: 8 },
+    }), null);
+
+    now += 2_401;
+
+    assert.equal(bot.chooseRouteAction({
+      ...baseSnapshot,
+      playerPosition: { x: 1, y: 0, z: 8 },
+    }), null);
+  } finally {
+    Date.now = realDateNow;
+  }
+});
+
+test("getRouteStateTelemetry does not treat cross-floor visible monsters as combat hold", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    monsterNames: ["Dragon"],
+    waypoints: [
+      { x: 5, y: 0, z: 8, type: "walk" },
+    ],
+  });
+
+  const routeState = bot.getRouteStateTelemetry({
+    ready: true,
+    playerPosition: { x: 0, y: 0, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [
+      {
+        id: 1,
+        name: "Dragon",
+        position: { x: 1, y: 0, z: 7 },
+        reachableForCombat: false,
+        withinCombatBox: false,
+        withinCombatWindow: true,
+      },
+    ],
+  });
+
+  assert.equal(routeState.state, "routing");
+});
+
+test("chooseRouteAction can route away from floor transition danger zones outside combat", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    routeFollowExactWaypoints: true,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 12, y: 10, z: 8, type: "walk" },
+    ],
+  });
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 10, y: 10, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    reachableWalkableTiles: [
+      { x: 10, y: 10, z: 8 },
+      { x: 11, y: 10, z: 8 },
+      { x: 12, y: 10, z: 8 },
+    ],
+    hazardTiles: [
+      {
+        position: { x: 10, y: 10, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["stairs"],
+      },
+    ],
+  };
+
+  assert.equal(bot.getDistanceKeeperTileMap(snapshot).has("11,10,8"), false);
+  assert.equal(bot.getRouteNavigationTileMap(snapshot).has("11,10,8"), true);
+
+  const action = bot.chooseRouteAction(snapshot);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.destination, { x: 11, y: 10, z: 8 });
+});
+
+test("chooseRouteAction can route into floor transition approach waypoints outside combat", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    routeFollowExactWaypoints: true,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 13, y: 11, z: 9, type: "walk" },
+      { x: 12, y: 10, z: 9, type: "stairs-up" },
+    ],
+  });
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 16, y: 10, z: 9 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    reachableWalkableTiles: [
+      { x: 16, y: 10, z: 9 },
+      { x: 15, y: 10, z: 9 },
+      { x: 14, y: 10, z: 9 },
+      { x: 13, y: 11, z: 9 },
+    ],
+    hazardTiles: [
+      {
+        position: { x: 12, y: 10, z: 9 },
+        categories: ["stairsLadders"],
+        labels: ["stairs"],
+      },
+    ],
+  };
+
+  assert.equal(bot.getRouteNavigationTileMap(snapshot).has("13,11,9"), false);
+  assert.equal(bot.getRouteNavigationTileMap(snapshot, {
+    extraFloorTransitionPositions: [bot.options.waypoints[0]],
+  }).has("13,11,9"), true);
+
+  const action = bot.chooseRouteAction(snapshot);
+  assert.equal(action?.kind, "walk");
+  assert.equal(action?.destination?.z, 9);
+});
+
+test("chooseRouteAction leaves a floor transition landing before enforcing route spacing", () => {
+  const waypoints = Array.from({ length: 35 }, (_, index) => ({
+    x: 33000 + index,
+    y: 32000,
+    z: 8,
+    type: "walk",
+  }));
+  waypoints[7] = { x: 32817, y: 32141, z: 8, type: "walk" };
+  waypoints[27] = { x: 32816, y: 32144, z: 8, type: "stairs-up" };
+
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    routeFollowExactWaypoints: true,
+    waypointRadius: 0,
+    waypoints,
+  });
+  bot.routeIndex = 7;
+  bot.routeCoordinationState = {
+    selfInstanceId: "zlocimir",
+    members: [
+      {
+        instanceId: "zlocimir",
+        characterName: "Zlocimir",
+        routeIndex: 7,
+        confirmedIndex: 6,
+        playerPosition: { x: 32815, y: 32144, z: 8 },
+        startedAt: 1,
+      },
+      {
+        instanceId: "czarnobrat",
+        characterName: "Czarnobrat",
+        routeIndex: 13,
+        confirmedIndex: 12,
+        playerPosition: { x: 32836, y: 32140, z: 9 },
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 32815, y: 32144, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    reachableWalkableTiles: [
+      { x: 32815, y: 32144, z: 8 },
+      { x: 32815, y: 32143, z: 8 },
+      { x: 32816, y: 32142, z: 8 },
+      { x: 32817, y: 32141, z: 8 },
+    ],
+  };
+
+  assert.equal(bot.getRouteSpacingAdvice(7).hold, true);
+  assert.equal(bot.getLocalFloorTransitionDangerZones(snapshot).length, 1);
+
+  const action = bot.chooseRouteAction(snapshot);
+  assert.equal(action?.kind, "walk");
+  assert.notEqual(action?.reason, "route-spacing");
+  assert.notEqual(action?.walkReason, "route-spacing-bounce");
+  assert.equal(action?.destination?.x, 32817);
+  assert.equal(action?.destination?.y, 32141);
+  assert.equal(action?.destination?.z, 8);
 });
 
 test("chooseRouteAction immediately reissues a route walk after the last click made progress", () => {
@@ -19457,6 +19828,186 @@ test("chooseRouteAction holds a shared cavebot until the peer opens the 10 perce
   assert.equal(bot.routeSpacingHold, null);
 });
 
+test("team mode disables route spacing holds", () => {
+  const waypoints = Array.from({ length: 67 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    routeSpacingEnabled: false,
+    waypoints,
+  });
+
+  bot.routeCoordinationState = {
+    selfInstanceId: "late",
+    members: [
+      {
+        instanceId: "early",
+        characterName: "Early",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 1,
+      },
+      {
+        instanceId: "late",
+        characterName: "Late",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(action?.kind, "walk");
+  assert.equal(action?.destination?.x, 101);
+  assert.equal(bot.routeSpacingHold, null);
+});
+
+test("Team Hunt route-walks and holds waypoint progress for same-route peers", () => {
+  const waypoints = [
+    { x: 100, y: 200, z: 8, type: "walk" },
+    { x: 101, y: 200, z: 8, type: "walk" },
+    { x: 102, y: 200, z: 8, type: "walk" },
+  ];
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    teamEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    waypoints,
+  });
+
+  bot.routeIndex = 1;
+  bot.routeCoordinationState = {
+    selfInstanceId: "scout",
+    members: [
+      {
+        instanceId: "knight",
+        characterName: "Knight Alpha",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 1,
+      },
+      {
+        instanceId: "scout",
+        characterName: "Scout Beta",
+        routeIndex: 1,
+        confirmedIndex: 0,
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const snapshot = {
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 101, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  };
+
+  assert.equal(bot.options.teamEnabled, true);
+  assert.equal(bot.options.partyFollowEnabled, false);
+  assert.equal(bot.getFollowTrainAssignment(snapshot), null);
+
+  const heldAction = bot.chooseRouteAction(snapshot);
+  assert.equal(heldAction?.kind, "hold-route");
+  assert.equal(heldAction?.reason, "team-hunt-sync");
+  assert.equal(bot.routeIndex, 1);
+
+  bot.routeCoordinationState.members[0].routeIndex = 1;
+  bot.routeCoordinationState.members[0].confirmedIndex = 1;
+
+  const walkAction = bot.chooseRouteAction(snapshot);
+  assert.equal(walkAction?.kind, "walk");
+  assert.equal(walkAction?.destination?.x, 102);
+  assert.equal(bot.routeIndex, 2);
+});
+
+test("team coordination sync is throttled while the runtime loop is hot", async () => {
+  const bot = new MinibiaTargetBot({
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight", "Druid"],
+  });
+  let syncCount = 0;
+
+  bot.running = true;
+  bot.setFollowTrainCoordinationAdapter({
+    async sync({ now }) {
+      syncCount += 1;
+      return {
+        selfInstanceId: "self",
+        members: [{ instanceId: "self", updatedAt: now }],
+      };
+    },
+  });
+
+  const snapshot = {
+    ready: true,
+    playerName: "Knight",
+  };
+
+  const first = await bot.syncFollowTrainCoordination(snapshot, { throttle: true, now: 1_000 });
+  const second = await bot.syncFollowTrainCoordination(snapshot, { throttle: true, now: 1_100 });
+  const third = await bot.syncFollowTrainCoordination(snapshot, { throttle: true, now: 1_300 });
+
+  assert.equal(syncCount, 2);
+  assert.equal(first, second);
+  assert.equal(third?.members?.[0]?.updatedAt, 1_300);
+});
+
+test("pk assist coordination sync is throttled without hiding option changes", async () => {
+  const bot = new MinibiaTargetBot({
+    pkAssistEnabled: true,
+    pkAssistMode: "assist-only",
+  });
+  let syncCount = 0;
+
+  bot.running = true;
+  bot.setPkAssistCoordinationAdapter({
+    async sync({ options, now }) {
+      syncCount += 1;
+      return {
+        selfInstanceId: "self",
+        members: [{ mode: options.pkAssistMode, updatedAt: now }],
+      };
+    },
+  });
+
+  const snapshot = {
+    ready: true,
+    playerName: "Knight",
+  };
+
+  const first = await bot.syncPkAssistCoordination(snapshot, { throttle: true, now: 2_000 });
+  const second = await bot.syncPkAssistCoordination(snapshot, { throttle: true, now: 2_050 });
+  bot.options.pkAssistMode = "evade-only";
+  const third = await bot.syncPkAssistCoordination(snapshot, { throttle: true, now: 2_060 });
+
+  assert.equal(syncCount, 2);
+  assert.equal(first, second);
+  assert.equal(third?.members?.[0]?.mode, "evade-only");
+});
+
 test("route spacing window uses the route spread, not a small fixed waypoint cap", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -19539,6 +20090,65 @@ test("route spacing advice honors expected live sessions beyond the current leas
   assert.equal(advice.reason, "drift");
   assert.equal(advice.targetGap, 67 / 3);
   assert.equal(advice.maxGap, 25);
+});
+
+test("chooseRouteAction releases once the current route spacing gap reaches the minimum band", () => {
+  const waypoints = Array.from({ length: 35 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypointRadius: 0,
+    waypoints,
+  });
+
+  bot.routeIndex = 8;
+  bot.routeCoordinationState = {
+    selfInstanceId: "follower",
+    members: [
+      {
+        instanceId: "follower",
+        characterName: "Follower",
+        routeIndex: 8,
+        confirmedIndex: 8,
+        startedAt: 2,
+      },
+      {
+        instanceId: "leader",
+        characterName: "Leader",
+        routeIndex: 23,
+        confirmedIndex: 23,
+        startedAt: 1,
+      },
+    ],
+  };
+
+  const window = bot.getRouteSpacingWindow(2);
+  assert.equal(window.minGap, 15);
+  assert.equal(bot.getRouteSpacingAdvice(9).hold, false);
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 108, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+    reachableWalkableTiles: [
+      { x: 108, y: 200, z: 8 },
+      { x: 109, y: 200, z: 8 },
+    ],
+  });
+
+  assert.equal(action?.kind ?? null, null);
+  assert.equal(bot.routeIndex, 9);
+  assert.equal(bot.routeSpacingHold?.peerInstanceId, "leader");
 });
 
 test("chooseRouteAction holds after the route spacing leeway past its predecessor", () => {
@@ -19806,6 +20416,158 @@ test("chooseTarget can assist a same-session monster beyond the normal route spa
 
   assert.equal(selection?.chosen?.id, 10);
   assert.equal(bot.lastTargetScoreReport?.candidates[0]?.skippedReasons.includes("route spacing lane"), false);
+});
+
+test("chooseTarget infers same-session assist from coordinated peer position", () => {
+  const waypoints = Array.from({ length: 100 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    monsterNames: ["Dragon"],
+    rangeX: 20,
+    rangeY: 20,
+    combatRangeX: 20,
+    combatRangeY: 20,
+    waypoints,
+  });
+
+  bot.routeIndex = 0;
+  bot.routeCoordinationState = {
+    selfInstanceId: "follower",
+    members: [
+      {
+        instanceId: "follower",
+        characterName: "Follower",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        playerPosition: { x: 100, y: 200, z: 8 },
+        startedAt: 2,
+      },
+      {
+        instanceId: "leader",
+        characterName: "Leader",
+        routeIndex: 50,
+        confirmedIndex: 49,
+        playerPosition: { x: 110, y: 201, z: 8 },
+        startedAt: 1,
+      },
+    ],
+  };
+
+  const assistTarget = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 110, y: 200, z: 8 },
+    dx: 10,
+    dy: 0,
+    dz: 0,
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    engagedPlayerIds: [],
+    engagedPlayerNames: [],
+    engagedPlayerCount: 0,
+  };
+  const snapshot = {
+    ready: true,
+    playerName: "Follower",
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visiblePlayers: [],
+    visibleCreatures: [assistTarget],
+    allMatches: [assistTarget],
+    candidates: [assistTarget],
+  };
+
+  const selection = bot.chooseTarget(snapshot);
+
+  assert.equal(bot.isSharedSessionAssistTarget(assistTarget, snapshot), true);
+  assert.equal(selection?.chosen?.id, 10);
+  assert.equal(bot.lastTargetScoreReport?.candidates[0]?.skippedReasons.includes("route spacing lane"), false);
+});
+
+test("chooseTarget prioritizes same-session assist targets over solo targets", () => {
+  const waypoints = Array.from({ length: 100 }, (_, index) => ({
+    x: 100 + index,
+    y: 200,
+    z: 8,
+    type: "walk",
+  }));
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    monsterNames: ["Dragon"],
+    rangeX: 20,
+    rangeY: 20,
+    combatRangeX: 20,
+    combatRangeY: 20,
+    waypoints,
+  });
+
+  bot.routeIndex = 0;
+  bot.routeCoordinationState = {
+    selfInstanceId: "follower",
+    members: [
+      {
+        instanceId: "follower",
+        characterName: "Follower",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        playerPosition: { x: 100, y: 200, z: 8 },
+        startedAt: 2,
+      },
+      {
+        instanceId: "leader",
+        characterName: "Leader",
+        routeIndex: 50,
+        confirmedIndex: 49,
+        playerPosition: { x: 110, y: 201, z: 8 },
+        startedAt: 1,
+      },
+    ],
+  };
+
+  const soloTarget = {
+    id: 10,
+    name: "Dragon",
+    position: { x: 101, y: 200, z: 8 },
+    dx: 1,
+    dy: 0,
+    dz: 0,
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+  };
+  const assistTarget = {
+    id: 11,
+    name: "Dragon",
+    position: { x: 110, y: 200, z: 8 },
+    dx: 10,
+    dy: 0,
+    dz: 0,
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+  };
+
+  const selection = bot.chooseTarget({
+    ready: true,
+    playerName: "Follower",
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visiblePlayers: [],
+    visibleCreatures: [soloTarget, assistTarget],
+    allMatches: [soloTarget, assistTarget],
+    candidates: [soloTarget, assistTarget],
+  });
+
+  assert.equal(selection?.chosen?.id, 11);
+  assert.equal(bot.lastTargetScoreReport?.candidates.find((entry) => entry.id === 11)?.scoreBreakdown.sharedAssist, 5000);
 });
 
 test("chooseTarget keeps local combat available while route spacing is collapsed", () => {
@@ -23077,6 +23839,93 @@ test("restorePreferredChaseMode keeps native chase standing during wave dodges n
   assert.equal(selector.currentChaseMode, 0);
   assert.equal(bot.preferredChaseMode, 2);
   assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "stand");
+});
+
+test("restorePreferredChaseMode keeps explicit chase-to-kill profiles aggressive during wave dodge risk", async () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    chaseMode: "aggressive",
+    monsterNames: ["Dragon"],
+    targetProfiles: [
+      {
+        name: "Dragon",
+        chaseMode: "aggressive",
+        behavior: "hold",
+        stickToTarget: true,
+        avoidWave: true,
+      },
+    ],
+    waypoints: [
+      { x: 100, y: 99, z: 8, type: "stairs-down" },
+    ],
+  });
+  const selector = {
+    currentChaseMode: 0,
+    setChaseMode(mode) {
+      this.currentChaseMode = mode;
+    },
+  };
+  bot.page = { id: "page-1", title: "Minibia" };
+  bot.cdp = {
+    async evaluate(expression) {
+      return evaluatePageExpression(expression, {
+        gameClient: {
+          interface: {
+            fightModeSelector: selector,
+          },
+        },
+      });
+    },
+  };
+  bot.lastSnapshot = createModuleSnapshot({
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: {
+      id: 10,
+      name: "Dragon",
+      position: { x: 101, y: 100, z: 8 },
+      withinCombatBox: true,
+      withinCombatWindow: true,
+      reachableForCombat: true,
+    },
+    visibleCreatures: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        withinCombatBox: true,
+        withinCombatWindow: true,
+        reachableForCombat: true,
+      },
+    ],
+    candidates: [
+      {
+        id: 10,
+        name: "Dragon",
+        position: { x: 101, y: 100, z: 8 },
+        withinCombatBox: true,
+        withinCombatWindow: true,
+        reachableForCombat: true,
+      },
+    ],
+    combatModes: {
+      chaseMode: {
+        key: "stand",
+        label: "Stand",
+        rawValue: "0",
+      },
+    },
+  });
+
+  const result = await bot.restorePreferredChaseMode();
+
+  assert.equal(result?.ok, true);
+  assert.equal(result?.routeSafetyClamped, false);
+  assert.equal(result?.preferredMode, 2);
+  assert.equal(result?.appliedMode, 2);
+  assert.equal(selector.currentChaseMode, 2);
+  assert.equal(bot.preferredChaseMode, 2);
+  assert.equal(bot.lastSnapshot.combatModes.chaseMode.key, "chase");
 });
 
 test("route-safe combat hold still holds for reach targets and close targets", () => {

@@ -843,6 +843,7 @@ test("route profile packs export grouped settings and preview validation-first i
     assert.equal(Object.hasOwn(pack.alarms, "alarmsEnabled"), false);
     assert.equal(Object.hasOwn(pack.alarms, "alarmsSoundEnabled"), false);
     assert.deepEqual(pack.alarms.alarmsBlacklistNames, ["Bad Actor"]);
+    assert.equal(pack.party.teamEnabled, false);
     assert.deepEqual(pack.party.partyFollowMembers, ["Scout Beta"]);
     assert.equal(Object.hasOwn(pack.options, "creatureLedger"), false);
     assert.equal(Object.hasOwn(pack.options, "cavebotPaused"), false);
@@ -1110,6 +1111,19 @@ test("route spacing leases track active peers and clean up stale members", async
       ],
     };
     const routeGroup = describeRouteSpacingGroup(options);
+    const teamRouteGroup = describeRouteSpacingGroup({
+      ...options,
+      routeSpacingEnabled: false,
+      teamEnabled: true,
+    });
+    const disabledRouteGroup = describeRouteSpacingGroup({
+      ...options,
+      routeSpacingEnabled: false,
+      teamEnabled: false,
+    });
+
+    assert.equal(teamRouteGroup?.routeKey, routeGroup?.routeKey);
+    assert.equal(disabledRouteGroup, null);
 
     const first = await syncRouteSpacingLease({
       options,

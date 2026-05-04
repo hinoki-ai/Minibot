@@ -179,6 +179,8 @@ const summaryFields = {
   antiIdleDetail: document.getElementById("summary-anti-idle-detail"),
   alarms: document.getElementById("summary-alarms"),
   alarmsDetail: document.getElementById("summary-alarms-detail"),
+  teamHunt: document.getElementById("summary-team-hunt"),
+  teamHuntDetail: document.getElementById("summary-team-hunt-detail"),
   partyFollow: document.getElementById("summary-party-follow"),
   partyFollowDetail: document.getElementById("summary-party-follow-detail"),
   pkAssist: document.getElementById("summary-pk-assist"),
@@ -208,6 +210,7 @@ const compactPanelFields = {
   reconnect: document.getElementById("compact-reconnect-summary"),
   antiIdle: document.getElementById("compact-anti-idle-summary"),
   alarms: document.getElementById("compact-alarms-summary"),
+  teamHunt: document.getElementById("compact-team-hunt-summary"),
   partyFollow: document.getElementById("compact-party-follow-summary"),
   pkAssist: document.getElementById("compact-pk-assist-summary"),
   rookiller: document.getElementById("compact-rookiller-summary"),
@@ -247,6 +250,7 @@ const quickButtons = {
   reconnect: document.getElementById("quick-toggle-reconnect"),
   antiIdle: document.getElementById("quick-toggle-anti-idle"),
   alarms: document.getElementById("quick-toggle-alarms"),
+  teamHunt: document.getElementById("quick-toggle-team-hunt"),
   partyFollow: document.getElementById("quick-toggle-party-follow"),
   pkAssist: document.getElementById("quick-toggle-pk-assist"),
 };
@@ -275,6 +279,7 @@ const compactQuickButtons = {
   reconnect: document.getElementById("compact-toggle-reconnect"),
   antiIdle: document.getElementById("compact-toggle-anti-idle"),
   alarms: document.getElementById("compact-toggle-alarms"),
+  teamHunt: document.getElementById("compact-toggle-team-hunt"),
   partyFollow: document.getElementById("compact-toggle-party-follow"),
   pkAssist: document.getElementById("compact-toggle-pk-assist"),
   rookiller: document.getElementById("compact-toggle-rookiller"),
@@ -495,6 +500,8 @@ let routeOverviewRenderedKey = "";
 let waypointListStructureRenderedKey = "";
 let waypointListStateRenderedKey = "";
 let routeLivePreviewRenderedKey = "";
+let routeWaypointStructureKeySource = null;
+let routeWaypointStructureKeyValue = "";
 let botTabsRenderedKey = "";
 let botTabsStructureRenderedKey = "";
 let sessionTabOrderIds = [];
@@ -1582,6 +1589,18 @@ const MODULE_RULE_SCHEMAS = {
       { key: "requireStationary", label: "Only while idle" },
     ],
   },
+  team: {
+    enabledKey: "teamEnabled",
+    allowRules: false,
+    moduleFields: [
+      {
+        key: "teamEnabled",
+        label: "Team Hunt",
+        type: "checkbox",
+        help: "Run the same cavebot route on coordinated waypoint progress.",
+      },
+    ],
+  },
   partyFollow: {
     enabledKey: "partyFollowEnabled",
     allowRules: false,
@@ -1686,6 +1705,7 @@ const COMPACT_MODULE_MODAL_KEYS = new Set([
   "reconnect",
   "trainer",
   "haste",
+  "team",
   "ringAutoReplace",
   "amuletAutoReplace",
   "banking",
@@ -1932,10 +1952,18 @@ const MODULE_RULE_UI = {
       { title: "Safety Gates", fields: ["requireNoTargets", "requireStationary"] },
     ],
   },
+  team: {
+    ...HEADLESS_SETTINGS_UI,
+    modalTitle: "Team Hunt",
+    modalMeta: "same route",
+    cardTitle: "Team Hunt",
+    note: "Characters use the cavebot route and hold waypoint progress for same-route synchronization.",
+    settingsOnly: false,
+  },
   partyFollow: {
     ...HEADLESS_SETTINGS_UI,
     modalTitle: "Follow Chain",
-    modalMeta: "follow chain",
+    modalMeta: "leader and followers",
     cardTitle: "Follow Chain",
     note: "Build a chain from live tabs, seen players, or manual names. Slot 1 leads; each next slot follows the member above with its own role and fight stance.",
     settingsOnly: false,
@@ -2057,6 +2085,7 @@ const MODULE_RULE_FIELD_LABELS = {
   trainerManaTrainerMinHealthPercent: "Min HP % for mana spell",
   trainerEscapeDistance: "Escape range",
   trainerEscapeCooldownMs: "Escape cooldown ms",
+  teamEnabled: "Team Hunt",
   partyFollowMembers: "Follow chain",
   partyFollowManualPlayers: "Manual players",
   partyFollowDistance: "Spacing sqm",
@@ -2862,6 +2891,23 @@ function getWaypointIdentityKey(waypoint, index = 0) {
   ].join(":");
 }
 
+function getRouteWaypointStructureKey(waypoints = getWaypoints()) {
+  if (routeWaypointStructureKeySource === waypoints) {
+    return routeWaypointStructureKeyValue;
+  }
+
+  routeWaypointStructureKeySource = waypoints;
+  routeWaypointStructureKeyValue = (Array.isArray(waypoints) ? waypoints : [])
+    .map((waypoint, index) => getWaypointIdentityKey(waypoint, index))
+    .join("|");
+  return routeWaypointStructureKeyValue;
+}
+
+function invalidateRouteWaypointStructureKey() {
+  routeWaypointStructureKeySource = null;
+  routeWaypointStructureKeyValue = "";
+}
+
 function clearRouteLiveResumeTarget() {
   routeLiveResumeTargetKey = "";
 }
@@ -3060,9 +3106,6 @@ function renderWaypointCardStatePills(index, focusIndex = null, { resumeTarget =
 }
 
 function getRouteLivePreviewRenderKey(waypoints = getWaypoints()) {
-  const waypointKey = waypoints
-    .map((waypoint, index) => getWaypointIdentityKey(waypoint, index))
-    .join("|");
   const markedKey = getMarkedWaypointIndexes(waypoints).join(",");
 
   return [
@@ -3074,7 +3117,7 @@ function getRouteLivePreviewRenderKey(waypoints = getWaypoints()) {
     routeLiveResumeTargetKey,
     state?.binding?.profileKey || "",
     "preview",
-    waypointKey,
+    getRouteWaypointStructureKey(waypoints),
   ].join("::");
 }
 
@@ -6440,10 +6483,17 @@ function applyState(nextState, { patch = false } = {}) {
 
   try {
     const previousContextKey = getSessionContextKey(state);
+    const previousOptions = state?.options || null;
+    const previousWaypoints = previousOptions?.waypoints || null;
     const resolvedState = patch && state
       ? { ...state, ...nextState }
       : nextState;
     const nextContextKey = getSessionContextKey(resolvedState);
+    const nextOptions = resolvedState?.options || null;
+    const optionsChanged = previousOptions !== nextOptions;
+    if (optionsChanged || previousWaypoints !== (nextOptions?.waypoints || null)) {
+      invalidateRouteWaypointStructureKey();
+    }
     state = resolvedState;
     if (Object.prototype.hasOwnProperty.call(resolvedState, "viewMode")) {
       const nextViewMode = normalizeViewMode(resolvedState.viewMode);
@@ -6452,7 +6502,9 @@ function applyState(nextState, { patch = false } = {}) {
         syncViewModeUi();
       }
     }
-    setMarkedWaypointIndexes(getMarkedWaypointIndexes(state?.options?.waypoints || []), state?.options?.waypoints || []);
+    if (optionsChanged || previousContextKey !== nextContextKey) {
+      setMarkedWaypointIndexes(getMarkedWaypointIndexes(state?.options?.waypoints || []), state?.options?.waypoints || []);
+    }
     if (routeLiveResumeTargetKey) {
       const waypoints = state?.options?.waypoints || [];
       const selectedWaypoint = waypoints[selectedWaypointIndex] || null;
@@ -7727,10 +7779,15 @@ function applyElementDisabledState(element, disabled) {
   if (!(element instanceof HTMLElement)) return;
 
   if ("disabled" in element && typeof element.disabled === "boolean") {
-    element.disabled = disabled;
+    if (element.disabled !== disabled) {
+      element.disabled = disabled;
+    }
   }
 
-  element.setAttribute("aria-disabled", disabled ? "true" : "false");
+  const ariaDisabled = disabled ? "true" : "false";
+  if (element.getAttribute("aria-disabled") !== ariaDisabled) {
+    element.setAttribute("aria-disabled", ariaDisabled);
+  }
 }
 
 function formatRuleParts(parts = []) {
@@ -8259,6 +8316,10 @@ function formatModuleCurrentLine(moduleKey, rules = [], modulesState = null) {
       }
       case "banking":
         return "No active banking rules";
+      case "team":
+        return modulesState?.teamEnabled
+          ? "Same cavebot route / waypoint sync holds active"
+          : "Team Hunt disabled";
       case "partyFollow":
         return modulesState?.partyFollowEnabled
           ? formatFollowTrainDetail(modulesState.partyFollowMembers, modulesState.partyFollowDistance)
@@ -8530,6 +8591,7 @@ function cloneModuleOptions(options = {}) {
     lootPreferredContainers: cloneValue(options.lootPreferredContainers || []),
     bankingEnabled: Boolean(options.bankingEnabled),
     bankingRules: cloneValue(options.bankingRules || []),
+    teamEnabled: Boolean(options.teamEnabled),
     partyFollowEnabled: Boolean(options.partyFollowEnabled),
     partyFollowMembers: cloneValue(options.partyFollowMembers || []),
     partyFollowManualPlayers: cloneValue(options.partyFollowManualPlayers || []),
@@ -10309,6 +10371,7 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
     antiIdle: "antiIdleEnabled",
     distanceKeeper: "distanceKeeperEnabled",
     alarms: "alarmsEnabled",
+    team: "teamEnabled",
     partyFollow: "partyFollowEnabled",
   }[moduleKey];
   const rawEnabled = rawEnabledKey ? Boolean(options?.[rawEnabledKey]) : false;
@@ -10322,6 +10385,20 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
   };
 
   switch (moduleKey) {
+    case "team": {
+      const enabled = Boolean(options?.teamEnabled);
+      return {
+        ...baseState,
+        rawEnabled: enabled,
+        effectiveEnabled: enabled,
+        state: enabled ? "on" : "off",
+        label: enabled ? "On" : "Off",
+        shortLabel: enabled ? "On" : "Off",
+        detail: enabled
+          ? "Same-route waypoint synchronization armed"
+          : "Team Hunt route sync is off",
+      };
+    }
     case "partyFollow": {
       const effectiveState = getPartyFollowEffectiveState(options, sourceState);
       return {
@@ -11872,7 +11949,7 @@ function syncModuleStatusDisplays(modulesState = ensureModulesDraft()) {
   const statusLine = schema.allowRules === false
     ? (moduleKey === "ringAutoReplace"
       ? getEquipmentReplaceCombinedStatus(modulesState).activeLabel
-      : ["trainer", "reconnect", "antiIdle", "autoEat", "haste", "ammo", "partyFollow", "deathHeal"].includes(moduleKey)
+      : ["trainer", "reconnect", "antiIdle", "autoEat", "haste", "ammo", "team", "partyFollow", "deathHeal"].includes(moduleKey)
         ? formatEffectiveModuleStatusLine(effectiveState, [], { settingsOnly, plainWhenEmpty: !settingsOnly })
         : (settingsOnly ? `${enabled ? "On" : "Off"} - settings only` : (enabled ? "On" : "Off")))
     : ["healer", "distanceKeeper"].includes(moduleKey)
@@ -11972,7 +12049,10 @@ function syncModulesDraftFromDom() {
 
 function setTextContent(element, value) {
   if (!element) return;
-  element.textContent = value;
+  const nextValue = String(value ?? "");
+  if (element.textContent !== nextValue) {
+    element.textContent = nextValue;
+  }
 }
 
 function getMonotonicNowMs() {
@@ -12287,6 +12367,7 @@ function getDashboardRenderKey(
     antiIdleState.state,
     antiIdleState.label,
     options.alarmsEnabled ? "1" : "0",
+    options.teamEnabled ? "1" : "0",
     options.partyFollowEnabled ? "1" : "0",
     partyFollowState.label,
     partyFollowState.detail,
@@ -13575,6 +13656,7 @@ function renderCompactPanel() {
   setTextContent(compactPanelFields.reconnect, summaryFields.reconnect?.textContent || "-");
   setTextContent(compactPanelFields.antiIdle, summaryFields.antiIdle?.textContent || "-");
   setTextContent(compactPanelFields.alarms, alarmSummary.headline || "-");
+  setTextContent(compactPanelFields.teamHunt, summaryFields.teamHunt?.textContent || "-");
   setTextContent(compactPanelFields.partyFollow, summaryFields.partyFollow?.textContent || "-");
   setTextContent(compactPanelFields.pkAssist, summaryFields.pkAssist?.textContent || "-");
   setTextContent(compactPanelFields.rookiller, summaryFields.rookiller?.textContent || "-");
@@ -14295,7 +14377,10 @@ function setDisabled(buttons, disabled, reason = "") {
     }
 
     applyElementDisabledState(button, disabled);
-    button.title = disabled ? reason : button.dataset.titleDefault || "";
+    const title = disabled ? String(reason || "") : button.dataset.titleDefault || "";
+    if (button.title !== title) {
+      button.title = title;
+    }
   }
 }
 
@@ -14553,7 +14638,8 @@ function getModuleSummaryText(options = state?.options || {}) {
   if (options.trainerEnabled) enabled.push("trainer");
   if (options.reconnectEnabled || isTrainerReconnectEnabled(options)) enabled.push("reconnect");
   if (options.antiIdleEnabled) enabled.push("anti-idle");
-  if (options.partyFollowEnabled) enabled.push("follow");
+  if (options.teamEnabled) enabled.push("team-hunt");
+  if (options.partyFollowEnabled) enabled.push("follow-chain");
   if (options.chaseMode && options.chaseMode !== "auto") enabled.push(`chase:${options.chaseMode}`);
   if (options.rookillerEnabled) enabled.push("rook8");
   if (options.once) enabled.push("once");
@@ -15984,6 +16070,16 @@ function renderSummarySheets() {
   setTextContent(summaryFields.alarms, alarmSummary.headline);
   setTextContent(summaryFields.alarmsDetail, alarmSummary.detail);
   setTextContent(
+    summaryFields.teamHunt,
+    options.teamEnabled ? "On" : "Off",
+  );
+  setTextContent(
+    summaryFields.teamHuntDetail,
+    options.teamEnabled
+      ? "Same route / waypoint sync holds active"
+      : "No Team Hunt route sync",
+  );
+  setTextContent(
     summaryFields.partyFollow,
     options.partyFollowEnabled
       ? formatFollowTrainHeadline(partyFollowMembers)
@@ -16168,6 +16264,7 @@ function renderDashboard() {
   setEffectiveModuleTileState("reconnect", getModuleEffectiveState("reconnect", options, state));
   setEffectiveModuleTileState("antiIdle", getModuleEffectiveState("antiIdle", options, state));
   setEffectiveModuleTileState("alarms", getModuleEffectiveState("alarms", options, state));
+  setEffectiveModuleTileState("teamHunt", getModuleEffectiveState("team", options, state));
   setEffectiveModuleTileState("partyFollow", getModuleEffectiveState("partyFollow", options, state));
   if (cavebotMasterStopSummary instanceof HTMLElement) {
     setTextContent(
@@ -16293,35 +16390,6 @@ async function triggerReconnect(buttons = actionButtons.routeReconnectPanel) {
   });
 }
 
-function formatTargetProfileSummary(profile, visibleEntries = []) {
-  const keepLabel = Number(profile.keepDistanceMin) > 0 || Number(profile.keepDistanceMax) > 1
-    ? `${Math.round(Number(profile.keepDistanceMin) || 0)}-${Math.round(Number(profile.keepDistanceMax) || 0)} sqm`
-    : "melee/default";
-  const finishLabel = Number(profile.finishBelowPercent) > 0
-    ? `finish <= ${Math.round(Number(profile.finishBelowPercent) || 0)}%`
-    : "finish off";
-  const stanceLabel = normalizeCombatStanceValue(profile?.chaseMode) === "auto"
-    ? "stance default"
-    : `stance ${formatCombatStanceLabel(profile?.chaseMode)}`;
-  const visibleLowHp = visibleEntries
-    .map((entry) => Number(entry?.healthPercent))
-    .filter((value) => Number.isFinite(value));
-  const visibleLabel = visibleEntries.length
-    ? `${visibleEntries.length} visible${visibleLowHp.length ? ` / hp ${visibleLowHp.map((value) => `${Math.round(value)}%`).join(", ")}` : ""}`
-    : "not visible";
-
-  return [
-    `priority score ${Math.round(Number(profile.priority) || 0)}`,
-    `danger ${Math.round(Number(profile.dangerLevel) || 0)}`,
-    `focus ${TARGET_PROFILE_KILL_MODE_LABELS[profile.killMode] || TARGET_PROFILE_KILL_MODE_LABELS.normal}`,
-    stanceLabel,
-    `spacing ${TARGET_PROFILE_BEHAVIOR_LABELS[profile.behavior] || TARGET_PROFILE_BEHAVIOR_LABELS.kite}`,
-    keepLabel,
-    finishLabel,
-    visibleLabel,
-  ].join(" / ");
-}
-
 function readTargetProfilesFromDom() {
   if (!targetProfileList) {
     return normalizeTargetProfiles(targetProfilesDraft || []);
@@ -16334,6 +16402,10 @@ function readTargetProfilesFromDom() {
 
   const renderedProfiles = new Map(rows.map((row) => {
     const getField = (field) => row.querySelector(`[data-target-profile-field="${field}"]`);
+    const avoidHazardsField = getField("avoidHazards");
+    const avoidHazards = avoidHazardsField
+      ? avoidHazardsField.checked
+      : Boolean(getField("avoidBeam")?.checked || getField("avoidWave")?.checked);
     const profile = normalizeTargetProfile({
       name: row.dataset.targetProfileName || "",
       enabled: getField("enabled")?.checked,
@@ -16347,8 +16419,8 @@ function readTargetProfilesFromDom() {
       behavior: getField("behavior")?.value,
       preferShootable: getField("preferShootable")?.checked,
       stickToTarget: getField("stickToTarget")?.checked,
-      avoidBeam: getField("avoidBeam")?.checked,
-      avoidWave: getField("avoidWave")?.checked,
+      avoidBeam: avoidHazards,
+      avoidWave: avoidHazards,
     });
     return [profile.name.toLowerCase(), profile];
   }));
@@ -16400,13 +16472,12 @@ function moveTargetProfilePriority(profileName, delta) {
   renderTargetProfiles({ force: true });
 }
 
-function getTargetProfilesRenderKey(profiles, visibleCreatures, searchQuery = "") {
+function getTargetProfilesRenderKey(profiles, searchQuery = "") {
   const profileKey = profiles.map((p) => [
     p.name, p.enabled, p.priority, p.dangerLevel, p.keepDistanceMin, p.keepDistanceMax,
     p.finishBelowPercent, p.killMode, p.chaseMode, p.behavior, p.preferShootable, p.stickToTarget, p.avoidBeam, p.avoidWave,
   ].join(":")).join("|");
-  const visibleKey = visibleCreatures.map((e) => String(e?.name || "")).join(",");
-  return `${profileKey}::${visibleKey}::${String(searchQuery || "").trim().toLowerCase()}`;
+  return `${profileKey}::${String(searchQuery || "").trim().toLowerCase()}`;
 }
 
 function renderTargetingDistanceRuleList(rules = []) {
@@ -16505,7 +16576,6 @@ function renderTargetProfiles({ force = false } = {}) {
   if (!targetProfileList) return;
 
   const profiles = sortTargetProfilesByPriority(syncTargetProfilesDraftToTargetNames(getMonsterInputNames()));
-  const visibleCreatures = Array.isArray(state?.snapshot?.visibleCreatures) ? state.snapshot.visibleCreatures : [];
   const searchQuery = getCreatureRegistrySearchQuery();
   const searchTerms = getCreatureRegistrySearchTerms(searchQuery);
   const filteredProfiles = searchTerms.length
@@ -16520,12 +16590,12 @@ function renderTargetProfiles({ force = false } = {}) {
     return;
   }
 
-  const renderKey = getTargetProfilesRenderKey(profiles, visibleCreatures, searchQuery);
-  // Skip re-render if nothing changed and the user is actively editing inside the profile list.
-  const profileListHasFocus = targetProfileList.contains(document.activeElement);
-  if (!force && renderKey === targetProfilesRenderedKey && profileListHasFocus) {
+  const renderKey = getTargetProfilesRenderKey(profiles, searchQuery);
+  if (!force && renderKey === targetProfilesRenderedKey) {
     return;
   }
+
+  const profileListHasFocus = targetProfileList.contains(document.activeElement);
   if (!force && profileListHasFocus) {
     // Content changed but user is actively editing — defer the re-render
     return;
@@ -16540,30 +16610,21 @@ function renderTargetProfiles({ force = false } = {}) {
   }
 
   targetProfileList.innerHTML = filteredProfiles.map((profile, index) => {
-    const visibleEntries = visibleCreatures.filter((entry) => String(entry?.name || "").trim().toLowerCase() === profile.name.toLowerCase());
-    const summary = formatTargetProfileSummary(profile, visibleEntries);
-    const activeBadge = profile.enabled ? "Active" : "Off";
     const rankedIndex = profiles.findIndex((entry) => entry.name.toLowerCase() === profile.name.toLowerCase());
     const priorityIndex = rankedIndex >= 0 ? rankedIndex : index;
+    const avoidHazards = Boolean(profile.avoidBeam || profile.avoidWave);
 
     return `
       <section class="target-profile-row ${profile.enabled ? "" : "off"}" data-target-profile-name="${escapeHtml(profile.name)}" data-target-profile-index="${priorityIndex}">
         <div class="target-profile-head">
           <div class="target-profile-title">
-            <span class="target-profile-priority">${escapeHtml(formatPriorityRankLabel(priorityIndex))}</span>
-            <strong>${escapeHtml(profile.name)}</strong>
-            <span class="target-profile-badge ${profile.enabled ? "active" : ""}">${activeBadge}</span>
+            <strong class="target-profile-name">${escapeHtml(profile.name)}</strong>
           </div>
           <div class="target-profile-actions">
-            <button type="button" class="btn mini" data-move-target-profile="${escapeHtml(profile.name)}" data-profile-delta="-1" ${priorityIndex === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(profile.name)} up">Move Up</button>
-            <button type="button" class="btn mini" data-move-target-profile="${escapeHtml(profile.name)}" data-profile-delta="1" ${priorityIndex === profiles.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(profile.name)} down">Move Down</button>
-            <label class="module-rule-control module-rule-check target-profile-check">
-              <input type="checkbox" data-target-profile-field="enabled" ${profile.enabled ? "checked" : ""} />
-              <span>Enabled</span>
-            </label>
+            <button type="button" class="btn mini" data-move-target-profile="${escapeHtml(profile.name)}" data-profile-delta="-1" ${priorityIndex === 0 ? "disabled" : ""} aria-label="Move ${escapeHtml(profile.name)} up">Up</button>
+            <button type="button" class="btn mini" data-move-target-profile="${escapeHtml(profile.name)}" data-profile-delta="1" ${priorityIndex === profiles.length - 1 ? "disabled" : ""} aria-label="Move ${escapeHtml(profile.name)} down">Down</button>
           </div>
         </div>
-        <div class="target-profile-summary">${escapeHtml(summary)}</div>
         <div class="target-profile-grid compact-profile-grid">
           <label class="module-rule-control compact-rule-control">
             <span>Priority score</span>
@@ -16610,20 +16671,20 @@ function renderTargetProfiles({ force = false } = {}) {
         </div>
         <div class="target-profile-flags compact-profile-flags">
           <label class="module-rule-control module-rule-check target-profile-check compact-rule-control">
+            <input type="checkbox" data-target-profile-field="enabled" ${profile.enabled ? "checked" : ""} />
+            <span>Enabled</span>
+          </label>
+          <label class="module-rule-control module-rule-check target-profile-check compact-rule-control">
             <input type="checkbox" data-target-profile-field="preferShootable" ${profile.preferShootable ? "checked" : ""} />
-            <span>Prefer shootable</span>
+            <span>Shootable</span>
           </label>
           <label class="module-rule-control module-rule-check target-profile-check compact-rule-control">
             <input type="checkbox" data-target-profile-field="stickToTarget" ${profile.stickToTarget ? "checked" : ""} />
-            <span>Stick to target</span>
+            <span>Stick target</span>
           </label>
           <label class="module-rule-control module-rule-check target-profile-check compact-rule-control">
-            <input type="checkbox" data-target-profile-field="avoidBeam" ${profile.avoidBeam ? "checked" : ""} />
+            <input type="checkbox" data-target-profile-field="avoidHazards" ${avoidHazards ? "checked" : ""} />
             <span>Avoid beams</span>
-          </label>
-          <label class="module-rule-control module-rule-check target-profile-check compact-rule-control">
-            <input type="checkbox" data-target-profile-field="avoidWave" ${profile.avoidWave ? "checked" : ""} />
-            <span>Avoid waves</span>
           </label>
         </div>
       </section>
@@ -16890,21 +16951,7 @@ function renderModules({ force = false } = {}) {
 }
 
 function getWaypointListStructureKey(waypoints = getWaypoints()) {
-  const waypointKey = waypoints
-    .map((waypoint, index) => [
-      index,
-      waypoint.x,
-      waypoint.y,
-      waypoint.z,
-      waypoint.label,
-      waypoint.type,
-      waypoint.action,
-      waypoint.targetIndex,
-      waypoint.radius,
-    ].join(":"))
-    .join("|");
-
-  return waypointKey;
+  return getRouteWaypointStructureKey(waypoints);
 }
 
 function getWaypointListStateKey(waypoints = getWaypoints(), markedKey = getMarkedWaypointIndexes(waypoints).join(",")) {
@@ -17076,6 +17123,7 @@ function syncWaypointListRowState(waypoints = getWaypoints()) {
 }
 
 function invalidateWaypointListRender() {
+  invalidateRouteWaypointStructureKey();
   waypointListStructureRenderedKey = "";
   waypointListStateRenderedKey = "";
 }
@@ -18408,6 +18456,8 @@ function modulesPayload() {
   const draft = syncModulesDraftFromDom();
   const trainerPartnerName = getResolvedTrainerPartnerName(draft);
   const partyFollowMembers = normalizeTextListSummary(draft.partyFollowMembers);
+  const teamEnabled = Boolean(draft.teamEnabled);
+  const partyFollowEnabled = teamEnabled ? false : Boolean(draft.partyFollowEnabled);
   const trainerManaTrainerRules = (() => {
     const sourceRules = Array.isArray(draft.trainerManaTrainerRules) ? draft.trainerManaTrainerRules : [];
     const sourceRule = sourceRules.find((rule) => String(rule?.words || "").trim()) || null;
@@ -18544,7 +18594,8 @@ function modulesPayload() {
     lootPreferredContainers: cloneValue(draft.lootPreferredContainers),
     bankingEnabled: draft.bankingEnabled,
     bankingRules: cloneValue(draft.bankingRules),
-    partyFollowEnabled: draft.partyFollowEnabled,
+    teamEnabled,
+    partyFollowEnabled,
     partyFollowMembers: partyFollowMembers.join("\n"),
     partyFollowManualPlayers: normalizeTextListSummary(draft.partyFollowManualPlayers).join("\n"),
     partyFollowMemberRoles: cloneValue(
@@ -18576,9 +18627,11 @@ function followTrainPayload() {
   const draft = syncModulesDraftFromDom();
   ensureFollowTrainAutoChainDraft(draft);
   const partyFollowMembers = getAutomaticFollowTrainMembers(draft);
+  const partyFollowEnabled = Boolean(draft.partyFollowEnabled);
 
   return {
-    partyFollowEnabled: draft.partyFollowEnabled,
+    teamEnabled: partyFollowEnabled ? false : Boolean(draft.teamEnabled),
+    partyFollowEnabled,
     partyFollowMembers: partyFollowMembers.join("\n"),
     partyFollowManualPlayers: normalizeTextListSummary(draft.partyFollowManualPlayers).join("\n"),
     partyFollowMemberRoles: cloneValue(
@@ -18789,7 +18842,10 @@ function addSeenFollowTrainMembers() {
 }
 
 function buildPartyFollowTogglePayload(enabled) {
-  const payload = { partyFollowEnabled: enabled };
+  const payload = {
+    teamEnabled: false,
+    partyFollowEnabled: enabled,
+  };
   if (enabled) {
     const partyFollowMembers = getAutomaticFollowTrainMembers(state?.options || {});
     if (partyFollowMembers.length >= 2) {
@@ -18797,6 +18853,13 @@ function buildPartyFollowTogglePayload(enabled) {
     }
   }
   return payload;
+}
+
+function buildTeamHuntTogglePayload(enabled) {
+  return {
+    teamEnabled: enabled,
+    partyFollowEnabled: false,
+  };
 }
 
 function moveFollowTrainMember(index, delta) {
@@ -20412,6 +20475,12 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
   { button: quickButtons.reconnect, optionKey: "reconnectEnabled", label: "Reconnect" },
   { button: quickButtons.antiIdle, optionKey: "antiIdleEnabled", label: "Anti Idle" },
   { button: quickButtons.alarms, optionKey: "alarmsEnabled", label: "Alarms" },
+  {
+    button: quickButtons.teamHunt,
+    optionKey: "teamEnabled",
+    label: "Team Hunt",
+    buildPayload: (nextEnabled) => buildTeamHuntTogglePayload(nextEnabled),
+  },
   { button: quickButtons.partyFollow, optionKey: "partyFollowEnabled", label: "Follow Chain" },
   { button: quickButtons.pkAssist, optionKey: "pkAssistEnabled", label: "PK Assist" },
 ].forEach(({ button, optionKey, label, getCurrentEnabled, buildPayload }) => {

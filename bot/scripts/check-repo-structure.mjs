@@ -56,6 +56,7 @@ export const REQUIRED_BUNDLE_PATHS = Object.freeze([
   "bot/bb.mjs",
   "bot/onscreen_monster_bot.mjs",
   "bot/scripts/check-repo-structure.mjs",
+  "bot/scripts/run-tests.mjs",
   "bot/test/repo-structure.test.mjs",
 ]);
 
@@ -257,8 +258,12 @@ function validatePackageManifest({
     issues.push("bot/package.json must expose npm run check:structure");
   }
 
-  if (packageJson.scripts?.test !== "node --test --test-concurrency=1") {
-    issues.push("bot/package.json test script must keep deterministic single-process test execution");
+  if (packageJson.scripts?.test !== "node scripts/run-tests.mjs smoke") {
+    issues.push("bot/package.json test script must run the smoke test lane");
+  }
+
+  if (packageJson.scripts?.["test:all"] !== "node scripts/run-tests.mjs all") {
+    issues.push("bot/package.json must expose npm run test:all for the full suite");
   }
 
   if (!Array.isArray(packageJson.files) || !packageJson.files.includes("scripts/**/*")) {

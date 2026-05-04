@@ -66,6 +66,9 @@ Useful scripts:
 
 ```bash
 npm run check:structure
+npm run test:core
+npm run test:desktop
+npm run test:all
 npm run refresh:minibia-data
 npm run pack
 npm run dist
@@ -222,6 +225,12 @@ npm test
 ```
 
 `npm run check:structure` verifies the portable root boundary, canonical
-markdown set, generated-state exclusions, and package entry points. `npm run
-pack` produces an unpacked release bundle. `npm run dist` creates installable
-artifacts for the current platform.
+markdown set, generated-state exclusions, and package entry points. `npm test`
+runs the smoke lane only. Use `npm run test:core` for bot decision logic, `npm
+run test:desktop` for the Electron renderer and shell, `npm run
+test:integration` for local browser/socket/CDP behavior, `npm run test:release`
+for bundle and repository checks, and `npm run test:all` only when the whole
+suite is required.
+
+`npm run pack` produces an unpacked release bundle. `npm run dist` creates
+installable artifacts for the current platform.

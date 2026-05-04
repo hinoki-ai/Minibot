@@ -47,7 +47,8 @@ async function createMinimalStructuredRepo() {
     files: ["scripts/**/*"],
     scripts: {
       "check:structure": "node scripts/check-repo-structure.mjs",
-      test: "node --test --test-concurrency=1",
+      test: "node scripts/run-tests.mjs smoke",
+      "test:all": "node scripts/run-tests.mjs all",
     },
     build: {
       directories: {

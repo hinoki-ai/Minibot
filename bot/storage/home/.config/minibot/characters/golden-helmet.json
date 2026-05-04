@@ -12,7 +12,11 @@
       "Wolf",
       "Bear",
       "Poison Spider",
-      "Rotworm"
+      "Rotworm",
+      "Alpha Rotworm",
+      "Snake",
+      "Rabbit",
+      "Chicken"
     ],
     "players": [
       "Zlocimir Wielkoportf",
@@ -27,11 +31,13 @@
       "Smokd",
       "Kulag",
       "the guard",
-      "Minibia — Free Browser Tibia MMORPG",
       "Client 4",
       "Gard Night",
       "Neymar Togrosso",
-      "Scouse Goebbels"
+      "Scouse Goebbels",
+      "Jonnny Testatudo",
+      "Grof",
+      "Curandeira"
     ],
     "npcs": []
   },

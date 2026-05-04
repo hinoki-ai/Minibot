@@ -25,7 +25,18 @@
       "Alpha Rotworm",
       "Wolf",
       "Spider",
-      "Rabbit"
+      "Rabbit",
+      "Dragon Lord",
+      "Deer",
+      "Lion",
+      "Orc Warrior",
+      "Slime",
+      "Orc Berserker",
+      "Orc",
+      "Minotaur Archer",
+      "Fire Devil",
+      "Cyclops",
+      "Dog"
     ],
     "players": [
       "Czarnobrat",
@@ -74,7 +85,10 @@
       "Grof",
       "the guard",
       "Minek",
-      "Uh Maker"
+      "Uh Maker",
+      "Smokd",
+      "Flacoo",
+      "Ban"
     ],
     "npcs": []
   },

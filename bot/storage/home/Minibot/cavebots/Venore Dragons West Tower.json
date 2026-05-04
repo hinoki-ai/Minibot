@@ -12,7 +12,7 @@
       "keepDistanceMin": 0,
       "keepDistanceMax": 0,
       "finishBelowPercent": 0,
-      "killMode": "normal",
+      "killMode": "asap",
       "chaseMode": "aggressive",
       "behavior": "hold",
       "preferShootable": true,
@@ -28,7 +28,7 @@
       "keepDistanceMin": 0,
       "keepDistanceMax": 0,
       "finishBelowPercent": 0,
-      "killMode": "normal",
+      "killMode": "asap",
       "chaseMode": "aggressive",
       "behavior": "hold",
       "preferShootable": true,
@@ -44,7 +44,7 @@
       "keepDistanceMin": 0,
       "keepDistanceMax": 0,
       "finishBelowPercent": 0,
-      "killMode": "normal",
+      "killMode": "asap",
       "chaseMode": "aggressive",
       "behavior": "hold",
       "preferShootable": true,
@@ -60,7 +60,7 @@
       "keepDistanceMin": 0,
       "keepDistanceMax": 0,
       "finishBelowPercent": 0,
-      "killMode": "normal",
+      "killMode": "asap",
       "chaseMode": "aggressive",
       "behavior": "hold",
       "preferShootable": true,
@@ -80,6 +80,7 @@
   "autowalkEnabled": true,
   "autowalkLoop": true,
   "routeStrictClear": false,
+  "routeSpacingEnabled": false,
   "routeFollowExactWaypoints": true,
   "routeRecording": false,
   "routeRecordStep": 5,
@@ -262,7 +263,8 @@
   "amuletAutoReplaceRequireStationary": false,
   "bankingEnabled": false,
   "bankingRules": [],
-  "partyFollowEnabled": false,
+  "teamEnabled": true,
+  "partyFollowEnabled": true,
   "partyFollowMembers": [
     "Zlocimir Wielkoportf",
     "Czarnobrat"
@@ -384,7 +386,8 @@
       "x": 32780,
       "y": 32145,
       "z": 7,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 001"
     },
     {
@@ -426,21 +429,24 @@
       "x": 32779,
       "y": 32142,
       "z": 8,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 007"
     },
     {
       "x": 32785,
       "y": 32138,
       "z": 8,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 008"
     },
     {
       "x": 32790,
       "y": 32138,
       "z": 8,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 009"
     },
     {
@@ -459,23 +465,26 @@
     },
     {
       "x": 32788,
-      "y": 32133,
+      "y": 32135,
       "z": 8,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 012"
     },
     {
       "x": 32783,
       "y": 32137,
       "z": 8,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 013"
     },
     {
       "x": 32782,
       "y": 32142,
       "z": 8,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 014"
     },
     {
@@ -489,7 +498,8 @@
       "x": 32780,
       "y": 32147,
       "z": 7,
-      "type": "walk",
+      "type": "node",
+      "radius": 1,
       "label": "Waypoint 016"
     }
   ],
