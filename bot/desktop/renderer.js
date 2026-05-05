@@ -1634,6 +1634,12 @@ const MODULE_RULE_SCHEMAS = {
         ],
         help: "Fallback combat stance for followers without an explicit row role. Row role selections override this default with a sharper tactical lane.",
       },
+      {
+        key: "partyFollowLooseRecoveryEnabled",
+        label: "Loose recovery",
+        type: "checkbox",
+        help: "Allow a separated follower to walk independently toward shared live leader coordinates after floor and native-follow recovery fail.",
+      },
     ],
   },
   pkAssist: {
@@ -2097,6 +2103,7 @@ const MODULE_RULE_FIELD_LABELS = {
   partyFollowManualPlayers: "Manual players",
   partyFollowDistance: "Spacing sqm",
   partyFollowCombatMode: "Default stance",
+  partyFollowLooseRecoveryEnabled: "Loose recovery",
 };
 const MODULE_RULE_FIELD_LABELS_BY_MODULE = Object.freeze({
   healer: Object.freeze({
@@ -5167,6 +5174,7 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
   const manualField = getModuleOptionFieldSpec("partyFollow", "partyFollowManualPlayers");
   const distanceField = getModuleOptionFieldSpec("partyFollow", "partyFollowDistance");
   const combatModeField = getModuleOptionFieldSpec("partyFollow", "partyFollowCombatMode");
+  const looseRecoveryField = getModuleOptionFieldSpec("partyFollow", "partyFollowLooseRecoveryEnabled");
 
   return `
     <div class="follow-train-shell">
@@ -5267,6 +5275,7 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
             </div>
             ${distanceField ? renderModuleOptionField("partyFollow", distanceField, modulesState?.partyFollowDistance) : ""}
             ${combatModeField ? renderModuleOptionField("partyFollow", combatModeField, modulesState?.partyFollowCombatMode) : ""}
+            ${looseRecoveryField ? renderModuleOptionField("partyFollow", looseRecoveryField, modulesState?.partyFollowLooseRecoveryEnabled) : ""}
           </div>
         </section>
       </div>
@@ -8638,6 +8647,7 @@ function cloneModuleOptions(options = {}) {
     partyFollowMemberChaseModes: cloneValue(options.partyFollowMemberChaseModes || {}),
     partyFollowDistance: Number(options.partyFollowDistance) || 0,
     partyFollowCombatMode: String(options.partyFollowCombatMode || "follow-and-fight"),
+    partyFollowLooseRecoveryEnabled: options.partyFollowLooseRecoveryEnabled !== false,
   };
 }
 
@@ -11849,7 +11859,7 @@ function getModulesRenderKey(modulesState) {
     ? modulesState?.ammoEnabled !== false
     : Boolean(modulesState?.[schema.enabledKey]);
   const customValues = moduleKey === "partyFollow" || moduleKey === "team"
-    ? `:${Boolean(modulesState?.teamEnabled) ? "1" : "0"}:${Boolean(modulesState?.partyFollowEnabled) ? "1" : "0"}:${normalizeTextListSummary(modulesState?.partyFollowMembers).join(",")}:${String(modulesState?.partyFollowCombatMode || "")}:${JSON.stringify(pruneFollowTrainMemberRoles(modulesState?.partyFollowMemberRoles, modulesState?.partyFollowMembers, modulesState?.partyFollowCombatMode))}:${JSON.stringify(pruneFollowTrainMemberChaseModes(modulesState?.partyFollowMemberChaseModes, modulesState?.partyFollowMembers))}:${getFollowTrainSourceSignature()}:${getFollowTrainRuntimeSignature()}`
+    ? `:${Boolean(modulesState?.teamEnabled) ? "1" : "0"}:${Boolean(modulesState?.partyFollowEnabled) ? "1" : "0"}:${normalizeTextListSummary(modulesState?.partyFollowMembers).join(",")}:${String(modulesState?.partyFollowCombatMode || "")}:${modulesState?.partyFollowLooseRecoveryEnabled !== false ? "1" : "0"}:${JSON.stringify(pruneFollowTrainMemberRoles(modulesState?.partyFollowMemberRoles, modulesState?.partyFollowMembers, modulesState?.partyFollowCombatMode))}:${JSON.stringify(pruneFollowTrainMemberChaseModes(modulesState?.partyFollowMemberChaseModes, modulesState?.partyFollowMembers))}:${getFollowTrainSourceSignature()}:${getFollowTrainRuntimeSignature()}`
     : moduleKey === "trainer"
       ? `:${getResolvedTrainerPartnerName(modulesState)}:${String(state?.snapshot?.playerName || "")}:${getFollowTrainSourceSignature()}:${getTrainerDuoPresetSignature()}`
       : moduleKey === "healer"
@@ -18680,6 +18690,7 @@ function modulesPayload() {
     ),
     partyFollowDistance: draft.partyFollowDistance,
     partyFollowCombatMode: draft.partyFollowCombatMode,
+    partyFollowLooseRecoveryEnabled: draft.partyFollowLooseRecoveryEnabled !== false,
     pkAssistEnabled: draft.pkAssistEnabled,
     pkAssistMode: draft.pkAssistMode,
     pkAssistAllies: normalizeTextListSummary(draft.pkAssistAllies).join("\n"),
@@ -18716,6 +18727,7 @@ function followTrainPayload() {
     ),
     partyFollowDistance: draft.partyFollowDistance,
     partyFollowCombatMode: draft.partyFollowCombatMode,
+    partyFollowLooseRecoveryEnabled: draft.partyFollowLooseRecoveryEnabled !== false,
   };
 }
 
@@ -18745,6 +18757,7 @@ function teamHuntPayload() {
     ),
     partyFollowDistance: draft.partyFollowDistance,
     partyFollowCombatMode: draft.partyFollowCombatMode,
+    partyFollowLooseRecoveryEnabled: draft.partyFollowLooseRecoveryEnabled !== false,
   };
 }
 

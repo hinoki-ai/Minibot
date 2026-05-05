@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildVocationProfile,
   loadVocationProfile,
+  resolveManaTrainerSpell,
 } from "../lib/vocation-pack.mjs";
 
 test("buildVocationProfile derives sustain defaults and spell priorities from the spell pack", () => {
@@ -35,4 +36,16 @@ test("loadVocationProfile reads the vendored druid pack and exposes support-only
   assert.ok(profile.spellCount > 0);
   assert.equal(profile.sustain.supportSpells.healFriend?.words, "exura sio");
   assert.equal(profile.pvpSafety.safeMode, true);
+});
+
+test("resolveManaTrainerSpell does not replace explicit custom spells with light", () => {
+  const profile = buildVocationProfile({
+    vocation: "paladin",
+    spells: [
+      { id: 5, name: "Light", words: "utevo lux", level: 1, mana: 20 },
+    ],
+  });
+
+  assert.equal(resolveManaTrainerSpell(profile, "adori vita vis"), null);
+  assert.equal(resolveManaTrainerSpell(profile, "utevo res ina")?.words, "utevo lux");
 });

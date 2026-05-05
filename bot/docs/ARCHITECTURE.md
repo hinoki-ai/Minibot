@@ -88,6 +88,7 @@ Shared gameplay modules:
 - [`lib/modules/shopper.mjs`](../lib/modules/shopper.mjs): normalized buy, sell, and sell-all planning
 - [`lib/modules/refill.mjs`](../lib/modules/refill.mjs): refill request planning from vocation policy, hidden supply plans, visible trade state, and supply counts
 - [`lib/modules/npc-dialogue.mjs`](../lib/modules/npc-dialogue.mjs): recent dialogue parsing and bank-balance extraction
+- [`lib/modules/haste.mjs`](../lib/modules/haste.mjs), [`lib/modules/aoe-solver.mjs`](../lib/modules/aoe-solver.mjs), [`lib/modules/target-scoring.mjs`](../lib/modules/target-scoring.mjs), [`lib/modules/hunt-ledger.mjs`](../lib/modules/hunt-ledger.mjs), [`lib/modules/party-planner.mjs`](../lib/modules/party-planner.mjs), [`lib/modules/progression.mjs`](../lib/modules/progression.mjs), and [`lib/modules/protector.mjs`](../lib/modules/protector.mjs): shared planners and reports for haste, AoE, target ranking, hunt economy, team summaries, NPC progression, and alarms
 - [`lib/modules/auto-eat.mjs`](../lib/modules/auto-eat.mjs), [`lib/modules/hotbar.mjs`](../lib/modules/hotbar.mjs), [`lib/modules/consumables.mjs`](../lib/modules/consumables.mjs), [`lib/modules/ammo.mjs`](../lib/modules/ammo.mjs), [`lib/modules/inventory.mjs`](../lib/modules/inventory.mjs), [`lib/modules/container-routing.mjs`](../lib/modules/container-routing.mjs), and [`lib/modules/economy.mjs`](../lib/modules/economy.mjs): shared support layers used by the higher-level modules
 
 Per-module ownership, rule shapes, exports, action types, and primary tests live
@@ -113,6 +114,7 @@ in [`docs/MODULES.md`](./MODULES.md).
 - route validation reports for saved profiles and active route configs
 - live claim files used to prevent double control across Minibot desks
 - route-spacing leases used to keep multiple characters on the same route from collapsing into each other
+- route-pack import/export through [`lib/route-packs.mjs`](../lib/route-packs.mjs), with validation-first previews and local-only state excluded
 
 ### Managed Browser Layer
 
@@ -126,6 +128,8 @@ in [`docs/MODULES.md`](./MODULES.md).
 If those are unset, it falls back to common Chrome, Chromium, Brave, and Edge install paths on Linux, Windows, and macOS. On Linux, an installed Minibia desktop-app launcher is preferred over auto-detected browser binaries so `New Session` opens the app window instead of a plain browser URL tab.
 
 The managed launcher builds a detached launch spec with DevTools, managed-profile, and background-hygiene Chromium flags, then waits for the new session to appear on the configured DevTools port. The heavier always-active background flags are opt-in through `MINIBOT_KEEP_BROWSER_BACKGROUND_ACTIVE=1`.
+
+[`lib/runtime-layout.mjs`](../lib/runtime-layout.mjs) detects portable layout paths. [`lib/browser-profile-privacy.mjs`](../lib/browser-profile-privacy.mjs) owns Chromium profile pruning and copy filters. Transfer bundles strip cache/history/password databases from the copied seed profile, while managed runtime profile seeding may preserve saved-password databases only inside the dedicated runtime profile and still prunes cache and stale locks.
 
 Hotbar restoration is scoped to the explicit Minibia seed/runtime profile by default so curated session hotbars and window placement remain stable across launches. Broad Chrome/Chromium/Brave/Edge profile discovery is only enabled for recovery when `MINIBOT_HOTBAR_ALLOW_BROWSER_DISCOVERY=1`.
 
@@ -325,6 +329,7 @@ The test suite currently covers:
 - browser-session executable resolution and launch behavior
 - desktop renderer interactions, accessibility, compact-view mirroring, modal flows, and Hunt Studio plus route-builder behavior
 - app protocol and power-save behavior
+- browser profile privacy, runtime layout, session-safety close guards, route packs, and package boundaries
 - shared action layer and capability probing
 - normalized snapshot extraction
 - vendored data refresh and vocation pack generation

@@ -678,6 +678,14 @@ function createFollowTrainCoordinationAdapter(session) {
           currentState: String(followTrainStatus?.currentState || ""),
           followActive: followTrainStatus?.followActive === true,
           leaderName: String(followTrainStatus?.leaderName || ""),
+          combatActive: followTrainStatus?.combatActive === true,
+          combatTargetName: String(followTrainStatus?.combatTargetName || ""),
+          combatTargetId: followTrainStatus?.combatTargetId != null
+            && followTrainStatus.combatTargetId !== ""
+            && Number.isFinite(Number(followTrainStatus.combatTargetId))
+            ? Math.trunc(Number(followTrainStatus.combatTargetId))
+            : null,
+          combatThreatCount: Math.max(0, Math.trunc(Number(followTrainStatus?.combatThreatCount) || 0)),
           floorTransition: peer?.bot?.getFollowTrainFloorTransition?.() || null,
           recentActions: peer?.bot?.getFollowTrainRecentActions?.() || [],
           title: peer.binding.title || peer.bot.page?.title || "",
@@ -947,6 +955,7 @@ const FOLLOW_TRAIN_OPTION_KEYS = new Set([
   "partyFollowMemberChaseModes",
   "partyFollowDistance",
   "partyFollowCombatMode",
+  "partyFollowLooseRecoveryEnabled",
 ]);
 
 const TEAM_HUNT_OPTION_KEYS = new Set([

@@ -14,8 +14,8 @@ The current repo ships:
 - an account registry for login method, local secret policy, preferred
   character, character list, reconnect policy, notes, and trainer bootstrap
 - live DevTools discovery plus managed browser launch with a dedicated profile,
-  managed-profile flags, optional always-active background flags, and Linux
-  Minibia desktop-app preference
+  managed-profile flags, browser-profile hygiene, optional always-active
+  background flags, and Linux Minibia desktop-app preference
 - Hunt Studio for target queues, target profiles, shared-spawn policy, creature
   registries, player/NPC watch, fallback combat rules, and vendored hunt presets
 - route builder and route library support for saved route profiles, recording,
@@ -23,9 +23,10 @@ The current repo ships:
   interactions such as `bank`, `shop`, `npc-action`, `daily-task`, `use-item`,
   `rope`, `ladder`, and `shovel-hole`
 - shared modules for sustain, healer, potion healer, condition healer, death
-  heal, trainer, mana trainer, auto eat, ring/amulet replacement, ammo,
+  heal, trainer, mana trainer, auto eat, haste, ammo, ring/amulet replacement,
   rune maker, spell caster, distance keeper, auto light, auto convert, refill,
-  looting, banking, reconnect, alarms, anti-idle, follow chain, and rookiller
+  looting, banking, reconnect, alarms, anti-idle, Team Hunt, PK Assist, and
+  rookiller
 - shared action primitives for hotbar, inventory, item use, container, NPC
   dialogue, trade, travel, residence, blessing, and promotion interactions,
   including target-aware hotbar item use and hotkey dispatch for configured
@@ -117,7 +118,8 @@ Portable mode:
   `minibia/bot/storage/runtime/...`
 - `client/client-meta.json` is the launch contract
 - `client/chrome-profile` is only an optional sanitized seed for managed browser
-  launches
+  launches; transfer bundles strip browser cache/history/password databases and
+  machine-local account secrets
 
 ## Common Workflows
 
@@ -170,8 +172,9 @@ node onscreen_monster_bot.mjs --port 9224 --url https://minibia.com/play --autow
 ```
 
 Supported flags: `--port`, `--monster`, `--monsters`, `--interval`,
-`--retarget`, `--range-x`, `--range-y`, `--floor`, `--url`, `--autowalk`,
-`--allow-input-control`, `--once`, `--dry-run`, and `--help`.
+`--retarget`, `--range-x`, `--range-y`, `--floor`, `--chase-mode`,
+`--chase`, `--chase-stance`, `--url`, `--autowalk`, `--allow-input-control`,
+`--once`, `--dry-run`, and `--help`.
 
 ### Route Recorder Helper
 

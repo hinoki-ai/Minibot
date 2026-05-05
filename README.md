@@ -48,4 +48,6 @@ npm run bundle:minibia
 ```
 
 The bundle builder omits `.git`, `node_modules`, `dist`, `artifacts`, stale
-claims, route-spacing leases, transient page configs, logs, and runtime locks.
+claims, route-spacing leases, transient page configs, logs, browser cache,
+browser history, saved-password databases, machine-local account secrets, and
+runtime locks.

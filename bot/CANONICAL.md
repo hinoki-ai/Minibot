@@ -178,6 +178,13 @@ Do not document backlog-only route fields as current runtime schema.
   and return normalized `{ ok, driver, reason, details }` results.
 - Named route profiles are stored outside the repo under `~/Minibot/cavebots`
   unless portable mode redirects them to `storage/home/Minibot/cavebots`.
+- Portable transfer bundles sanitize Chromium profile state and local account
+  secrets. Browser cache, history, saved-password databases, stale locks, and
+  `local-file` account passwords are not canonical transfer state; explicit
+  `portable-file` account secrets may remain portable by design.
+- External-control requests use top-level `id` only as the request/response
+  correlation value. Session selection should be documented and sent as
+  `params.sessionId`.
 
 ## Live Movement Notes
 

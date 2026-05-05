@@ -149,7 +149,10 @@ Protocol shape:
 {"id":5,"method":"actionBlock","params":{"steps":[{"type":"say","words":"hi"},{"type":"wait","durationMs":500}]}}
 ```
 
-Each line is one JSON request. Responses are one JSON line with `id`, `ok`, and either `result` or `error`. Use `subscribe` to receive renderer-style `bb:event` envelopes:
+Each line is one JSON request. The top-level `id` is only the request
+correlation value returned by the response; use `params.sessionId` to target a
+session. Responses are one JSON line with `id`, `ok`, and either `result` or
+`error`. Use `subscribe` to receive renderer-style `bb:event` envelopes:
 
 ```json
 {"id":6,"method":"subscribe"}
@@ -315,6 +318,8 @@ Use the left-rail cards and the shared module modal to configure:
 - trainer
 - mana trainer
 - auto eat
+- haste
+- ammo
 - ring and amulet auto replace
 - rune maker
 - spell caster
@@ -325,6 +330,7 @@ Use the left-rail cards and the shared module modal to configure:
 - looting
 - banking
 - Team Hunt
+- PK Assist
 - anti-idle
 
 Important behavior notes:
@@ -342,6 +348,8 @@ Important behavior notes:
 - looting uses keep lists, skip lists, and preferred container routing
 - refill can combine vocation restock thresholds, hidden supply-plan desired/minimum counts, buy caps, reserve gold, configured sell requests, protected autosell items, and capacity-aware autosell planning while a trade window is open; hidden loop settings can branch to a service leg and pause failed service actions with the owner reason
 - auto eat uses the selected food source from hotbar, equipment, or open containers before anti-idle pulses
+- haste keeps movement speed up from live haste-condition detection and can drink a configured mana fluid or mana potion before retrying the spell
+- ammo reloads the quiver from open containers and can restock preferred ammo while trade is open
 - ring and amulet replacement can target explicit names or generic slot matches and will fall back to vendored item metadata when runtime labels are numeric or opaque
 - reconnect uses disconnect-only retry windows and the real Minibia reconnect surface; death still blocks it
 - alarms own low-HP, player, staff-like, and blacklist proximity thresholds instead of hiding that alert policy in the tab strip alone
@@ -350,6 +358,7 @@ Important behavior notes:
 - Team Hunt members can be live tabs, seen players, or manual player names
 - Team Hunt supports `Follow and fight` plus `Follow only`, with optional per-member tactical role overrides like `front-guard`, `assist-dps`, `sio-healer`, `party-buffer`, `rearguard`, and `scout`
 - visible same-floor combat threats suspend native follow so each follower can target, fight, and then reform the chain; same-floor recovery movement uses viewport map-clicks before client-path fallback
+- PK Assist shares local aggressor incidents across trusted live sessions for focus, regroup, or victim retreat actions
 - anti-idle sends a guarded keepalive pulse after real gameplay inactivity crosses the configured delay
 
 `Combat` and `Once` live in Hunt Studio, not in the shared module modal or Route Builder. `Field Safe`, `Session Waypoints`, `Cavebot Pause`, and `Rookiller` are quick controls on the desk.
@@ -444,6 +453,7 @@ Accepted flags:
 - `--range-x`
 - `--range-y`
 - `--floor`
+- `--chase-mode`, `--chase`, or `--chase-stance`
 - `--url`
 - `--autowalk`
 - `--allow-input-control`
@@ -511,7 +521,9 @@ Transfer checklist:
 
 The builder intentionally omits `.git`, `node_modules`, `dist`, `artifacts`,
 stale claims, route-spacing leases, transient page configs, logs, browser cache,
-and runtime lock files.
+browser history, saved-password databases, and runtime lock files. It also
+removes machine-local account passwords from `local-file` account records while
+leaving explicit `portable-file` account secrets in the bundle.
 
 ## Persistence Paths
 
@@ -533,7 +545,10 @@ Portable mode exception:
 - when the repo is inside `minibia/bot` with a sibling `minibia/client`, Minibot switches to portable paths
 - in that layout, app config, account registry, and route state live under `minibia/bot/storage/home/...`
 - generated browser and Electron profile state lives under ignored `minibia/bot/storage/runtime/...`
-- `client/chrome-profile` is only an optional sanitized seed for managed client launches; `client/client-meta.json` is the source-controlled launch contract
+- `client/chrome-profile` is only an optional sanitized seed for managed client
+  launches; transfer bundles strip browser cache/history/password databases from
+  that seed, and `client/client-meta.json` is the source-controlled launch
+  contract
 
 ## Route Profile Format
 

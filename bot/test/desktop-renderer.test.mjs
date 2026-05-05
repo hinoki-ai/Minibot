@@ -2342,9 +2342,9 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     }
   }
   const teamPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "teamEnabled") && payload.teamEnabled === true);
-  assert.equal(Object.hasOwn(teamPayload || {}, "partyFollowEnabled"), false);
-  const followPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "partyFollowEnabled") && payload.partyFollowEnabled === true);
-  assert.equal(Object.hasOwn(followPayload || {}, "teamEnabled"), false);
+  assert.equal(teamPayload?.partyFollowEnabled, true);
+  const followPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "partyFollowEnabled") && payload.partyFollowEnabled === false);
+  assert.equal(followPayload?.teamEnabled, false);
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "on");
@@ -2357,8 +2357,8 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.querySelector("#quick-toggle-alarms strong")?.textContent?.trim(), "Off");
   assert.equal(document.getElementById("compact-toggle-alarms").closest(".compact-split-card")?.dataset.state, "off");
   assert.equal(document.querySelector("#compact-toggle-alarms strong")?.textContent?.trim(), "Off");
-  assert.equal(document.getElementById("quick-toggle-party-follow").closest(".quick-module-card")?.dataset.state, "on");
-  assert.equal(document.getElementById("compact-toggle-party-follow").closest(".compact-split-card")?.dataset.state, "on");
+  assert.equal(document.getElementById("quick-toggle-party-follow").closest(".quick-module-card")?.dataset.state, "off");
+  assert.equal(document.getElementById("compact-toggle-party-follow").closest(".compact-split-card")?.dataset.state, "off");
 
   const sessionWaypointsBeforeToggle = currentState().options.showWaypointOverlay;
   const sessionOverlayCallCount = calls.setSessionWaypointOverlays.length;

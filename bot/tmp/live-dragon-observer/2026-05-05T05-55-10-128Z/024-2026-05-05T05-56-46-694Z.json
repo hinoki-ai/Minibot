@@ -1,0 +1,219 @@
+{
+  "sample": 24,
+  "capturedAt": "2026-05-05T05:56:46.694Z",
+  "activeSessionId": "1BDE4B061F00E721CEE95E16CFBCB210",
+  "sessions": [
+    {
+      "id": "CB16696E15D30F41298C63AFF9CCECDB",
+      "characterName": "Zlocimir Wielkoportf",
+      "routeName": "Venore Dragons East",
+      "running": true,
+      "routeIndex": 0,
+      "overlayFocusIndex": 0,
+      "routeState": {
+        "state": "routing",
+        "owner": "reconnect",
+        "waypointIndex": 0,
+        "lastAcceptedWaypoint": null,
+        "acceptanceReason": "connected",
+        "retryCount": 0,
+        "blockedReason": "connected",
+        "skipReason": "",
+        "lastFailureReason": "",
+        "routeResetActive": false,
+        "routeResetPhase": null,
+        "routeResetTargetIndex": null
+      },
+      "position": {
+        "x": 32831,
+        "y": 32137,
+        "z": 9
+      },
+      "healthPercent": 97.09302325581395,
+      "manaPercent": 26.666666666666668,
+      "visiblePlayers": [
+        "Czarnobrat"
+      ],
+      "currentTarget": "Dragon",
+      "follow": {
+        "enabled": true,
+        "active": true,
+        "pilot": false,
+        "selfIndex": 1,
+        "leaderName": "Czarnobrat",
+        "state": "FOLLOWING",
+        "nativeFollowActive": true,
+        "lastSeenPosition": {
+          "x": 32832,
+          "y": 32136,
+          "z": 9
+        },
+        "desyncCount": 370,
+        "rejoinAttempts": 384
+      },
+      "blocker": {
+        "owner": "reconnect",
+        "state": "skipped",
+        "reason": "connected",
+        "action": null,
+        "result": {
+          "ok": null,
+          "reason": "",
+          "action": ""
+        }
+      },
+      "stuck": {
+        "route": false,
+        "waypointIndex": 0,
+        "reason": "",
+        "ledgerCount": 8,
+        "recent": [
+          {
+            "type": "stuck",
+            "at": 1777960136379,
+            "waypointIndex": 0,
+            "reason": "stalled"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960134813,
+            "waypointIndex": 0,
+            "reason": "stalled"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960133492,
+            "waypointIndex": 0,
+            "reason": "stalled"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960131800,
+            "waypointIndex": 0,
+            "reason": "stalled"
+          },
+          {
+            "type": "stuck",
+            "at": 1777959772784,
+            "waypointIndex": 0,
+            "reason": "stalled"
+          },
+          {
+            "type": "stuck",
+            "at": 1777959726595,
+            "waypointIndex": 0,
+            "reason": "stalled"
+          }
+        ]
+      },
+      "diagnostics": {
+        "ok": true,
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "1BDE4B061F00E721CEE95E16CFBCB210",
+      "characterName": "Czarnobrat",
+      "routeName": "Venore Dragons East",
+      "running": true,
+      "routeIndex": 13,
+      "overlayFocusIndex": 22,
+      "routeState": {
+        "state": "routing",
+        "owner": "reconnect",
+        "waypointIndex": 13,
+        "lastAcceptedWaypoint": null,
+        "acceptanceReason": "connected",
+        "retryCount": 0,
+        "blockedReason": "connected",
+        "skipReason": "",
+        "lastFailureReason": "",
+        "routeResetActive": false,
+        "routeResetPhase": null,
+        "routeResetTargetIndex": null
+      },
+      "position": {
+        "x": 32832,
+        "y": 32136,
+        "z": 9
+      },
+      "healthPercent": 98,
+      "manaPercent": 34.23728813559322,
+      "visiblePlayers": [
+        "Zlocimir Wielkoportf"
+      ],
+      "currentTarget": "",
+      "follow": {
+        "enabled": true,
+        "active": false,
+        "pilot": true,
+        "selfIndex": 0,
+        "leaderName": "",
+        "state": "DISABLED",
+        "nativeFollowActive": false,
+        "lastSeenPosition": null,
+        "desyncCount": 0,
+        "rejoinAttempts": 0
+      },
+      "blocker": {
+        "owner": "reconnect",
+        "state": "skipped",
+        "reason": "connected",
+        "action": null,
+        "result": {
+          "ok": null,
+          "reason": "",
+          "action": ""
+        }
+      },
+      "stuck": {
+        "route": false,
+        "waypointIndex": 0,
+        "reason": "",
+        "ledgerCount": 28,
+        "recent": [
+          {
+            "type": "stuck",
+            "at": 1777960515631,
+            "waypointIndex": 8,
+            "reason": "stalled"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960381219,
+            "waypointIndex": 20,
+            "reason": "blocked"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960374868,
+            "waypointIndex": 20,
+            "reason": "blocked"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960373864,
+            "waypointIndex": 20,
+            "reason": "blocked"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960372333,
+            "waypointIndex": 20,
+            "reason": "blocked"
+          },
+          {
+            "type": "stuck",
+            "at": 1777960370245,
+            "waypointIndex": 20,
+            "reason": "blocked"
+          }
+        ]
+      },
+      "diagnostics": {
+        "ok": true,
+        "diagnostics": []
+      }
+    }
+  ]
+}

@@ -22,6 +22,13 @@ const HEALING_TIER_PATTERNS = Object.freeze({
   light: Object.freeze([/\blight healing\b/i, /\bexura\b/i]),
 });
 
+const MANA_TRAINER_FALLBACK_WORD_KEYS = Object.freeze(new Set([
+  "creature illusion",
+  "light",
+  "utevo res ina",
+  "utevo lux",
+]));
+
 const VOCATION_SIGNATURE_SPELL_WORDS = Object.freeze({
   knight: Object.freeze([
     "exeta res",
@@ -312,6 +319,11 @@ export function resolveManaTrainerSpell(vocationProfile = {}, preferredWords = "
   const exactSpell = getVocationSpellByWords(vocationProfile, preferredWords);
   if (exactSpell) {
     return exactSpell;
+  }
+
+  const preferredKey = normalizeSpellWordsKey(preferredWords);
+  if (preferredKey && !MANA_TRAINER_FALLBACK_WORD_KEYS.has(preferredKey)) {
+    return null;
   }
 
   for (const pattern of [/\butevo res ina\b/i, /\butevo lux\b/i]) {

@@ -241,6 +241,7 @@ const ROUTE_PROFILE_PACK_SECTION_KEYS = Object.freeze({
     "partyFollowMemberChaseModes",
     "partyFollowDistance",
     "partyFollowCombatMode",
+    "partyFollowLooseRecoveryEnabled",
     "pkAssistEnabled",
     "pkAssistMode",
     "pkAssistAllies",

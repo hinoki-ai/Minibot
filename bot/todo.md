@@ -5,12 +5,12 @@ handoff, roadmap, audit, or next-agent markdown.
 
 Last verification baseline:
 
-- date: 2026-04-30, America/Santiago
-- full run: `npm test` -> `799` passed, `0` failed
+- date: 2026-05-05, America/Santiago
+- smoke run: `npm test` -> `106` passed, `0` failed
 - route validation: `node scripts/validate-routes.mjs` -> `36` route files,
   `0` errors, `586` warnings
 - structure check: `npm run check:structure` -> OK
-- audit context: open non-frozen P1/P2 queue closure pass against the current
+- audit context: canonical documentation audit/update pass against the current
   dirty worktree; unrelated local changes were not reverted
 
 Recommended execution depth:
