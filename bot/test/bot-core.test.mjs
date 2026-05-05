@@ -6502,7 +6502,7 @@ test("chooseHeal preserves self-targeting for hotbar healing runes", () => {
   assert.equal(action?.hotkey, "F5");
 });
 
-test("chooseHeal migrates the configured legacy rune hotkey into a healer tier", () => {
+test("chooseHeal migrates the configured legacy rune hotkey into a healer key tier", () => {
   const bot = new MinibiaTargetBot({
     healerEnabled: true,
     healerRules: [],
@@ -6539,10 +6539,12 @@ test("chooseHeal migrates the configured legacy rune hotkey into a healer tier",
   assert.equal(action?.target, "self");
   assert.equal(action?.category, "rune");
   assert.equal(action?.name, "Ultimate Healing Rune");
+  assert.equal(action?.allowConfiguredHotbarInput, true);
 });
 
 test("chooseHeal prioritizes the migrated rune tier before covered spell tiers", () => {
   const bot = new MinibiaTargetBot({
+    inputControlEnabled: true,
     healerEnabled: true,
     healerRules: [
       {
@@ -6587,6 +6589,55 @@ test("chooseHeal prioritizes the migrated rune tier before covered spell tiers",
   assert.equal(actions[0]?.ruleIndex, 0);
   assert.equal(actions[0]?.hotkey, "F5");
   assert.equal(actions.length, 1);
+});
+
+test("attemptHeal can press a configured rune hotkey without inventory or hotbar confidence", async () => {
+  const bot = new MinibiaTargetBot({
+    inputControlEnabled: true,
+    healerEnabled: true,
+    healerRules: [
+      {
+        enabled: true,
+        words: "Ultimate Healing Rune",
+        hotkey: "F5",
+        minHealthPercent: 0,
+        maxHealthPercent: 65,
+        minMana: 0,
+        minManaPercent: 0,
+        cooldownMs: 900,
+      },
+    ],
+  });
+  let hotkeyAction = null;
+
+  bot.useHotkey = async (action) => {
+    hotkeyAction = action;
+    return { ok: true, transport: "keyboard-hotkey", hotkey: action.hotkey };
+  };
+
+  const attempt = await bot.attemptHeal(createModuleSnapshot({
+    playerStats: {
+      healthPercent: 42,
+      mana: 0,
+      manaPercent: 0,
+    },
+    hotbar: { slots: [] },
+    containers: [],
+    confidence: {
+      families: {
+        self: { status: "confident" },
+        inventory: { status: "unknown", reason: "containers unavailable" },
+        hotbar: { status: "unknown", reason: "hotbar snapshot stale" },
+      },
+    },
+  }));
+
+  assert.equal(attempt.result?.ok, true);
+  assert.equal(hotkeyAction?.moduleKey, "healer");
+  assert.equal(hotkeyAction?.hotkey, "F5");
+  assert.equal(hotkeyAction?.target, "self");
+  assert.equal(hotkeyAction?.category, "rune");
+  assert.equal(hotkeyAction?.verifiedSupply, false);
 });
 
 test("chooseHeal inserts the configured legacy rune as a top tier before potion healing", () => {

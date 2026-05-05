@@ -532,6 +532,7 @@ test("tick lets the migrated healer rune tier outrank sustain health potions", a
 
 test("tick fires the migrated healer rune hotkey before sustain or covered spell heals", async () => {
   const bot = createBot({
+    inputControlEnabled: true,
     vocation: "knight",
     healerEnabled: true,
     healerRules: [
@@ -609,8 +610,75 @@ test("tick fires the migrated healer rune hotkey before sustain or covered spell
   assert.equal(pressedHotkeys[0]?.target, "self");
 });
 
+test("tick presses a configured UH function key without visible input control", async () => {
+  const bot = createBot({
+    vocation: "knight",
+    healerEnabled: true,
+    healerRules: [],
+    healerRuneName: "Ultimate Healing Rune",
+    healerRuneHotkey: "F5",
+    healerRuneHealthPercent: 50,
+  });
+  const sentEvents = [];
+
+  installRefresh(bot, {
+    ready: true,
+    playerStats: {
+      health: 130,
+      maxHealth: 300,
+      healthPercent: 43,
+      mana: 90,
+      maxMana: 120,
+      manaPercent: 75,
+    },
+    hotbar: {
+      slotCount: 1,
+      slots: [
+        {
+          index: 4,
+          kind: "item",
+          label: "Ultimate Healing Rune",
+          itemId: 2273,
+          count: 6,
+          item: { id: 2273, name: "Ultimate Healing Rune", count: 6 },
+          enabled: true,
+        },
+      ],
+    },
+    containers: [],
+    visibleCreatures: [],
+    candidates: [],
+    currentTarget: null,
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    hasLightCondition: true,
+  });
+
+  bot.page = { id: "page-1", title: "Minibia" };
+  bot.cdp = {
+    isOpen: () => true,
+    async send(method, params = {}) {
+      sentEvents.push({ method, params });
+      return {};
+    },
+  };
+  bot.useHotbarSlot = async () => {
+    assert.fail("configured UH F-key healing should not use the crosshair hotbar slot path");
+  };
+
+  const snapshot = await bot.tick();
+  const keyEvents = sentEvents.filter((event) => event.method === "Input.dispatchKeyEvent");
+
+  assert.equal(snapshot?.ready, true);
+  assert.equal(sentEvents[0]?.method, "Page.bringToFront");
+  assert.deepEqual(keyEvents.map((event) => event.params.type), ["rawKeyDown", "keyUp"]);
+  assert.deepEqual(keyEvents.map((event) => event.params.key), ["F5", "F5"]);
+  assert.deepEqual(keyEvents.map((event) => event.params.code), ["F5", "F5"]);
+});
+
 test("tick keeps emergency healing after an unconfirmed rune hotkey", async () => {
   const bot = createBot({
+    inputControlEnabled: true,
     vocation: "knight",
     healerEnabled: true,
     healerEmergencyHealthPercent: 60,

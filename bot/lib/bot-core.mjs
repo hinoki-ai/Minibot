@@ -117,7 +117,7 @@ const DEFAULT_PROTECTOR_STALE_TARGET_MS = 15_000;
 const DEFAULT_PROTECTOR_NO_PROGRESS_MS = 60_000;
 const MODULE_REQUIRED_SNAPSHOT_FAMILIES = Object.freeze({
   sustain: Object.freeze(["self", "inventory", "hotbar"]),
-  healer: Object.freeze(["self", "inventory", "hotbar"]),
+  healer: Object.freeze(["self"]),
   potionHealer: Object.freeze(["self", "inventory", "hotbar"]),
   conditionHealer: Object.freeze(["self"]),
   deathHeal: Object.freeze(["self", "hotbar"]),
@@ -273,6 +273,20 @@ function isUnconfirmedHotkeyHealResult(action = null, result = null) {
   const actionType = normalizeDecisionText(action?.type);
   const transport = normalizeDecisionText(result?.transport || result?.details?.transport);
   return actionType === "useHotkey" || transport === "keyboard-hotkey";
+}
+
+function canUseConfiguredHealerHotkeyWithoutInputControl(action = {}) {
+  const moduleKey = normalizeDecisionText(action?.moduleKey).toLowerCase();
+  const category = normalizeDecisionText(action?.category).toLowerCase();
+  const target = normalizeDecisionText(action?.target || "self").toLowerCase();
+  const actionType = normalizeDecisionText(action?.type || "useHotkey").toLowerCase();
+  return (
+    action?.allowConfiguredHotbarInput === true
+    && actionType === "usehotkey"
+    && moduleKey === "healer"
+    && category === "rune"
+    && (!target || target === "self")
+  );
 }
 
 function formatDecisionReason(record = null) {
@@ -2643,6 +2657,48 @@ function buildHealingRuneConsumableAction(snapshot, runeName, {
   }
 
   return null;
+}
+
+function hasExplicitDepletedHealingRuneHotbarSlot(snapshot = {}, runeName = "") {
+  const canonicalName = normalizeHealingRuneRuleName(runeName);
+  const metadata = HEALING_RUNE_RULE_METADATA_BY_NAME[canonicalName];
+  if (!canonicalName || !metadata) {
+    return false;
+  }
+
+  const slots = Array.isArray(snapshot?.inventory?.hotbar?.slots)
+    ? snapshot.inventory.hotbar.slots
+    : Array.isArray(snapshot?.hotbar?.slots)
+      ? snapshot.hotbar.slots
+      : [];
+  const nameKeys = [canonicalName, ...metadata.runtimeNames]
+    .map((name) => String(name || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  return slots.some((slot) => {
+    const slotItemId = Number(slot?.itemId ?? slot?.item?.id);
+    const haystack = [
+      slot?.label,
+      slot?.name,
+      slot?.item?.name,
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean)
+      .join(" ");
+    const matchesRune = slotItemId === metadata.itemId
+      || nameKeys.some((nameKey) => haystack.includes(nameKey));
+    if (!matchesRune) {
+      return false;
+    }
+
+    const rawCount = slot?.count ?? slot?.item?.count;
+    if (rawCount == null || rawCount === "") {
+      return false;
+    }
+
+    const count = Number(rawCount);
+    return Number.isFinite(count) && count <= 0;
+  });
 }
 
 function sanitizeHealerTargetName(value = "") {
@@ -30692,11 +30748,11 @@ export class MinibiaTargetBot {
       });
 
       if (rule.hotkey) {
-        if (!consumableAction) {
+        if (!consumableAction && hasExplicitDepletedHealingRuneHotbarSlot(snapshot, context.runeName)) {
           return null;
         }
 
-        return {
+        const hotkeyAction = {
           type: "useHotkey",
           moduleKey: "healer",
           ruleIndex,
@@ -30704,10 +30760,13 @@ export class MinibiaTargetBot {
           target: "self",
           name: context.runeName,
           category: "rune",
-          itemId: consumableAction.itemId ?? null,
-          verifiedSupply: true,
+          itemId: consumableAction?.itemId ?? null,
+          verifiedSupply: Boolean(consumableAction),
           label: rule.label || context.runeName,
+          allowConfiguredHotbarInput: true,
         };
+
+        return hotkeyAction;
       }
 
       return consumableAction;
@@ -35732,7 +35791,7 @@ export class MinibiaTargetBot {
       return { ok: false, reason: "invalid hotkey", hotkey: action.hotkey || "" };
     }
 
-    if (!this.isInputControlEnabled()) {
+    if (!this.isInputControlEnabled() && !canUseConfiguredHealerHotkeyWithoutInputControl(action)) {
       return { ok: false, reason: "input control disabled", hotkey, words };
     }
 
