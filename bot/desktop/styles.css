@@ -5892,6 +5892,20 @@ select[data-feedback="error"] {
   min-height: 0;
 }
 
+.team-hunt-shell {
+  grid-column: 1 / -1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.team-hunt-control-strip {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 320px);
+}
+
 .follow-train-layout {
   min-height: 0;
   display: grid;
@@ -16017,4 +16031,76 @@ input[type="checkbox"]:checked::before {
   line-height: 1.08;
   overflow-wrap: anywhere;
   text-align: center;
+}
+
+/* Modal action audit: green commits, red exits. */
+.modal-panel .btn.primary,
+.modal-panel .modal-save-button {
+  border-color: #72bf4f;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 44%),
+    linear-gradient(180deg, #507d33, #28471f);
+  color: #f4ffe8;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.44),
+    0 0 0 1px rgba(114, 191, 79, 0.2);
+}
+
+.modal-panel .btn.primary:hover:not(:disabled),
+.modal-panel .modal-save-button:hover:not(:disabled) {
+  border-color: #93dc6b;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent 44%),
+    linear-gradient(180deg, #5f9140, #305626);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.12),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(114, 191, 79, 0.26),
+    0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.modal-panel .btn.primary:active:not(:disabled),
+.modal-panel .btn.primary[data-pressed="true"]:not(:disabled),
+.modal-panel .modal-save-button:active:not(:disabled),
+.modal-panel .modal-save-button[data-pressed="true"]:not(:disabled) {
+  border-color: #b4f28b;
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.32),
+    inset 0 0 0 999px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(114, 191, 79, 0.3);
+}
+
+.modal-panel .modal-actions .modal-close-button {
+  min-width: 86px;
+  border-color: #d65345;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%),
+    linear-gradient(180deg, #7a3229, #4a1d18);
+  color: #ffe8e3;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(214, 83, 69, 0.2);
+}
+
+.modal-panel .modal-actions .modal-close-button:hover:not(:disabled) {
+  border-color: #f07161;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%),
+    linear-gradient(180deg, #8f3e34, #57231d);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(214, 83, 69, 0.28),
+    0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.modal-panel .modal-actions .modal-close-button:active:not(:disabled),
+.modal-panel .modal-actions .modal-close-button[data-pressed="true"]:not(:disabled) {
+  border-color: #ff9a8d;
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.32),
+    inset 0 0 0 999px rgba(0, 0, 0, 0.09),
+    0 0 0 1px rgba(214, 83, 69, 0.32);
 }

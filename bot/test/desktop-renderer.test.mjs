@@ -1687,6 +1687,39 @@ test("modal polish does not blanket-hide operational notes and live status text"
   }
 });
 
+test("modal footer actions keep red close buttons and green save buttons", () => {
+  const dom = new JSDOM(html);
+  trackDom(dom);
+  const { document } = dom.window;
+  attachStyles(document);
+
+  const panels = [...document.querySelectorAll(".modal-panel")];
+  assert.equal(panels.length, 7);
+
+  for (const panel of panels) {
+    const closeButton = panel.querySelector(".modal-actions [data-close-modal]");
+    assert.ok(closeButton, `${panel.id} is missing a footer close button`);
+    assert.ok(closeButton.classList.contains("modal-close-button"), `${panel.id} close button lost its modal class`);
+    assert.ok(closeButton.classList.contains("danger"), `${panel.id} close button should use the danger treatment`);
+
+    const closeStyle = dom.window.getComputedStyle(closeButton);
+    assert.equal(closeStyle.borderColor, "rgb(214, 83, 69)", `${panel.id} close button should resolve red`);
+    assert.equal(closeStyle.color, "rgb(255, 232, 227)", `${panel.id} close text should resolve red-tinted`);
+
+    const saveButtons = [
+      ...new Set(panel.querySelectorAll(".modal-actions .modal-save-button, .modal-actions [data-save-modules]")),
+    ];
+    for (const saveButton of saveButtons) {
+      assert.ok(saveButton.classList.contains("primary"), `${panel.id} save action should stay primary`);
+      assert.equal(saveButton.classList.contains("danger"), false, `${panel.id} save action should not be danger`);
+
+      const saveStyle = dom.window.getComputedStyle(saveButton);
+      assert.equal(saveStyle.borderColor, "rgb(114, 191, 79)", `${panel.id} save action should resolve green`);
+      assert.equal(saveStyle.color, "rgb(244, 255, 232)", `${panel.id} save text should resolve green-tinted`);
+    }
+  }
+});
+
 test("stateful controls stay disabled until the first desk sync completes", async () => {
   const deferred = Promise.withResolvers();
   const desk = await createDesk({
@@ -1712,7 +1745,7 @@ test("stateful controls stay disabled until the first desk sync completes", asyn
   assert.equal(document.getElementById("save-targeting").disabled, false);
 });
 
-test("dashboard shows inherited trainer services and follow-chain movement blockers", async () => {
+test("dashboard shows inherited trainer services and Team Hunt movement blockers", async () => {
   const initialState = createState({
     options: {
       autowalkEnabled: true,
@@ -1757,7 +1790,7 @@ test("dashboard shows inherited trainer services and follow-chain movement block
   assert.equal(document.querySelector("#quick-toggle-anti-idle strong")?.textContent?.trim(), "Off");
 
   assert.equal(document.getElementById("summary-trainer").textContent.trim(), "Follow");
-  assert.match(document.getElementById("summary-trainer-detail").textContent, /Follow Chain owns movement/i);
+  assert.match(document.getElementById("summary-trainer-detail").textContent, /Team Hunt owns movement/i);
   assert.notEqual(document.getElementById("summary-reconnect").textContent.trim(), "Off");
   assert.notEqual(document.getElementById("summary-auto-eat").textContent.trim(), "Off");
   assert.notEqual(document.getElementById("summary-anti-idle").textContent.trim(), "Off");
@@ -2760,7 +2793,7 @@ test("master stop reflects running live sessions across the full desk, not only 
   assert.match(document.getElementById("quick-open-cavebot-pause")?.title || "", /stop 1 tab/i);
 });
 
-test("hunt, trainer, and follow-chain buttons open their own panels", async () => {
+test("hunt and trainer buttons open their panels", async () => {
   const desk = await createDesk();
   const { document } = desk;
 
@@ -2795,7 +2828,8 @@ test("hunt, trainer, and follow-chain buttons open their own panels", async () =
 
   document.getElementById("quick-open-party-follow").click();
   await flush();
-  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Follow Chain");
+  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Team Hunt");
+  assert.equal(document.querySelector('[data-module-key="team"][data-module-option-field="teamEnabled"]') !== null, true);
   assert.equal(document.querySelector('[data-module-key="partyFollow"]') !== null, true);
   assert.equal(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerPartnerName"]'), null);
 });
@@ -3467,7 +3501,7 @@ test("effective module cards surface follow-owned route control and blocked trai
   assert.equal(autowalkToggle.classList.contains("active"), false);
   assert.equal(autowalkToggle.getAttribute("aria-pressed"), "true");
   assert.equal(getModuleCardState(autowalkToggle), "blocked");
-  assert.match(autowalkToggle.title, /follow chain owns movement/i);
+  assert.match(autowalkToggle.title, /Team Hunt owns movement/i);
 
   assert.match(getCompactText(trainerToggle), /Follow$/);
   assert.equal(trainerToggle.classList.contains("active"), false);
@@ -3475,7 +3509,7 @@ test("effective module cards surface follow-owned route control and blocked trai
   assert.equal(getModuleCardState(trainerToggle), "blocked");
   assert.match(trainerToggle.title, /trainer partner guide gamma stays saved/i);
   assert.equal(document.getElementById("summary-trainer").textContent.trim(), "Follow");
-  assert.match(document.getElementById("summary-trainer-detail").textContent, /follow chain owns movement/i);
+  assert.match(document.getElementById("summary-trainer-detail").textContent, /Team Hunt owns movement/i);
   assert.match(document.getElementById("summary-party-follow-detail").textContent, /passive follow suppresses combat/i);
 });
 
@@ -7579,7 +7613,7 @@ test("trainer modal saves trainer-owned partner, trainer mana, reconnect, and es
   await flush();
 
   assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Trainer");
-  assert.match(document.getElementById("module-note").textContent, /separate from Follow Chain/i);
+  assert.match(document.getElementById("module-note").textContent, /separate from Team Hunt/i);
   assert.ok(document.querySelector(".trainer-shell"));
   assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerReconnectEnabled"]'));
   assert.ok(document.querySelector('[data-module-key="trainer"][data-module-option-field="trainerAutoPartyEnabled"]'));
@@ -7981,12 +8015,13 @@ test("alarms modal saves per-category proximity settings and blacklist names", a
   assert.deepEqual(currentState().options.alarmsBlacklistNames, ["God Minibia", "Kolakao"]);
 });
 
-test("anti-idle saves live keepalive timing and follow chain saves chain members from separated player sources", async () => {
+test("anti-idle saves live keepalive timing and Team Hunt saves chain members from separated player sources", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
         antiIdleEnabled: true,
         antiIdleIntervalMs: 60000,
+        teamEnabled: true,
         partyFollowEnabled: true,
         partyFollowMembers: ["Knight Alpha"],
         partyFollowManualPlayers: [],
@@ -8027,11 +8062,11 @@ test("anti-idle saves live keepalive timing and follow chain saves chain members
   assert.equal(currentState().options.antiIdleEnabled, true);
   assert.equal(currentState().options.antiIdleIntervalMs, 90000);
 
-  document.querySelector('[data-open-modal="partyFollow"]').click();
+  document.querySelector('[data-open-modal="team"]').click();
   await flush();
 
-  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Follow Chain");
-  assert.equal(document.getElementById("module-state-line").textContent.trim(), "2 slots");
+  assert.equal(document.getElementById("module-modal-title").textContent.trim(), "Team Hunt");
+  assert.equal(document.getElementById("module-state-line").textContent.trim(), "On");
   assert.ok(document.querySelector(".follow-train-layout"));
   assert.equal(document.querySelector('[data-follow-train-source-name="Scout Beta"]') !== null, true);
   assert.equal(document.querySelector('[data-follow-train-source-name="Guide Gamma"]') !== null, true);
@@ -8073,7 +8108,7 @@ test("anti-idle saves live keepalive timing and follow chain saves chain members
   await flush();
 
   payload = calls.updateOptions.at(-1);
-  assert.equal(payload.teamEnabled, false);
+  assert.equal(payload.teamEnabled, true);
   assert.equal(payload.partyFollowEnabled, true);
   assert.equal(payload.partyFollowMembers, "Knight Alpha\nGuide Gamma\nScout Beta\nManual Delta");
   assert.equal(payload.partyFollowManualPlayers, "Manual Delta");
@@ -8100,7 +8135,7 @@ test("anti-idle saves live keepalive timing and follow chain saves chain members
   assert.equal(currentState().options.partyFollowCombatMode, "follow-only");
 });
 
-test("follow chain surfaces shared HP supply and loot summaries", async () => {
+test("Team Hunt surfaces shared HP supply and loot summaries", async () => {
   const initialState = createState({
     options: {
       partyFollowEnabled: true,
@@ -8191,7 +8226,7 @@ test("follow chain surfaces shared HP supply and loot summaries", async () => {
   assert.match(quickDetail, /supplies pots 30 \/ runes 8/);
   assert.match(quickDetail, /loot 1\.8k gp \/ 5 kills/);
 
-  document.querySelector('[data-open-modal="partyFollow"]').click();
+  document.querySelector('[data-open-modal="team"]').click();
   await flush();
 
   const overviewText = document.querySelector(".follow-train-overview").textContent;
@@ -8203,7 +8238,7 @@ test("follow chain surfaces shared HP supply and loot summaries", async () => {
   assert.match(overviewText, /1\.8k gp \/ 5 kills \/ 1 lap/);
 });
 
-test("Team Hunt and Follow Chain quick toggles can be enabled together", async () => {
+test("Team Hunt quick toggle owns Team Roles", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
@@ -8216,27 +8251,32 @@ test("Team Hunt and Follow Chain quick toggles can be enabled together", async (
   const { document, calls, currentState } = desk;
 
   assert.equal(document.querySelector("#quick-open-team-hunt span").textContent.trim(), "Team Hunt");
-  assert.equal(document.querySelector("#quick-open-party-follow span").textContent.trim(), "Follow Chain");
+  assert.equal(document.getElementById("quick-open-party-follow").closest(".quick-module-card").hidden, true);
 
   document.getElementById("quick-toggle-team-hunt").click();
   await flush();
 
   assert.deepEqual(calls.updateOptions.at(-1), {
     teamEnabled: true,
+    partyFollowEnabled: true,
+    partyFollowMembers: "Knight Alpha\nScout Beta",
   });
   assert.equal(currentState().options.teamEnabled, true);
-  assert.equal(currentState().options.partyFollowEnabled, false);
+  assert.equal(currentState().options.partyFollowEnabled, true);
+  assert.deepEqual(currentState().options.partyFollowMembers, ["Knight Alpha", "Scout Beta"]);
 
   document.getElementById("quick-toggle-party-follow").click();
   await flush();
 
-  assert.equal(calls.updateOptions.at(-1).partyFollowEnabled, true);
-  assert.equal(Object.hasOwn(calls.updateOptions.at(-1), "teamEnabled"), false);
-  assert.equal(currentState().options.teamEnabled, true);
-  assert.equal(currentState().options.partyFollowEnabled, true);
+  assert.deepEqual(calls.updateOptions.at(-1), {
+    teamEnabled: false,
+    partyFollowEnabled: false,
+  });
+  assert.equal(currentState().options.teamEnabled, false);
+  assert.equal(currentState().options.partyFollowEnabled, false);
 });
 
-test("follow chain auto-fills live tabs when enabled and refreshes seen players while open", async () => {
+test("Team Hunt auto-fills live tabs when enabled and refreshes seen players while open", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
@@ -8257,15 +8297,17 @@ test("follow chain auto-fills live tabs when enabled and refreshes seen players 
   });
   const { document, emit, currentState, calls } = desk;
 
-  document.getElementById("quick-toggle-party-follow").click();
+  document.getElementById("quick-toggle-team-hunt").click();
   await flush();
 
+  assert.equal(currentState().options.teamEnabled, true);
   assert.equal(currentState().options.partyFollowEnabled, true);
   assert.deepEqual(currentState().options.partyFollowMembers, ["Knight Alpha", "Scout Beta"]);
+  assert.equal(calls.updateOptions.at(-1).teamEnabled, true);
   assert.equal(calls.updateOptions.at(-1).partyFollowEnabled, true);
   assert.equal(calls.updateOptions.at(-1).partyFollowMembers, "Knight Alpha\nScout Beta");
 
-  document.querySelector('[data-open-modal="partyFollow"]').click();
+  document.querySelector('[data-open-modal="team"]').click();
   await flush();
 
   assert.equal(document.querySelector("[data-follow-train-chain-list]").textContent.includes("Knight Alpha"), true);
@@ -8274,11 +8316,12 @@ test("follow chain auto-fills live tabs when enabled and refreshes seen players 
   document.querySelector("#modal-module [data-save-modules]").click();
   await flush();
 
+  assert.equal(calls.updateOptions.at(-1).teamEnabled, true);
   assert.equal(calls.updateOptions.at(-1).partyFollowEnabled, true);
   assert.equal(calls.updateOptions.at(-1).partyFollowMembers, "Knight Alpha\nScout Beta");
   assert.deepEqual(currentState().options.partyFollowMembers, ["Knight Alpha", "Scout Beta"]);
 
-  document.querySelector('[data-open-modal="partyFollow"]').click();
+  document.querySelector('[data-open-modal="team"]').click();
   await flush();
 
   assert.equal(document.querySelector('[data-follow-train-source-name="Guide Gamma"]'), null);
@@ -8305,7 +8348,7 @@ test("follow chain auto-fills live tabs when enabled and refreshes seen players 
   assert.match(document.querySelector("[data-follow-train-chain-list]").textContent, /Scout Beta/);
 });
 
-test("follow chain auto-fill keeps separate live follow components", async () => {
+test("Team Hunt auto-fill keeps separate live follow components", async () => {
   const makeSession = ({
     id,
     name,
@@ -8384,7 +8427,7 @@ test("follow chain auto-fill keeps separate live follow components", async () =>
   assert.equal(calls.updateOptions.at(-1).partyFollowMembers, "Druid Gamma\nMule Delta");
   assert.deepEqual(currentState().options.partyFollowMembers, ["Druid Gamma", "Mule Delta"]);
 
-  document.querySelector('[data-open-modal="partyFollow"]').click();
+  document.querySelector('[data-open-modal="team"]').click();
   await flush();
 
   assert.equal(document.querySelector('[data-follow-train-source-name="Guide Gamma"]') !== null, true);

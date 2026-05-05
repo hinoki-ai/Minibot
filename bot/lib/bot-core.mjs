@@ -665,6 +665,13 @@ export const DEFAULTS = {
   inputControlEnabled: false,
 };
 
+const FALSEY_ENV_VALUES = new Set(["0", "false", "no", "off"]);
+
+export function isVisibleInputControlHardDisabled(env = process.env) {
+  const value = String(env?.MINIBOT_DISABLE_VISIBLE_INPUT || "").trim().toLowerCase();
+  return Boolean(value) && !FALSEY_ENV_VALUES.has(value);
+}
+
 const GOLD_COIN_ID = 3031;
 const PLATINUM_COIN_ID = 3035;
 const CRYSTAL_COIN_ID = 3043;
@@ -733,6 +740,8 @@ const ROUTE_SPACING_BOUNCE_COOLDOWN_MS = 1_200;
 const ROUTE_SPACING_HOLD_BYPASS_MS = 12_000;
 const ROUTE_SPACING_HOLD_BYPASS_WINDOW_MS = 8_000;
 const TEAM_HUNT_SYNC_LOG_COOLDOWN_MS = 4_000;
+const TEAM_HUNT_SYNC_HOLD_BYPASS_MS = 8_000;
+const TEAM_HUNT_SYNC_HOLD_BYPASS_WINDOW_MS = 8_000;
 const ROUTE_RECOVERY_AMBIGUOUS_CROSSING_DISTANCE = 1;
 const COMBAT_FAST_LOOP_DELAY_MS = 75;
 const TARGET_PROFILE_CHASE_MODE_GRACE_MS = 2_000;
@@ -1025,6 +1034,7 @@ export const DEFAULT_AUTO_CONVERT_RULE = Object.freeze({
 export const SPELL_CASTER_PATTERNS = Object.freeze([
   "any",
   "adjacent",
+  "front",
   "aligned",
   "diagonal",
   "pack",
@@ -1076,6 +1086,7 @@ export const DEFAULT_SPELL_CASTER_RULE = Object.freeze({
   runeName: "",
   itemName: "",
   itemId: null,
+  targetNames: [],
   minManaPercent: 20,
   maxTargetDistance: 4,
   minTargetCount: 1,
@@ -1088,6 +1099,7 @@ export const DEFAULT_SPELL_CASTER_RULE = Object.freeze({
   requireSafeTile: false,
   requireLineOfSight: true,
   requireTarget: true,
+  requireNoPlayers: false,
   requireStationary: false,
 });
 
@@ -1260,6 +1272,7 @@ const EMPTY_SPELL_CASTER_RULE = Object.freeze({
   enabled: true,
   label: "",
   words: "",
+  targetNames: [],
   minManaPercent: 0,
   maxTargetDistance: 0,
   minTargetCount: 1,
@@ -1272,6 +1285,7 @@ const EMPTY_SPELL_CASTER_RULE = Object.freeze({
   requireSafeTile: false,
   requireLineOfSight: true,
   requireTarget: true,
+  requireNoPlayers: false,
   requireStationary: false,
 });
 
@@ -3174,6 +3188,7 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     runeName: String(fallback?.runeName || fallback?.itemName || "").trim(),
     itemName: String(fallback?.itemName || fallback?.runeName || "").trim(),
     itemId: Number.isFinite(Number(fallback?.itemId)) ? Math.trunc(Number(fallback.itemId)) : null,
+    targetNames: normalizeTextList(fallback?.targetNames ?? fallback?.targets ?? fallback?.monsterNames ?? fallback?.monsters),
     minManaPercent: clampPercent(fallback?.minManaPercent, DEFAULT_SPELL_CASTER_RULE.minManaPercent),
     maxTargetDistance: normalizeNonNegativeNumber(fallback?.maxTargetDistance, DEFAULT_SPELL_CASTER_RULE.maxTargetDistance),
     minTargetCount: Math.max(1, Math.trunc(normalizeNonNegativeNumber(
@@ -3192,6 +3207,7 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     requireSafeTile: normalizeBoolean(fallback?.requireSafeTile, DEFAULT_SPELL_CASTER_RULE.requireSafeTile),
     requireLineOfSight: normalizeBoolean(fallback?.requireLineOfSight, DEFAULT_SPELL_CASTER_RULE.requireLineOfSight),
     requireTarget: normalizeBoolean(fallback?.requireTarget, DEFAULT_SPELL_CASTER_RULE.requireTarget),
+    requireNoPlayers: normalizeBoolean(fallback?.requireNoPlayers, DEFAULT_SPELL_CASTER_RULE.requireNoPlayers),
     requireStationary: normalizeBoolean(fallback?.requireStationary, DEFAULT_SPELL_CASTER_RULE.requireStationary),
   };
 
@@ -3205,6 +3221,13 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     itemId: Number.isFinite(Number(rule?.itemId ?? normalizedFallback.itemId))
       ? Math.trunc(Number(rule?.itemId ?? normalizedFallback.itemId))
       : null,
+    targetNames: normalizeTextList(
+      rule?.targetNames
+      ?? rule?.targets
+      ?? rule?.monsterNames
+      ?? rule?.monsters
+      ?? normalizedFallback.targetNames,
+    ),
     minManaPercent: clampPercent(rule?.minManaPercent, normalizedFallback.minManaPercent),
     maxTargetDistance: normalizeNonNegativeNumber(rule?.maxTargetDistance, normalizedFallback.maxTargetDistance),
     minTargetCount: Math.max(1, Math.trunc(normalizeNonNegativeNumber(rule?.minTargetCount, normalizedFallback.minTargetCount))),
@@ -3220,6 +3243,7 @@ function normalizeSpellCasterRule(rule = {}, fallback = DEFAULT_SPELL_CASTER_RUL
     requireSafeTile: normalizeBoolean(rule?.requireSafeTile, normalizedFallback.requireSafeTile),
     requireLineOfSight: normalizeBoolean(rule?.requireLineOfSight, normalizedFallback.requireLineOfSight),
     requireTarget: normalizeBoolean(rule?.requireTarget, normalizedFallback.requireTarget),
+    requireNoPlayers: normalizeBoolean(rule?.requireNoPlayers, normalizedFallback.requireNoPlayers),
     requireStationary: normalizeBoolean(rule?.requireStationary, normalizedFallback.requireStationary),
   };
 
@@ -13614,6 +13638,7 @@ export class MinibiaTargetBot {
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
     this.teamHuntHold = null;
+    this.teamHuntBypass = null;
     this.routeResetState = null;
     this.corpseReturnState = null;
     this.rookillerState = null;
@@ -18267,6 +18292,7 @@ export class MinibiaTargetBot {
         const plan = this.findFollowTrainDestination(snapshot, transition.position, {
           spacing: 0,
           allowExactTarget: true,
+          allowUnsafeExactTarget: true,
         });
         if (!plan?.destination) {
           return null;
@@ -18337,7 +18363,8 @@ export class MinibiaTargetBot {
 
     const plan = this.findFollowTrainDestination(snapshot, transition.position, {
       spacing: 0,
-      allowExactTarget: false,
+      allowExactTarget: true,
+      allowUnsafeExactTarget: true,
     });
     if (!plan?.destination) {
       return null;
@@ -18472,6 +18499,7 @@ export class MinibiaTargetBot {
     const plan = this.findFollowTrainDestination(snapshot, targetPosition, {
       spacing: 0,
       allowExactTarget: true,
+      allowUnsafeExactTarget: true,
     });
     if (!plan?.destination) {
       return null;
@@ -18542,6 +18570,7 @@ export class MinibiaTargetBot {
     const plan = this.findFollowTrainDestination(snapshot, projectedPosition, {
       spacing: 0,
       allowExactTarget: true,
+      allowUnsafeExactTarget: true,
     });
     if (!plan?.destination) {
       return null;
@@ -19248,6 +19277,7 @@ export class MinibiaTargetBot {
   findFollowTrainDestination(snapshot, targetPosition, {
     spacing = this.getFollowTrainSpacing(),
     allowExactTarget = false,
+    allowUnsafeExactTarget = false,
   } = {}) {
     const playerPosition = snapshot?.playerPosition || null;
     if (!playerPosition || !targetPosition || Number(playerPosition.z) !== Number(targetPosition.z)) {
@@ -19261,6 +19291,7 @@ export class MinibiaTargetBot {
     }
 
     const playerKey = this.getPositionKey(playerPosition);
+    const targetKey = this.getPositionKey(targetPosition);
     const candidates = [];
     const pushCandidate = (position, rank = 1) => {
       const key = this.getPositionKey(position);
@@ -19281,7 +19312,11 @@ export class MinibiaTargetBot {
         return;
       }
 
-      if (!this.canUseFollowTrainPosition(snapshot, position, playerPosition)) {
+      const exactTarget = Boolean(targetKey && key === targetKey);
+      if (
+        !(allowUnsafeExactTarget && exactTarget)
+        && !this.canUseFollowTrainPosition(snapshot, position, playerPosition)
+      ) {
         return;
       }
 
@@ -19307,7 +19342,10 @@ export class MinibiaTargetBot {
       pushCandidate(candidate, 1);
     }
 
-    if (allowExactTarget && this.canUseFollowTrainPosition(snapshot, targetPosition, playerPosition)) {
+    if (
+      allowExactTarget
+      && (allowUnsafeExactTarget || this.canUseFollowTrainPosition(snapshot, targetPosition, playerPosition))
+    ) {
       candidates.push({
         position: {
           x: Math.trunc(Number(targetPosition.x)),
@@ -19332,7 +19370,7 @@ export class MinibiaTargetBot {
       if (
         allowExactTarget
         && candidate.targetDistance === 0
-        && this.isExplicitlyReachableTile(snapshot, candidate.position)
+        && (allowUnsafeExactTarget || this.isExplicitlyReachableTile(snapshot, candidate.position))
       ) {
         return {
           destination: candidate.position,
@@ -21004,7 +21042,7 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    if (snapshot.pathfinderAutoWalking || snapshot.isMoving) {
+    if (this.isClientMovementActive(snapshot)) {
       return null;
     }
 
@@ -21108,6 +21146,26 @@ export class MinibiaTargetBot {
   clearLastWalkProgressPending() {
     this.lastWalkOriginKey = null;
     this.lastWalkProgressPending = false;
+  }
+
+  isClientMovementActive(snapshot = this.lastSnapshot) {
+    if (snapshot?.isMoving) {
+      return true;
+    }
+    if (!snapshot?.pathfinderAutoWalking) {
+      return false;
+    }
+
+    const stepsRemaining = Number(snapshot?.autoWalkStepsRemaining);
+    return !(Number.isFinite(stepsRemaining) && stepsRemaining <= 0);
+  }
+
+  isClientMovementClaimed(snapshot = this.lastSnapshot) {
+    return Boolean(
+      this.isClientMovementActive(snapshot)
+      || snapshot?.pathfinderFinalDestination
+      || Number(snapshot?.autoWalkStepsRemaining) > 0
+    );
   }
 
   preserveWalkFailureState(walkKey, origin = null) {
@@ -21220,7 +21278,7 @@ export class MinibiaTargetBot {
   } = {}) {
     if (!snapshot?.ready || !this.lastWalkProgressPending) return false;
     if (!this.lastWalkOriginKey || this.lastWalkKey !== walkKey) return false;
-    if (!allowMovementSignals && (snapshot.pathfinderAutoWalking || snapshot.isMoving)) return false;
+    if (!allowMovementSignals && this.isClientMovementActive(snapshot)) return false;
     if (this.isWaypointReached(snapshot.playerPosition, waypoint)) return false;
 
     const playerKey = this.getPositionKey(snapshot.playerPosition);
@@ -21375,12 +21433,7 @@ export class MinibiaTargetBot {
       return false;
     }
 
-    const movementClaimed = Boolean(
-      snapshot.pathfinderAutoWalking
-      || snapshot.isMoving
-      || snapshot.pathfinderFinalDestination
-      || Number(snapshot.autoWalkStepsRemaining) > 0
-    );
+    const movementClaimed = this.isClientMovementClaimed(snapshot);
     if (!movementClaimed) {
       return false;
     }
@@ -21439,12 +21492,7 @@ export class MinibiaTargetBot {
 
   updateClientAutoWalkStationaryState(snapshot = this.lastSnapshot, now = this.getNow()) {
     const playerKey = this.getPositionKey(snapshot?.playerPosition);
-    const movementClaimed = Boolean(
-      snapshot?.pathfinderAutoWalking
-      || snapshot?.isMoving
-      || snapshot?.pathfinderFinalDestination
-      || Number(snapshot?.autoWalkStepsRemaining) > 0
-    );
+    const movementClaimed = this.isClientMovementClaimed(snapshot);
 
     if (!snapshot?.ready || !playerKey || !movementClaimed) {
       this.clearClientAutoWalkStationaryState();
@@ -21485,12 +21533,7 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    const movementClaimed = Boolean(
-      snapshot?.pathfinderAutoWalking
-      || snapshot?.isMoving
-      || snapshot?.pathfinderFinalDestination
-      || Number(snapshot?.autoWalkStepsRemaining) > 0
-    );
+    const movementClaimed = this.isClientMovementClaimed(snapshot);
     if (movementClaimed && this.hasRecentBlockedWalkMessage(snapshot, now)) {
       this.rememberBlockedWalkDestinationFromSnapshot(snapshot, now);
       this.clearClientAutoWalkStationaryState();
@@ -21529,8 +21572,7 @@ export class MinibiaTargetBot {
       || !this.options.autowalkEnabled
       || this.isCavebotPaused()
       || !this.options.waypoints.length
-      || snapshot.pathfinderAutoWalking
-      || snapshot.isMoving
+      || this.isClientMovementActive(snapshot)
     ) {
       this.clearRouteStationaryState();
       return null;
@@ -21672,6 +21714,7 @@ export class MinibiaTargetBot {
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
     this.teamHuntHold = null;
+    this.teamHuntBypass = null;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
   }
@@ -21781,6 +21824,7 @@ export class MinibiaTargetBot {
       this.routeSpacingHold = null;
       this.routeSpacingBypass = null;
       this.teamHuntHold = null;
+      this.teamHuntBypass = null;
       this.lastRouteCoordinationSyncAt = 0;
       this.lastRouteCoordinationSyncStateKey = "";
       return null;
@@ -21816,6 +21860,7 @@ export class MinibiaTargetBot {
     if (!this.routeCoordinationState) {
       this.routeSpacingHold = null;
       this.teamHuntHold = null;
+      this.teamHuntBypass = null;
     }
     return this.routeCoordinationState;
   }
@@ -21887,6 +21932,7 @@ export class MinibiaTargetBot {
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
     this.teamHuntHold = null;
+    this.teamHuntBypass = null;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
 
@@ -22289,6 +22335,24 @@ export class MinibiaTargetBot {
     }
 
     return this.routeSpacingBypass;
+  }
+
+  pruneTeamHuntBypass(now = this.getNow()) {
+    if (!this.teamHuntBypass) {
+      return null;
+    }
+
+    if (
+      now >= this.teamHuntBypass.until
+      || (
+        this.routeIndex !== this.teamHuntBypass.routeIndex
+        && now > (Number(this.teamHuntBypass.createdAt) || 0)
+      )
+    ) {
+      this.teamHuntBypass = null;
+    }
+
+    return this.teamHuntBypass;
   }
 
   getRouteSpacingAdvice(candidateIndex = this.routeIndex) {
@@ -22713,7 +22777,7 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    const shouldInterrupt = Boolean(snapshot?.pathfinderAutoWalking || snapshot?.isMoving);
+    const shouldInterrupt = this.isClientMovementActive(snapshot);
     if (shouldInterrupt) {
       if (this.isRouteSpacingBounceInProgress(snapshot)) {
         return null;
@@ -22861,11 +22925,22 @@ export class MinibiaTargetBot {
   shouldHoldForTeamHuntSync(candidateIndex = this.routeIndex) {
     const advice = this.getTeamHuntSyncAdvice(candidateIndex);
     const now = this.getNow();
+    const activeBypass = this.pruneTeamHuntBypass(now);
     if (!advice?.hold) {
       this.teamHuntHold = null;
       return false;
     }
 
+    const blockingPeerId = String(advice.blockingPeer?.instanceId || "");
+    if (
+      activeBypass
+      && activeBypass.routeIndex === this.routeIndex
+      && activeBypass.peerInstanceId === blockingPeerId
+    ) {
+      return false;
+    }
+
+    this.teamHuntBypass = null;
     const peerProgressKey = this.getRouteSpacingMemberProgressKey(advice.blockingPeer);
     const previousHold = this.teamHuntHold;
     const nextHold = previousHold?.peerInstanceId === advice.blockingPeer?.instanceId
@@ -22892,6 +22967,34 @@ export class MinibiaTargetBot {
         lastPeerProgressAt: now,
       };
 
+    const heldMs = now - (Number(nextHold.startedAt) || now);
+    const peerStaleMs = now - (Number(nextHold.lastPeerProgressAt) || Number(nextHold.startedAt) || now);
+    const selfMemberForBypass = advice.selfMember || this.getTeamHuntSelfMember(advice.members);
+    const selfHasBypassPriority = Boolean(
+      selfMemberForBypass
+      && advice.blockingPeer
+      && this.compareRouteSpacingPriority(selfMemberForBypass, advice.blockingPeer) < 0
+    );
+    if (
+      blockingPeerId
+      && selfHasBypassPriority
+      && heldMs >= TEAM_HUNT_SYNC_HOLD_BYPASS_MS
+      && peerStaleMs >= TEAM_HUNT_SYNC_HOLD_BYPASS_MS
+    ) {
+      this.teamHuntBypass = {
+        routeIndex: this.routeIndex,
+        peerInstanceId: blockingPeerId,
+        createdAt: now,
+        until: now + TEAM_HUNT_SYNC_HOLD_BYPASS_WINDOW_MS,
+      };
+      this.teamHuntHold = null;
+      this.log(
+        `Autowalk bypassing stale Team Hunt sync at waypoint ${this.routeIndex + 1}`
+        + ` after ${Math.max(1, Math.round(heldMs / 1000))}s`,
+      );
+      return false;
+    }
+
     if (now - nextHold.lastLogAt >= TEAM_HUNT_SYNC_LOG_COOLDOWN_MS) {
       const peerLabel = this.getRouteSpacingPeerLabel(advice.blockingPeer);
       this.log(
@@ -22913,7 +23016,7 @@ export class MinibiaTargetBot {
     return {
       kind: "hold-route",
       reason: "team-hunt-sync",
-      interrupt: Boolean(snapshot?.pathfinderAutoWalking || snapshot?.isMoving),
+      interrupt: this.isClientMovementActive(snapshot),
     };
   }
 
@@ -23250,6 +23353,7 @@ export class MinibiaTargetBot {
     this.routeSpacingHold = null;
     this.routeSpacingBypass = null;
     this.teamHuntHold = null;
+    this.teamHuntBypass = null;
     this.lastRouteCoordinationSyncAt = 0;
     this.lastRouteCoordinationSyncStateKey = "";
 
@@ -24533,7 +24637,7 @@ export class MinibiaTargetBot {
       return tileRuleAction;
     }
 
-    if (snapshot.pathfinderAutoWalking || snapshot.isMoving) {
+    if (this.isClientMovementActive(snapshot)) {
       return null;
     }
 
@@ -24623,7 +24727,8 @@ export class MinibiaTargetBot {
   }
 
   isInputControlEnabled() {
-    return this.options?.inputControlEnabled === true;
+    return this.options?.inputControlEnabled === true
+      && !isVisibleInputControlHardDisabled();
   }
 
   async clearWaypointOverlay() {
@@ -26264,7 +26369,9 @@ export class MinibiaTargetBot {
     const recentWalkWindowMs = this.getRecentWalkWindowMs();
     const recentlyStartedWalk = Date.now() - this.lastWalkAt < recentWalkWindowMs;
 
-    if (destinationMatches && (snapshot.pathfinderAutoWalking || snapshot.isMoving)) {
+    const movementActive = this.isClientMovementActive(snapshot);
+
+    if (destinationMatches && movementActive) {
       return true;
     }
 
@@ -26275,7 +26382,7 @@ export class MinibiaTargetBot {
     return !finalDestinationKey
       && this.lastWalkProgressPending
       && recentlyStartedWalk
-      && (snapshot.pathfinderAutoWalking || snapshot.isMoving);
+      && movementActive;
   }
 
   shouldDeferTargetForRoute(snapshot, candidates = null) {
@@ -27503,8 +27610,12 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    return this.getFloorTransitionDangerZoneAt(snapshot, position, options)
-      || this.getRouteFloorTransitionDangerZoneAt(position, options);
+    const markerOnlyOptions = {
+      ...options,
+      radius: 0,
+    };
+    return this.getFloorTransitionDangerZoneAt(snapshot, position, markerOnlyOptions)
+      || this.getRouteFloorTransitionDangerZoneAt(position, markerOnlyOptions);
   }
 
   shouldAvoidPosition(snapshot, position) {
@@ -27768,7 +27879,9 @@ export class MinibiaTargetBot {
   getRouteNavigationTileMap(snapshot = this.lastSnapshot, {
     extraFloorTransitionPositions = [],
   } = {}) {
-    const map = this.getDistanceKeeperTileMap(snapshot);
+    const map = this.getDistanceKeeperTileMap(snapshot, {
+      excludeFloorTransitionDangerZone: true,
+    });
     const playerPosition = snapshot?.playerPosition || null;
     if (!playerPosition || this.shouldGuardCombatFloorTransitions(snapshot)) {
       return map;
@@ -27801,12 +27914,18 @@ export class MinibiaTargetBot {
           : Array.isArray(snapshot?.safeTiles)
             ? snapshot.safeTiles
             : [];
+    const explicitFloorTransitionKeys = new Set(
+      (Array.isArray(extraFloorTransitionPositions) ? extraFloorTransitionPositions : [])
+        .map((position) => this.getPositionKey(position))
+        .filter(Boolean),
+    );
 
     for (const tile of tiles) {
       const key = this.getPositionKey(tile);
       if (!key || map.has(key)) continue;
-      if (this.getFloorTransitionHazardAt(snapshot, tile)) continue;
-      if (this.getRouteFloorTransitionNoGoAt(tile)) continue;
+      const explicitFloorTransitionTarget = explicitFloorTransitionKeys.has(key);
+      if (!explicitFloorTransitionTarget && this.getFloorTransitionHazardAt(snapshot, tile)) continue;
+      if (!explicitFloorTransitionTarget && this.getRouteFloorTransitionNoGoAt(tile)) continue;
       if (this.getAutoAvoidHazardAt(snapshot, tile)) continue;
       if (this.shouldAvoidPosition(snapshot, tile)) continue;
       if (this.isRecentlyBlockedWalkDestination(tile)) continue;
@@ -28733,7 +28852,7 @@ export class MinibiaTargetBot {
       return null;
     }
 
-    if (holdRouteForCombat || snapshot?.pathfinderAutoWalking || snapshot?.isMoving) {
+    if (holdRouteForCombat || this.isClientMovementActive(snapshot)) {
       return null;
     }
 
@@ -29864,6 +29983,13 @@ export class MinibiaTargetBot {
     const currentWaypoint = this.getCurrentWaypoint();
     if (!playerPosition || !currentWaypoint) return false;
 
+    if (
+      this.isMandatoryFloorTransitionWaypointType(currentWaypoint)
+      && Math.trunc(Number(playerPosition.z)) === Math.trunc(Number(currentWaypoint.z))
+    ) {
+      return false;
+    }
+
     const rawCurrentDistance = this.getPositionDistance(playerPosition, currentWaypoint);
     const floorMismatchRecovery = !Number.isFinite(rawCurrentDistance)
       && Number.isFinite(Number(playerPosition.z))
@@ -30157,6 +30283,13 @@ export class MinibiaTargetBot {
       }
     }
 
+    const stickyCurrentTarget = this.getStickyCurrentTargetCandidate(snapshot, [], {
+      allowPriorityBreak: false,
+    });
+    if (stickyCurrentTarget && !this.isEscapeEntry(stickyCurrentTarget)) {
+      return stickyCurrentTarget;
+    }
+
     const candidates = this.getAttackCombatCandidates(snapshot);
 
     if (candidates.length) {
@@ -30285,6 +30418,49 @@ export class MinibiaTargetBot {
         const distance = this.getEntryDistance(entry, playerPosition);
         return !Number.isFinite(maxTargetDistance) || maxTargetDistance <= 0 || distance <= maxTargetDistance;
       });
+  }
+
+  getFrontSpellDirection(target = null, snapshot = this.lastSnapshot) {
+    const playerPosition = snapshot?.playerPosition || null;
+    const targetPosition = target?.position || null;
+    if (!playerPosition || !targetPosition || Number(targetPosition.z) !== Number(playerPosition.z)) {
+      return "";
+    }
+
+    const dx = Math.trunc(Number(targetPosition.x) - Number(playerPosition.x));
+    const dy = Math.trunc(Number(targetPosition.y) - Number(playerPosition.y));
+    if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) + Math.abs(dy) !== 1) {
+      return "";
+    }
+
+    if (dx === 1) return "east";
+    if (dx === -1) return "west";
+    if (dy === 1) return "south";
+    if (dy === -1) return "north";
+    return "";
+  }
+
+  matchesSpellTargetNames(rule = {}, target = null) {
+    const requiredNames = expandMonsterNameKeysWithAlphaVariants(
+      normalizeTextList(rule?.targetNames ?? rule?.targets ?? rule?.monsterNames ?? rule?.monsters),
+    );
+    if (!requiredNames.length) {
+      return true;
+    }
+
+    const targetKey = this.getNameKey(target?.name);
+    if (!targetKey) {
+      return false;
+    }
+
+    const targetBaseKey = getAlphaBaseMonsterNameKey(targetKey);
+    return requiredNames.includes(targetKey)
+      || (targetBaseKey && requiredNames.includes(targetBaseKey));
+  }
+
+  hasVisiblePlayers(snapshot = this.lastSnapshot) {
+    return (Array.isArray(snapshot?.visiblePlayers) && snapshot.visiblePlayers.length > 0)
+      || (Array.isArray(snapshot?.visiblePlayerNames) && snapshot.visiblePlayerNames.length > 0);
   }
 
   getAoeTargetsAround(center = null, targets = [], radius = 0) {
@@ -30511,6 +30687,8 @@ export class MinibiaTargetBot {
     switch (pattern) {
       case "adjacent":
         return distance <= 1;
+      case "front":
+        return Boolean(this.getFrontSpellDirection(target, snapshot));
       case "aligned":
         return aligned;
       case "diagonal":
@@ -31669,6 +31847,7 @@ export class MinibiaTargetBot {
       rules: this.options.spellCasterRules,
       matches: (rule, ruleIndex) => {
         if (vocationProfile && !isVocationSpellAvailable(vocationProfile, rule.words)) return false;
+        if (rule.requireNoPlayers && this.hasVisiblePlayers(snapshot)) return false;
         if (rule.requireStationary && (snapshot.isMoving || snapshot.pathfinderAutoWalking)) return false;
         if (manaPercent < rule.minManaPercent) return false;
 
@@ -31685,6 +31864,7 @@ export class MinibiaTargetBot {
 
         if (rule.requireTarget && !target) return false;
         if (!target) return false;
+        if (!this.matchesSpellTargetNames(rule, target)) return false;
 
         const distance = this.getEntryDistance(target, snapshot.playerPosition);
         if (Number(rule.maxTargetDistance) > 0 && distance > Number(rule.maxTargetDistance)) return false;
@@ -31711,6 +31891,9 @@ export class MinibiaTargetBot {
             targetCount: aoePlan.targetCount,
           };
         }
+        const frontDirection = normalizeEnum(rule?.pattern, SPELL_CASTER_PATTERNS, DEFAULT_SPELL_CASTER_RULE.pattern) === "front"
+          ? this.getFrontSpellDirection(target, snapshot)
+          : "";
         return {
           type: "attack-spell",
           moduleKey: "spellCaster",
@@ -31722,6 +31905,7 @@ export class MinibiaTargetBot {
           aoe: aoePlan,
           castPosition: aoePlan?.castPosition || null,
           targetCount: aoePlan?.targetCount ?? null,
+          turnDirection: frontDirection || null,
         };
       },
     });
@@ -32934,7 +33118,7 @@ export class MinibiaTargetBot {
   }
 
   getDistanceKeeperTileMap(snapshot, {
-    excludeFloorTransitionDangerZone = true,
+    excludeFloorTransitionDangerZone = false,
   } = {}) {
     const tiles = Array.isArray(snapshot?.reachableWalkableTiles) && snapshot.reachableWalkableTiles.length
       ? snapshot.reachableWalkableTiles
@@ -32951,6 +33135,7 @@ export class MinibiaTargetBot {
       const key = this.getPositionKey(tile);
       if (!key) continue;
       if (this.getFloorTransitionHazardAt(snapshot, tile)) continue;
+      if (this.getRouteFloorTransitionNoGoAt(tile)) continue;
       if (
         excludeFloorTransitionDangerZone
         && this.getFloorTransitionDangerZoneAt(snapshot, tile)
@@ -33718,19 +33903,31 @@ export class MinibiaTargetBot {
     const playerPosition = snapshot?.playerPosition || null;
     const seen = new Set();
     const threats = [];
-    const appendThreat = (entry = null) => {
+    const appendThreat = (entry = null, {
+      allowChaseApproach = false,
+    } = {}) => {
       const key = Number.isFinite(Number(entry?.id))
         ? `id:${Number(entry.id)}`
         : this.getPositionKey(entry?.position);
       if (!key || seen.has(key)) return;
-      if (!this.isEntryWithinCombatWindow(entry, playerPosition)) return;
-      if (!this.isEntryReachableForCombat(entry)) return;
+      if (allowChaseApproach) {
+        if (!this.isEntrySameFloorAsPlayer(entry, playerPosition)) return;
+      } else {
+        if (!this.isEntryWithinCombatWindow(entry, playerPosition)) return;
+        if (!this.isEntryReachableForCombat(entry)) return;
+      }
       seen.add(key);
       threats.push(entry);
     };
 
     this.getVisibleThreats(snapshot).forEach(appendThreat);
-    appendThreat(focusTarget);
+    appendThreat(focusTarget, {
+      allowChaseApproach: Boolean(
+        focusTarget
+        && this.isCurrentTargetEntry(focusTarget, snapshot)
+        && this.isChaseToKillProfile(this.getTargetProfile(focusTarget?.name))
+      ),
+    });
     return threats;
   }
 
@@ -33931,6 +34128,54 @@ export class MinibiaTargetBot {
     }, DEFAULT_DISTANCE_KEEPER_RULE);
   }
 
+  shouldKeepCurrentDistanceKeeperMovement({
+    snapshot,
+    playerPosition,
+    focusTarget,
+    threats,
+    rule,
+    currentDistance,
+    currentRelevantRisk,
+  } = {}) {
+    const destination = normalizePosition(snapshot?.pathfinderFinalDestination);
+    if (!snapshot?.ready || !destination || !playerPosition || !focusTarget?.position || !rule) {
+      return false;
+    }
+
+    if (Number(destination.z) !== Number(playerPosition.z)) {
+      return false;
+    }
+
+    const destinationStepDistance = this.getPositionDistance(playerPosition, destination);
+    if (!Number.isFinite(destinationStepDistance) || destinationStepDistance > 1) {
+      return false;
+    }
+
+    if (
+      this.getDistanceKeeperOccupiedTileKeys(snapshot, playerPosition).has(this.getPositionKey(destination))
+      || this.getFloorTransitionHazardAt(snapshot, destination)
+      || this.getCombatFloorTransitionDangerZoneAt(snapshot, destination)
+      || this.getElementalFieldAt(snapshot, destination)
+      || this.shouldAvoidPosition(snapshot, destination)
+    ) {
+      return false;
+    }
+
+    const destinationRiskSummary = this.getThreatRiskSummary(destination, threats);
+    const destinationRelevantRisk = (rule.dodgeBeams ? destinationRiskSummary.beamRisk : 0)
+      + (rule.dodgeWaves ? destinationRiskSummary.waveRisk : 0);
+    const isEscapeBehavior = String(rule.behavior || "").trim().toLowerCase() === "escape";
+
+    if (isEscapeBehavior) {
+      const destinationDistance = this.getPositionDistance(destination, focusTarget.position);
+      return Number.isFinite(destinationDistance)
+        && destinationDistance > currentDistance
+        && destinationRelevantRisk <= currentRelevantRisk;
+    }
+
+    return currentRelevantRisk > 0 && destinationRelevantRisk < currentRelevantRisk;
+  }
+
   scoreDistanceKeeperPosition({
     snapshot,
     position,
@@ -34126,7 +34371,7 @@ export class MinibiaTargetBot {
       return null;
     }
     if (this.isCavebotPaused()) return null;
-    if (snapshot.isMoving || snapshot.pathfinderAutoWalking) return null;
+    const movementActive = this.isClientMovementActive(snapshot);
 
     const playerPosition = snapshot.playerPosition;
     const escapeThreats = this.getVisibleEscapeThreats(snapshot);
@@ -34205,6 +34450,23 @@ export class MinibiaTargetBot {
         (effectiveRule.dodgeBeams && currentRiskSummary.beamRisk > 0)
         || (effectiveRule.dodgeWaves && currentRiskSummary.waveRisk > 0)
       );
+      const shouldInterruptMovement = movementActive && (isEscapeRule || shouldDodge);
+
+      if (movementActive && !shouldInterruptMovement) {
+        continue;
+      }
+
+      if (shouldInterruptMovement && this.shouldKeepCurrentDistanceKeeperMovement({
+        snapshot,
+        playerPosition,
+        focusTarget,
+        threats,
+        rule: effectiveRule,
+        currentDistance,
+        currentRelevantRisk,
+      })) {
+        continue;
+      }
 
       if (!outsideLow && !outsideHigh && !shouldDodge && !isEscapeRule) {
         continue;
@@ -34304,6 +34566,7 @@ export class MinibiaTargetBot {
         currentDistance,
         nextDistance: best.nextDistance,
         reason,
+        interruptMovement: movementActive,
       };
       action.movementIntent = this.normalizeMovementIntentFromAction(action, snapshot);
       return action;
@@ -34506,6 +34769,10 @@ export class MinibiaTargetBot {
   }
 
   getWaypointRadius(waypoint) {
+    if (this.isMandatoryFloorTransitionWaypointType(waypoint)) {
+      return 0;
+    }
+
     const hasWaypointRadius = waypoint?.radius != null && waypoint?.radius !== "";
     const radius = Number(waypoint?.radius);
     if (hasWaypointRadius && Number.isFinite(radius) && radius >= 0) {
@@ -34528,6 +34795,19 @@ export class MinibiaTargetBot {
       || type === "stairs-down"
       || type === "ladder"
       || type === "use-item"
+      || type === "exani-tera"
+      || type === "rope"
+      || type === "shovel-hole";
+  }
+
+  isMandatoryFloorTransitionWaypointType(typeOrWaypoint = null) {
+    const rawType = typeof typeOrWaypoint === "string"
+      ? typeOrWaypoint
+      : typeOrWaypoint?.type;
+    const type = normalizeWaypointType(rawType);
+    return type === "stairs-up"
+      || type === "stairs-down"
+      || type === "ladder"
       || type === "exani-tera"
       || type === "rope"
       || type === "shovel-hole";
@@ -34617,8 +34897,11 @@ export class MinibiaTargetBot {
   }
 
   shouldEnforceExactWaypointTraversal(waypoint, index = this.routeIndex) {
-    return this.shouldFollowRouteWaypointsExactly()
-      && this.isRecordedRouteWaypointType(waypoint, index);
+    return this.isMandatoryFloorTransitionWaypointType(waypoint)
+      || (
+        this.shouldFollowRouteWaypointsExactly()
+        && this.isRecordedRouteWaypointType(waypoint, index)
+      );
   }
 
   isWaypointReached(playerPosition, waypoint) {
@@ -34865,7 +35148,7 @@ export class MinibiaTargetBot {
       return false;
     }
 
-    if ((snapshot.pathfinderAutoWalking || snapshot.isMoving) && exactWaypointReached !== true) {
+    if (this.isClientMovementActive(snapshot) && exactWaypointReached !== true) {
       return false;
     }
 
@@ -35505,7 +35788,7 @@ export class MinibiaTargetBot {
         return staleWalkAction;
       }
 
-      const movementInProgress = Boolean(snapshot.pathfinderAutoWalking || snapshot.isMoving);
+      const movementInProgress = this.isClientMovementActive(snapshot);
       const staleClientAutoWalkAction = this.getStaleClientAutoWalkRecoveryAction(snapshot, waypoint, now);
       if (staleClientAutoWalkAction) {
         return staleClientAutoWalkAction;
@@ -35774,6 +36057,33 @@ export class MinibiaTargetBot {
 
     this.log(`Cast failed for ${words} (${actionType}): ${result?.reason || "unknown error"}`);
     return result;
+  }
+
+  async castAttackSpell(action = {}) {
+    const direction = String(action?.turnDirection || "").trim().toLowerCase();
+    if (!direction) {
+      return this.castWords(action);
+    }
+
+    const turnResult = await this.executeKeyboardTurn(direction);
+    if (!turnResult?.ok) {
+      const words = String(action?.words || "").trim();
+      this.log(`Turn failed before ${words || "attack spell"}: ${turnResult?.reason || "unknown error"}`);
+      return {
+        ok: false,
+        reason: turnResult?.reason || "turn failed",
+        phase: "turn",
+        direction,
+        turn: turnResult || null,
+      };
+    }
+
+    const castResult = await this.castWords(action);
+    return {
+      ...(castResult || {}),
+      direction,
+      turn: turnResult,
+    };
   }
 
   async useHotkey(action = {}) {
@@ -36874,6 +37184,109 @@ export class MinibiaTargetBot {
     if (dy === 1) return { ...MOVEMENT_KEY_EVENTS.south, direction: "south" };
     if (dy === -1) return { ...MOVEMENT_KEY_EVENTS.north, direction: "north" };
     return null;
+  }
+
+  async executeKeyboardTurn(direction = "") {
+    const normalizedDirection = String(direction || "").trim().toLowerCase();
+    const keyEvent = MOVEMENT_KEY_EVENTS[normalizedDirection] || null;
+    const modifierEvent = HOTKEY_MODIFIER_EVENTS.control;
+    if (!keyEvent) {
+      return { ok: false, reason: "keyboard turn unavailable", direction };
+    }
+
+    if (!this.isInputControlEnabled()) {
+      return { ok: false, reason: "input control disabled", direction: normalizedDirection };
+    }
+
+    if (this.options.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        transport: "keyboard-turn",
+        key: keyEvent.key,
+        direction: normalizedDirection,
+      };
+    }
+
+    await this.attach();
+    if (!this.hasUsableTransport() || typeof this.cdp?.send !== "function") {
+      return { ok: false, reason: "transport unavailable", direction: normalizedDirection };
+    }
+
+    try {
+      try {
+        await this.cdp.send("Page.bringToFront", {});
+      } catch {}
+
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "rawKeyDown",
+        key: modifierEvent.key,
+        code: modifierEvent.code,
+        windowsVirtualKeyCode: modifierEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: modifierEvent.nativeVirtualKeyCode,
+        modifiers: modifierEvent.modifiers,
+      });
+      await sleep(20);
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "rawKeyDown",
+        key: keyEvent.key,
+        code: keyEvent.code,
+        windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+        modifiers: modifierEvent.modifiers,
+      });
+      await sleep(35);
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: keyEvent.key,
+        code: keyEvent.code,
+        windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+        modifiers: modifierEvent.modifiers,
+      });
+      await this.cdp.send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: modifierEvent.key,
+        code: modifierEvent.code,
+        windowsVirtualKeyCode: modifierEvent.windowsVirtualKeyCode,
+        nativeVirtualKeyCode: modifierEvent.nativeVirtualKeyCode,
+        modifiers: 0,
+      });
+
+      return {
+        ok: true,
+        transport: "keyboard-turn",
+        key: keyEvent.key,
+        direction: normalizedDirection,
+      };
+    } catch (error) {
+      try {
+        await this.cdp.send("Input.dispatchKeyEvent", {
+          type: "keyUp",
+          key: keyEvent.key,
+          code: keyEvent.code,
+          windowsVirtualKeyCode: keyEvent.windowsVirtualKeyCode,
+          nativeVirtualKeyCode: keyEvent.nativeVirtualKeyCode,
+          modifiers: modifierEvent.modifiers,
+        });
+      } catch {}
+      try {
+        await this.cdp.send("Input.dispatchKeyEvent", {
+          type: "keyUp",
+          key: modifierEvent.key,
+          code: modifierEvent.code,
+          windowsVirtualKeyCode: modifierEvent.windowsVirtualKeyCode,
+          nativeVirtualKeyCode: modifierEvent.nativeVirtualKeyCode,
+          modifiers: 0,
+        });
+      } catch {}
+      return {
+        ok: false,
+        reason: "keyboard turn failed",
+        direction: normalizedDirection,
+        message: error?.message || String(error || ""),
+      };
+    }
   }
 
   async executeKeyboardStep(destination, origin = this.lastSnapshot?.playerPosition) {
@@ -38885,7 +39298,7 @@ export class MinibiaTargetBot {
 
       if (this.shouldYieldTrainerPartner(snapshot)) {
         let yielded = false;
-        if (snapshot.pathfinderAutoWalking || snapshot.isMoving) {
+        if (this.isClientMovementActive(snapshot)) {
           const interruptResult = await this.interruptAutoWalk().catch(() => null);
           if (interruptResult?.ok || interruptResult?.interruptedWalk) {
             yielded = true;
@@ -39105,7 +39518,7 @@ export class MinibiaTargetBot {
 
       const noGoEscapeAction = this.chooseNoGoZoneEscape(snapshot);
       if (noGoEscapeAction) {
-        if (snapshot.pathfinderAutoWalking || snapshot.isMoving) {
+        if (this.isClientMovementActive(snapshot)) {
           await this.interruptAutoWalk().catch(() => null);
         }
         const noGoEscapeResult = await this.reposition(noGoEscapeAction);
@@ -39194,6 +39607,9 @@ export class MinibiaTargetBot {
 
           const escapeAction = this.chooseDistanceKeeper(snapshot);
           if (escapeAction) {
+            if (escapeAction.interruptMovement && this.isClientMovementActive(snapshot)) {
+              await this.interruptAutoWalk().catch(() => null);
+            }
             const escapeResult = await this.reposition(escapeAction);
             this.recordDecision({
               owner: "distanceKeeper",
@@ -39254,6 +39670,9 @@ export class MinibiaTargetBot {
 
         const escapeAction = this.chooseDistanceKeeper(snapshot);
         if (escapeAction) {
+          if (escapeAction.interruptMovement && this.isClientMovementActive(snapshot)) {
+            await this.interruptAutoWalk().catch(() => null);
+          }
           const escapeResult = await this.reposition(escapeAction);
           this.recordDecision({
             owner: "distanceKeeper",
@@ -39482,6 +39901,9 @@ export class MinibiaTargetBot {
 
       const distanceAction = this.chooseDistanceKeeper(snapshot);
       if (distanceAction) {
+        if (distanceAction.interruptMovement && this.isClientMovementActive(snapshot)) {
+          await this.interruptAutoWalk().catch(() => null);
+        }
         const distanceResult = await this.reposition(distanceAction);
         this.recordDecision({
           owner: "distanceKeeper",
@@ -39498,7 +39920,7 @@ export class MinibiaTargetBot {
         const spellAction = this.chooseSpellCaster(snapshot, vocationProfile);
         if (spellAction) {
           const spellResult = spellAction.type === "attack-spell"
-            ? await this.castWords(spellAction)
+            ? await this.castAttackSpell(spellAction)
             : await executePlannedAction(this, spellAction);
           this.recordDecision({
             owner: "spellCaster",

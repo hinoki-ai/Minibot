@@ -73,6 +73,9 @@ Rules:
    regression.
 9. Run `npm run check:structure` after changing repository layout, canonical
    documentation, package entry points, or portable storage boundaries.
+10. Never close, kill, or tear down a live Minibia session, browser tab, or
+    Minibot client while a character has an active kill/combat moment. Stop
+    combat or wait for the target to clear before closing.
 
 ## Task Entry Points
 

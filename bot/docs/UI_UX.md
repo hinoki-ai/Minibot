@@ -31,6 +31,10 @@ The header owns session-level controls:
 - `Desk Pinned`
 - `Presets`
 
+`Close Session` and `Close Client` must surface main-process refusal instead of
+tearing down a tab or client while the selected character is in an active
+kill/combat moment.
+
 Every discovered character gets one tab. Busy characters remain visible but must present as read-only.
 
 Each tab must expose its live state badge plus compact `HP`, `P`, and `WP` chips so operators can read health, nearby-player pressure, and route position without opening another surface.
@@ -61,7 +65,7 @@ Current summary cards and quick toggles cover:
 - banking
 - anti-idle
 - alarms
-- follow chain
+- Team Hunt
 - PK assist
 - auto light
 - auto convert
@@ -71,7 +75,7 @@ Not every card opens the shared module modal:
 
 - `Hunt` opens the dedicated Hunt Studio modal
 - `Field Safe` and waypoint overlay controls point into route-focused surfaces
-- healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, follow chain, and PK assist use the shared module modal
+- healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, Team Hunt, and PK Assist use the shared module modal
 
 ### Center Column
 
@@ -138,7 +142,7 @@ The shared module editor is reused for:
 - anti-idle
 - looting
 - banking
-- follow chain
+- Team Hunt
 
 The Hunt Studio modal is the focused editor for persisted hunt state. Route Builder may summarize that state and open this modal, but Hunt Studio is the only UI owner for target queues, target profiles, shared-spawn policy, fallback combat rules, once, dry-run, runtime target polling fields, registry controls, and presets.
 
@@ -156,7 +160,7 @@ Current ownership split:
 
 - route builder modal: route file, route-local vocation and sustain settings, waypoints, tile rules, route-persisted waypoint overlay preference, route danger actions, and route-context Hunt Studio entry points
 - Hunt Studio modal: target queue, shared-spawn policy, target profiles, creature registry, player and NPC watch, fallback combat motion, once, dry-run, and presets
-- shared module modal: healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, follow chain
+- shared module modal: healer, death heal, trainer, mana trainer, auto eat, haste, ring and amulet auto replace, rune maker, spell caster, auto light, auto convert, reconnect, alarms, anti-idle, looting, banking, Team Hunt
 - accounts modal: account registry records, login method, stored secret policy, preferred character, character list, reconnect policy, and notes
 
 ### Session Model
@@ -212,8 +216,8 @@ Current ownership split:
 - Haste messaging must show the selected haste spell and whether mana-fluid support is armed; the editor stays compact and uses the shared module modal.
 - Ring and amulet replacement messaging must summarize both slot targets plus their repeat margin and combat or movement gates.
 - Anti-idle messaging must make clear that it fires only after real inactivity crosses the configured delay and may use a non-visible keepalive path before any input-style fallback.
-- Follow chain messaging must make the chain order clear: each member follows the name directly above it, and the default role can still be overridden per member.
-- Follow chain summaries must roll up live chain HP, supplies, and route loot
+- Team Hunt messaging must make the chain order clear: each member follows the name directly above it, and the default role can still be overridden per member.
+- Team Hunt summaries must roll up live chain HP, supplies, and route loot
   from the same session state used by the tab list; compact and full views must
   not calculate different party numbers.
 

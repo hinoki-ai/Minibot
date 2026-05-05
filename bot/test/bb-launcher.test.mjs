@@ -30,6 +30,7 @@ test("bb launcher builds the local electron desktop command", () => {
       env: {
         DISPLAY: ":1",
         CHROME_DESKTOP: "minibot.desktop",
+        MINIBOT_DISABLE_VISIBLE_INPUT: "1",
       },
       stdio: "inherit",
     },
@@ -74,6 +75,7 @@ test("bb launcher spawns the desktop app with inherited stdio", () => {
       env: {
         DISPLAY: ":1",
         CHROME_DESKTOP: "minibot.desktop",
+        MINIBOT_DISABLE_VISIBLE_INPUT: "1",
       },
       stdio: "inherit",
     },

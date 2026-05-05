@@ -252,10 +252,10 @@
                     <button id="quick-toggle-team-hunt" type="button"
                       class="btn tile-btn quick-module-toggle"><span>Power</span><strong>Off</strong></button>
                   </div>
-                  <div class="quick-module-card">
+                  <div class="quick-module-card" hidden>
                     <button id="quick-open-party-follow" type="button" class="quick-module-open"
-                      data-open-modal="partyFollow">
-                      <span>Follow Chain</span>
+                      data-open-modal="team">
+                      <span>Team Roles</span>
                       <strong id="summary-party-follow">-</strong>
                       <small id="summary-party-follow-detail">-</small>
                     </button>
@@ -716,10 +716,10 @@
                 <button id="compact-toggle-team-hunt" type="button" class="btn compact-card-toggle"
                   data-proxy-click="#quick-toggle-team-hunt"><span>Power</span><strong>Off</strong></button>
               </div>
-              <div class="compact-split-card">
+              <div class="compact-split-card" hidden>
                 <button id="compact-open-party-follow" type="button" class="compact-card-open"
-                  data-open-modal="partyFollow">
-                  <span>Follow Chain</span>
+                  data-open-modal="team">
+                  <span>Team Roles</span>
                   <strong id="compact-party-follow-summary">-</strong>
                 </button>
                 <button id="compact-toggle-party-follow" type="button" class="btn compact-card-toggle"
@@ -913,7 +913,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
         <button id="save-targeting" class="btn primary modal-save-button" type="button">Save Hunt</button>
       </div>
     </section>
@@ -1366,7 +1366,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
         <button id="save-autowalk" class="btn primary modal-save-button" type="button">Save Route</button>
       </div>
     </section>
@@ -1386,7 +1386,7 @@
         <div id="route-library-quick-meta" class="route-library-quick-meta">No saved cavebot files yet.</div>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
         <button id="load-route-quick" class="btn primary modal-save-button" type="button">Load</button>
       </div>
     </section>
@@ -1466,7 +1466,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
         <button id="delete-account" class="btn danger" type="button">Delete</button>
         <button id="new-account" class="btn" type="button">New Draft</button>
         <button id="save-account" class="btn primary modal-save-button" type="button">Save Account</button>
@@ -1558,7 +1558,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
         <button class="btn primary modal-save-button" type="button" data-save-modules>Save</button>
       </div>
     </section>
@@ -1576,7 +1576,7 @@
         <pre id="log-output" class="log-output"></pre>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
       </div>
     </section>
 
@@ -1605,7 +1605,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn modal-close-button" type="button" data-close-modal>Close</button>
+        <button class="btn danger modal-close-button" type="button" data-close-modal>Close</button>
       </div>
     </section>
 

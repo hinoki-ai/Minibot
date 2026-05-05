@@ -996,17 +996,20 @@ const MODULE_RULE_SCHEMAS = {
       label: "",
       words: "exori frigo",
       hotkey: "",
+      targetNames: "",
       minManaPercent: 20,
       maxTargetDistance: 4,
       minTargetCount: 1,
       cooldownMs: 900,
       pattern: "any",
       requireTarget: true,
+      requireNoPlayers: false,
       requireStationary: false,
     },
     fields: [
       { key: "words", label: "Spell", type: "text" },
       { key: "hotkey", label: "Hotkey", type: "text", placeholder: "F10" },
+      { key: "targetNames", label: "Targets", type: "text", placeholder: "Rotworm" },
       { key: "minManaPercent", label: "MP min", type: "number" },
       { key: "maxTargetDistance", label: "Range max", type: "number" },
       { key: "minTargetCount", label: "Target count", type: "number" },
@@ -1018,6 +1021,7 @@ const MODULE_RULE_SCHEMAS = {
         options: [
           { value: "any", label: "Any" },
           { value: "adjacent", label: "Adjacent" },
+          { value: "front", label: "Front tile" },
           { value: "aligned", label: "Aligned" },
           { value: "diagonal", label: "Diagonal" },
           { value: "pack", label: "Pack" },
@@ -1026,6 +1030,7 @@ const MODULE_RULE_SCHEMAS = {
     ],
     flags: [
       { key: "requireTarget", label: "Require target" },
+      { key: "requireNoPlayers", label: "Only with no players" },
       { key: "requireStationary", label: "Only while idle" },
     ],
   },
@@ -1617,7 +1622,7 @@ const MODULE_RULE_SCHEMAS = {
         key: "partyFollowDistance",
         label: "Spacing sqm",
         type: "number",
-        help: "Each follower keeps this many SQM behind the member directly above it in the follow chain.",
+        help: "Each follower keeps this many SQM behind the member directly above it in Team Hunt.",
       },
       {
         key: "partyFollowCombatMode",
@@ -1705,7 +1710,6 @@ const COMPACT_MODULE_MODAL_KEYS = new Set([
   "reconnect",
   "trainer",
   "haste",
-  "team",
   "ringAutoReplace",
   "amuletAutoReplace",
   "banking",
@@ -1805,8 +1809,9 @@ const MODULE_RULE_UI = {
       { title: "Priority", fields: ["label", "hotkey"] },
       { title: "Cast", fields: ["words", "cooldownMs"] },
       { title: "Pattern Gate", fields: ["pattern", "minManaPercent"] },
-      { title: "Target Gate", fields: ["maxTargetDistance", "minTargetCount"] },
-      { title: "Safety Gates", fields: ["requireTarget", "requireStationary"] },
+      { title: "Target Gate", fields: ["targetNames", "maxTargetDistance"] },
+      { title: "Count Gate", fields: ["minTargetCount", "requireTarget"] },
+      { title: "Safety Gates", fields: ["requireNoPlayers", "requireStationary"] },
     ],
   },
   distanceKeeper: {
@@ -1877,7 +1882,7 @@ const MODULE_RULE_UI = {
     modalTitle: "Trainer",
     modalMeta: "training guardrails",
     cardTitle: "Trainer",
-    note: "Trainer mode is separate from Follow Chain and the standalone Mana Trainer. It keeps training anchored with auto-party, reconnect, anti-idle, food cadence, its own mana spell, heals, escape, and follow-chain recovery.",
+    note: "Trainer mode is separate from Team Hunt and the standalone Mana Trainer. It keeps training anchored with auto-party, reconnect, anti-idle, food cadence, its own mana spell, heals, escape, and team recovery.",
     settingsOnly: false,
   },
   reconnect: {
@@ -1955,16 +1960,16 @@ const MODULE_RULE_UI = {
   team: {
     ...HEADLESS_SETTINGS_UI,
     modalTitle: "Team Hunt",
-    modalMeta: "same route",
+    modalMeta: "route and roles",
     cardTitle: "Team Hunt",
-    note: "Characters use the cavebot route and hold waypoint progress for same-route synchronization.",
+    note: "Characters use one cavebot route, ordered roles, and shared waypoint synchronization.",
     settingsOnly: false,
   },
   partyFollow: {
     ...HEADLESS_SETTINGS_UI,
-    modalTitle: "Follow Chain",
+    modalTitle: "Team Roles",
     modalMeta: "leader and followers",
-    cardTitle: "Follow Chain",
+    cardTitle: "Team Roles",
     note: "Build a chain from live tabs, seen players, or manual names. Slot 1 leads; each next slot follows the member above with its own role and fight stance.",
     settingsOnly: false,
   },
@@ -1988,6 +1993,7 @@ const MODULE_RULE_FIELD_LABELS = {
   deathHealCooldownMs: "Repeat ms",
   words: "Spell words",
   hotkey: "Hotkey",
+  targetNames: "Targets",
   minHealthPercent: "HP min %",
   maxHealthPercent: "HP max %",
   minMana: "Mana min",
@@ -2001,6 +2007,7 @@ const MODULE_RULE_FIELD_LABELS = {
   pattern: "Pattern",
   behavior: "Behavior",
   requireTarget: "Require target",
+  requireNoPlayers: "Only with no players",
   dodgeBeams: "Dodge beams",
   dodgeWaves: "Dodge aligned waves",
   requireNoLight: "Only when dark",
@@ -2086,7 +2093,7 @@ const MODULE_RULE_FIELD_LABELS = {
   trainerEscapeDistance: "Escape range",
   trainerEscapeCooldownMs: "Escape cooldown ms",
   teamEnabled: "Team Hunt",
-  partyFollowMembers: "Follow chain",
+  partyFollowMembers: "Team roles",
   partyFollowManualPlayers: "Manual players",
   partyFollowDistance: "Spacing sqm",
   partyFollowCombatMode: "Default stance",
@@ -2483,6 +2490,10 @@ function focusField(id) {
 
 function getModalPanelName(name) {
   return isModuleModalName(name) ? "module" : name;
+}
+
+function getCanonicalModalName(name) {
+  return name === "partyFollow" ? "team" : name;
 }
 
 function isElementInsideModal(name, element = document.activeElement) {
@@ -5186,7 +5197,7 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
         <section class="follow-train-column follow-train-chain-column">
           <div class="section-head target-sources-head">
             <div>
-              <strong>Follow Chain</strong>
+              <strong>Team Roles</strong>
               <div class="section-meta">Slot 1 leads. Every follower gets a role lane plus its own fight stance.</div>
             </div>
             <div class="inline-actions">
@@ -5259,6 +5270,19 @@ function renderFollowTrainFields(modulesState = ensureModulesDraft()) {
           </div>
         </section>
       </div>
+    </div>
+  `;
+}
+
+function renderTeamHuntFields(modulesState = ensureModulesDraft()) {
+  ensureFollowTrainAutoChainDraft(modulesState);
+  const teamEnabledField = getModuleOptionFieldSpec("team", "teamEnabled");
+  return `
+    <div class="team-hunt-shell">
+      <section class="team-hunt-control-strip">
+        ${teamEnabledField ? renderModuleOptionField("team", teamEnabledField, modulesState?.teamEnabled) : ""}
+      </section>
+      ${renderFollowTrainFields(modulesState)}
     </div>
   `;
 }
@@ -5444,7 +5468,7 @@ function renderTrainerFields(modulesState = ensureModulesDraft()) {
               <div class="section-head target-sources-head">
                 <div>
                   <strong>Training Partner</strong>
-                  <div class="section-meta">Pick one player for skill training. Trainer stays on that target, auto-parties before retargeting when enabled, and walks back into range without using Follow Chain.</div>
+                  <div class="section-meta">Pick one player for skill training. Trainer stays on that target, auto-parties before retargeting when enabled, and walks back into range without using Team Hunt.</div>
                 </div>
               </div>
               <div class="follow-train-source-stack">
@@ -6702,10 +6726,17 @@ function formatRuleSpell(words) {
   return spell || "No spell set";
 }
 
+function formatSpellRuleTargets(value) {
+  const targets = normalizeTextListSummary(value);
+  return targets.length ? targets.join(", ") : "Any target";
+}
+
 function formatSpellPattern(pattern = "any") {
   switch (String(pattern || "any").trim().toLowerCase()) {
     case "adjacent":
       return "Adjacent";
+    case "front":
+      return "Front Tile";
     case "aligned":
       return "Aligned";
     case "diagonal":
@@ -6879,7 +6910,7 @@ function getResolvedTrainerPartnerName(modulesState = ensureModulesDraft(), sour
     return configuredName;
   }
 
-  if (!modulesState?.trainerEnabled || modulesState?.partyFollowEnabled) {
+  if (!modulesState?.trainerEnabled || isTeamFollowConfigured(modulesState)) {
     return "";
   }
 
@@ -7838,7 +7869,9 @@ function formatModuleRuleLine(moduleKey, rule = {}) {
     case "spellCaster": {
       const gates = formatRuleParts([
         `${formatSpellPattern(rule.pattern)} pattern`,
+        formatSpellRuleTargets(rule.targetNames),
         formatSafetyGate(rule, "requireTarget", "target required", "target optional"),
+        formatSafetyGate(rule, "requireNoPlayers", "no players", "players allowed"),
         formatSafetyGate(rule, "requireStationary", "idle only", "movement allowed"),
       ]);
       return `${formatRuleSpell(rule.words)} within ${Math.round(Number(rule.maxTargetDistance) || 0)} SQM; MP ${formatPercent(rule.minManaPercent)}+; ${Math.round(Number(rule.minTargetCount) || 1)}+ target; ${gates}; cooldown ${formatMs(rule.cooldownMs)}`;
@@ -7958,6 +7991,7 @@ function getModuleRuleSummaryItems(moduleKey, rule = {}, context = {}) {
     case "spellCaster":
       return [
         { label: "Pattern", value: formatSpellPattern(rule.pattern), tone: "trigger" },
+        { label: "Targets", value: formatSpellRuleTargets(rule.targetNames), tone: "trigger" },
         { label: "Range max", value: `${Math.round(Number(rule.maxTargetDistance) || 0)} SQM`, tone: "trigger" },
         { label: "Target count", value: `${Math.round(Number(rule.minTargetCount) || 1)}+`, tone: "gate" },
         { label: "MP gate", value: `${formatPercent(rule.minManaPercent)}+`, tone: "gate" },
@@ -7966,6 +8000,11 @@ function getModuleRuleSummaryItems(moduleKey, rule = {}, context = {}) {
           label: "Target gate",
           value: formatSafetyGate(rule, "requireTarget", "Target required", "Target optional"),
           tone: rule.requireTarget ? "safe" : "open",
+        },
+        {
+          label: "Players",
+          value: formatSafetyGate(rule, "requireNoPlayers", "No players", "Players allowed"),
+          tone: rule.requireNoPlayers ? "safe" : "open",
         },
         {
           label: "Movement",
@@ -8318,12 +8357,12 @@ function formatModuleCurrentLine(moduleKey, rules = [], modulesState = null) {
         return "No active banking rules";
       case "team":
         return modulesState?.teamEnabled
-          ? "Same cavebot route / waypoint sync holds active"
+          ? `Route sync / ${formatFollowTrainDetail(modulesState.partyFollowMembers, modulesState.partyFollowDistance)}`
           : "Team Hunt disabled";
       case "partyFollow":
-        return modulesState?.partyFollowEnabled
+        return isTeamFollowConfigured(modulesState)
           ? formatFollowTrainDetail(modulesState.partyFollowMembers, modulesState.partyFollowDistance)
-          : "Follow chain disabled";
+          : "Team roles disabled";
       case "pkAssist":
         return formatPkAssistDetail(modulesState, state);
       default:
@@ -10263,12 +10302,22 @@ function hasSavedTrainerSetup(options = state?.options || {}) {
   return Boolean(options?.trainerConfigured || String(options?.trainerPartnerName || "").trim());
 }
 
+function isTeamFollowConfigured(options = state?.options || {}) {
+  return Boolean(
+    options?.partyFollowEnabled
+    || (
+      options?.teamEnabled
+      && normalizeTextListSummary(options?.partyFollowMembers).length >= 2
+    ),
+  );
+}
+
 function getFollowTrainRuntimeContext(sourceState = state, options = sourceState?.options || state?.options || {}) {
   const session = getBoundInstance(sourceState);
   const liveStatus = session?.followTrainStatus || null;
   let followTrainStatus = liveStatus;
 
-  if (!Number.isInteger(followTrainStatus?.selfIndex) && options?.partyFollowEnabled) {
+  if (!Number.isInteger(followTrainStatus?.selfIndex) && isTeamFollowConfigured(options)) {
     const members = normalizeTextListSummary(options?.partyFollowMembers);
     const currentNameKeys = getCurrentSessionNameKeys(sourceState);
     const selfIndex = members.findIndex((name) => currentNameKeys.has(String(name || "").trim().toLowerCase()));
@@ -10387,6 +10436,9 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
   switch (moduleKey) {
     case "team": {
       const enabled = Boolean(options?.teamEnabled);
+      const partyFollowMembers = normalizeTextListSummary(options?.partyFollowMembers);
+      const followContext = getFollowTrainRuntimeContext(sourceState, options);
+      const sharedSummary = getPartySharedSummary(sourceState, options);
       return {
         ...baseState,
         rawEnabled: enabled,
@@ -10395,8 +10447,8 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
         label: enabled ? "On" : "Off",
         shortLabel: enabled ? "On" : "Off",
         detail: enabled
-          ? "Same-route waypoint synchronization armed"
-          : "Team Hunt route sync is off",
+          ? `Route sync / ${formatFollowTrainDetail(partyFollowMembers, options?.partyFollowDistance)}${sharedSummary.inline ? ` / ${sharedSummary.inline}` : ""}${followContext.passiveFollower ? " / Passive role suppresses combat" : ""}`
+          : "Team Hunt is off",
       };
     }
     case "partyFollow": {
@@ -10408,7 +10460,7 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
       };
     }
     case "trainer": {
-      if (options?.partyFollowEnabled && (rawEnabled || hasSavedTrainerSetup(options))) {
+      if (isTeamFollowConfigured(options) && (rawEnabled || hasSavedTrainerSetup(options))) {
         const partnerName = getResolvedTrainerPartnerName(options, sourceState);
         return {
           ...baseState,
@@ -10417,8 +10469,8 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
           label: "Follow",
           shortLabel: "Follow",
           detail: partnerName
-            ? `Follow Chain owns movement. Trainer partner ${partnerName} stays saved.`
-            : "Follow Chain owns movement. Trainer settings stay saved.",
+            ? `Team Hunt owns movement. Trainer partner ${partnerName} stays saved.`
+            : "Team Hunt owns movement. Trainer settings stay saved.",
         };
       }
       return {
@@ -10438,7 +10490,7 @@ function getModuleEffectiveState(moduleKey, options = state?.options || {}, sour
           state: "blocked",
           label: "Follow",
           shortLabel: "Follow",
-          detail: "Follow Chain owns movement for this follower",
+          detail: "Team Hunt owns movement for this follower",
         };
       }
       if (rawEnabled && !followContext.routeResetActive && cavebotPaused) {
@@ -10678,7 +10730,7 @@ function getTargetingEffectiveState(options = state?.options || {}, sourceState 
 function getPartyFollowEffectiveState(options = state?.options || {}, sourceState = state) {
   const followContext = getFollowTrainRuntimeContext(sourceState, options);
   const sharedSummary = getPartySharedSummary(sourceState, options);
-  const enabled = Boolean(options?.partyFollowEnabled);
+  const enabled = isTeamFollowConfigured(options);
   const shortLabel = !enabled
     ? "Off"
     : followContext.passiveFollower
@@ -10698,7 +10750,7 @@ function getPartyFollowEffectiveState(options = state?.options || {}, sourceStat
     shortLabel,
     detail: enabled
       ? `${formatFollowTrainDetail(options?.partyFollowMembers, options?.partyFollowDistance)}${sharedSummary.inline ? ` / ${sharedSummary.inline}` : ""}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
-      : "No follow chain active",
+      : "No team roles active",
   };
 }
 
@@ -11661,6 +11713,9 @@ function renderModuleOptionFields(moduleKey, modulesState = ensureModulesDraft()
   if (moduleKey === "trainer") {
     return renderTrainerFields(modulesState);
   }
+  if (moduleKey === "team") {
+    return renderTeamHuntFields(modulesState);
+  }
   if (moduleKey === "partyFollow") {
     return renderFollowTrainFields(modulesState);
   }
@@ -11793,8 +11848,8 @@ function getModulesRenderKey(modulesState) {
   const enabledValue = moduleKey === "ammo"
     ? modulesState?.ammoEnabled !== false
     : Boolean(modulesState?.[schema.enabledKey]);
-  const customValues = moduleKey === "partyFollow"
-    ? `:${normalizeTextListSummary(modulesState?.partyFollowMembers).join(",")}:${String(modulesState?.partyFollowCombatMode || "")}:${JSON.stringify(pruneFollowTrainMemberRoles(modulesState?.partyFollowMemberRoles, modulesState?.partyFollowMembers, modulesState?.partyFollowCombatMode))}:${JSON.stringify(pruneFollowTrainMemberChaseModes(modulesState?.partyFollowMemberChaseModes, modulesState?.partyFollowMembers))}:${getFollowTrainSourceSignature()}:${getFollowTrainRuntimeSignature()}`
+  const customValues = moduleKey === "partyFollow" || moduleKey === "team"
+    ? `:${Boolean(modulesState?.teamEnabled) ? "1" : "0"}:${Boolean(modulesState?.partyFollowEnabled) ? "1" : "0"}:${normalizeTextListSummary(modulesState?.partyFollowMembers).join(",")}:${String(modulesState?.partyFollowCombatMode || "")}:${JSON.stringify(pruneFollowTrainMemberRoles(modulesState?.partyFollowMemberRoles, modulesState?.partyFollowMembers, modulesState?.partyFollowCombatMode))}:${JSON.stringify(pruneFollowTrainMemberChaseModes(modulesState?.partyFollowMemberChaseModes, modulesState?.partyFollowMembers))}:${getFollowTrainSourceSignature()}:${getFollowTrainRuntimeSignature()}`
     : moduleKey === "trainer"
       ? `:${getResolvedTrainerPartnerName(modulesState)}:${String(state?.snapshot?.playerName || "")}:${getFollowTrainSourceSignature()}:${getTrainerDuoPresetSignature()}`
       : moduleKey === "healer"
@@ -12294,8 +12349,9 @@ function getDashboardRenderKey(
   const reconnectState = getReconnectEffectiveState(options, state);
   const antiIdleState = getAntiIdleEffectiveState(options, state);
   const followContext = getFollowTrainRuntimeContext(state, options);
+  const teamFollowConfigured = isTeamFollowConfigured(options);
   const partyFollowState = {
-    label: !options.partyFollowEnabled
+    label: !teamFollowConfigured
       ? "Off"
       : followContext.passiveFollower
         ? "Passive"
@@ -12304,13 +12360,13 @@ function getDashboardRenderKey(
           : Number.isInteger(followContext.followTrainStatus?.selfIndex) && followContext.followTrainStatus.selfIndex === 0
             ? "Pilot"
             : "On",
-    detail: !options.partyFollowEnabled
+    detail: !teamFollowConfigured
       ? ""
       : followContext.passiveFollower
         ? "Passive follow role suppresses combat."
         : followContext.follower
           ? "Following the live chain."
-          : "Follow Chain armed.",
+          : "Team roles armed.",
   };
 
   return [
@@ -14639,7 +14695,7 @@ function getModuleSummaryText(options = state?.options || {}) {
   if (options.reconnectEnabled || isTrainerReconnectEnabled(options)) enabled.push("reconnect");
   if (options.antiIdleEnabled) enabled.push("anti-idle");
   if (options.teamEnabled) enabled.push("team-hunt");
-  if (options.partyFollowEnabled) enabled.push("follow-chain");
+  if (isTeamFollowConfigured(options)) enabled.push("team-roles");
   if (options.chaseMode && options.chaseMode !== "auto") enabled.push(`chase:${options.chaseMode}`);
   if (options.rookillerEnabled) enabled.push("rook8");
   if (options.once) enabled.push("once");
@@ -15729,14 +15785,15 @@ function focusRuneMakerPrimaryControl(panel) {
 }
 
 function openModal(name) {
-  const panelName = getModalPanelName(name);
+  const modalName = getCanonicalModalName(name);
+  const panelName = getModalPanelName(modalName);
   const targetPanel = modalPanels.find((panel) => panel.dataset.modal === panelName);
   if (!targetPanel) {
     flashStatus(`Unknown panel: ${name}`, "error", 3200);
     return null;
   }
 
-  if (activeModalName === "targeting" && name !== "targeting") {
+  if (activeModalName === "targeting" && modalName !== "targeting") {
     targetingDirty = false;
     resetTargetQueueDraft();
     resetTargetProfilesDraft();
@@ -15744,10 +15801,10 @@ function openModal(name) {
     resetTargetingCombatDraft();
   }
 
-  if (isModuleModalName(name)) {
-    activeModuleKey = name;
+  if (isModuleModalName(modalName)) {
+    activeModuleKey = modalName;
     ensureModulesDraft(true);
-    if (name === "partyFollow") {
+    if (modalName === "team" || modalName === "partyFollow") {
       ensureFollowTrainAutoChainDraft(modulesDraft);
     }
   }
@@ -15755,10 +15812,10 @@ function openModal(name) {
   closeWaypointAddPanel();
 
   lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  activeModalName = name;
+  activeModalName = modalName;
   syncModalState(true);
   syncModalPanels(panelName);
-  if (name === "targeting") {
+  if (modalName === "targeting") {
     targetingDirty = false;
     resetTargetQueueDraft();
     resetTargetProfilesDraft();
@@ -15768,16 +15825,16 @@ function openModal(name) {
     syncTargetWatchDockPosition({ clamp: true });
   }
 
-  if (isModuleModalName(name)) {
+  if (isModuleModalName(modalName)) {
     renderModules({ force: true });
   }
 
-  if (name === "logs") {
+  if (modalName === "logs") {
     renderDecisionTrace();
     renderRuntimeMetrics();
   }
 
-  if (name === "runeMaker" && focusRuneMakerPrimaryControl(targetPanel)) {
+  if (modalName === "runeMaker" && focusRuneMakerPrimaryControl(targetPanel)) {
     return targetPanel;
   }
 
@@ -15969,7 +16026,7 @@ function renderSummarySheets() {
   );
   setTextContent(summaryFields.spellWords, formatSpellRuleSummary(
     options.spellCasterRules,
-    (rule) => `${formatRuleSpell(rule.words)} / ${formatSpellPattern(rule.pattern)} / ${Math.round(Number(rule.maxTargetDistance) || 0)} SQM`,
+    (rule) => `${formatRuleSpell(rule.words)} / ${formatSpellRuleTargets(rule.targetNames)} / ${formatSpellPattern(rule.pattern)} / ${Math.round(Number(rule.maxTargetDistance) || 0)} SQM`,
   ));
   setTextContent(
     summaryFields.light,
@@ -16072,13 +16129,17 @@ function renderSummarySheets() {
   setTextContent(summaryFields.alarmsDetail, alarmSummary.detail);
   setTextContent(
     summaryFields.teamHunt,
-    "Route sync",
+    options.teamEnabled
+      ? formatFollowTrainHeadline(partyFollowMembers)
+      : "Team Hunt",
   );
   setTextContent(
     summaryFields.teamHuntDetail,
     options.teamEnabled
-      ? "Same route / waypoint sync holds active"
-      : "No Team Hunt route sync",
+      ? `Route sync / ${formatFollowTrainDetail(partyFollowMembers, options.partyFollowDistance)}${sharedPartySummary.inline ? ` / ${sharedPartySummary.inline}` : ""}${followTrainStatus?.active || followTrainStatus?.pilot
+        ? ` / ${formatFollowTrainStateLabel(followTrainStatus)}${followTrainStatus?.leaderName ? ` -> ${followTrainStatus.leaderName}` : ""}`
+        : ""}${followContext.passiveFollower ? " / Passive role suppresses combat" : ""}`
+      : "No Team Hunt coordination",
   );
   setTextContent(
     summaryFields.partyFollow,
@@ -16088,11 +16149,11 @@ function renderSummarySheets() {
   );
   setTextContent(
     summaryFields.partyFollowDetail,
-    options.partyFollowEnabled
+    isTeamFollowConfigured(options)
       ? `${formatFollowTrainDetail(partyFollowMembers, options.partyFollowDistance)}${sharedPartySummary.inline ? ` / ${sharedPartySummary.inline}` : ""}${followTrainStatus?.active || followTrainStatus?.pilot
         ? ` / ${formatFollowTrainStateLabel(followTrainStatus)}${followTrainStatus?.leaderName ? ` -> ${followTrainStatus.leaderName}` : ""}`
         : ""}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
-      : "No follow chain active",
+      : "No team roles active",
   );
   setTextContent(
     summaryFields.pkAssist,
@@ -18658,6 +18719,35 @@ function followTrainPayload() {
   };
 }
 
+function teamHuntPayload() {
+  const draft = syncModulesDraftFromDom();
+  ensureFollowTrainAutoChainDraft(draft);
+  const partyFollowMembers = getAutomaticFollowTrainMembers(draft);
+  const teamEnabled = Boolean(draft.teamEnabled);
+
+  return {
+    teamEnabled,
+    partyFollowEnabled: teamEnabled,
+    partyFollowMembers: partyFollowMembers.join("\n"),
+    partyFollowManualPlayers: normalizeTextListSummary(draft.partyFollowManualPlayers).join("\n"),
+    partyFollowMemberRoles: cloneValue(
+      pruneFollowTrainMemberRoles(
+        draft.partyFollowMemberRoles,
+        partyFollowMembers,
+        draft.partyFollowCombatMode,
+      ),
+    ),
+    partyFollowMemberChaseModes: cloneValue(
+      pruneFollowTrainMemberChaseModes(
+        draft.partyFollowMemberChaseModes,
+        partyFollowMembers,
+      ),
+    ),
+    partyFollowDistance: draft.partyFollowDistance,
+    partyFollowCombatMode: draft.partyFollowCombatMode,
+  };
+}
+
 function getModulePrimaryRuleField(moduleKey) {
   switch (moduleKey) {
     case "potionHealer":
@@ -18861,9 +18951,17 @@ function buildPartyFollowTogglePayload(enabled) {
 }
 
 function buildTeamHuntTogglePayload(enabled) {
-  return {
+  const payload = {
     teamEnabled: enabled,
+    partyFollowEnabled: enabled,
   };
+  if (enabled) {
+    const partyFollowMembers = getAutomaticFollowTrainMembers(state?.options || {});
+    if (partyFollowMembers.length >= 2) {
+      payload.partyFollowMembers = partyFollowMembers.join("\n");
+    }
+  }
+  return payload;
 }
 
 function moveFollowTrainMember(index, delta) {
@@ -20486,7 +20584,13 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
     label: "Team Hunt",
     buildPayload: (nextEnabled) => buildTeamHuntTogglePayload(nextEnabled),
   },
-  { button: quickButtons.partyFollow, optionKey: "partyFollowEnabled", label: "Follow Chain" },
+  {
+    button: quickButtons.partyFollow,
+    optionKey: "teamEnabled",
+    label: "Team Hunt",
+    getCurrentEnabled: () => Boolean(state?.options?.teamEnabled),
+    buildPayload: (nextEnabled) => buildTeamHuntTogglePayload(nextEnabled),
+  },
   { button: quickButtons.pkAssist, optionKey: "pkAssistEnabled", label: "PK Assist" },
 ].forEach(({ button, optionKey, label, getCurrentEnabled, getSuccessEnabled, buildPayload }) => {
   button?.addEventListener("click", async () => {
@@ -20549,9 +20653,11 @@ actionButtons.saveModules.forEach((button) => {
   button.addEventListener("click", async () => {
     if (!isStateReady() || !isDeskBound()) return;
     const savedModuleName = activeModalName;
-    const payload = savedModuleName === "partyFollow"
-      ? followTrainPayload()
-      : modulesPayload();
+    const payload = savedModuleName === "team"
+      ? teamHuntPayload()
+      : savedModuleName === "partyFollow"
+        ? followTrainPayload()
+        : modulesPayload();
     const nextState = await updateOptions(payload, {
       buttons: button,
       successMessage: "Module settings saved",

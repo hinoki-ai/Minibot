@@ -101,6 +101,10 @@ import { resolveMinibiaItemInfo, resolveMinibiaItemName } from "../lib/minibia-i
 import { loadMinibiaData } from "../lib/minibia-data.mjs";
 import { resolveRuntimeLayout } from "../lib/runtime-layout.mjs";
 import {
+  buildActiveKillMomentBlockMessage,
+  describeActiveKillMoment,
+} from "../lib/session-safety.mjs";
+import {
   buildTrainerBootstrapStepExpression,
   buildTrainerRoster,
   findTrainerRosterAccount,
@@ -160,6 +164,8 @@ if (RUNTIME_LAYOUT.portable) {
   app.setPath("userData", RUNTIME_LAYOUT.electronUserDataDir);
 }
 
+process.env.MINIBOT_DISABLE_VISIBLE_INPUT ||= "1";
+
 if (process.platform === "linux") {
   process.env.CHROME_DESKTOP ||= LINUX_DESKTOP_ENTRY_NAME;
   app.commandLine.appendSwitch("class", APP_NAME);
@@ -215,6 +221,8 @@ let sessionStateSaveChain = Promise.resolve();
 let trainerRosterAutoStartTriggered = false;
 let externalControlServer = null;
 let externalControlCommandChain = Promise.resolve();
+let allowMainWindowClose = false;
+let mainWindowCloseRequest = null;
 const desktopRuntimeTiming = {};
 
 const refreshingSessions = new Set();
@@ -2774,7 +2782,58 @@ async function closeSessionPage(session) {
   }
 }
 
-async function closeLiveSession(session) {
+async function refreshCloseSafetySnapshot(session) {
+  if (!canSyncSession(session)) {
+    return session?.bot?.lastSnapshot || null;
+  }
+
+  try {
+    return await refreshSession(session, {
+      allowRecovery: false,
+      emitSnapshot: false,
+      background: true,
+    });
+  } catch (error) {
+    pushSessionLog(session, `Close safety refresh failed: ${error.message}`);
+    return session?.bot?.lastSnapshot || null;
+  }
+}
+
+async function assertNoActiveKillMoment(targetSessions = [], { action = "close" } = {}) {
+  const candidates = targetSessions.filter(Boolean);
+
+  for (const session of candidates) {
+    await refreshCloseSafetySnapshot(session);
+  }
+
+  for (const session of candidates) {
+    const safety = describeActiveKillMoment(session);
+    if (!safety.active) {
+      continue;
+    }
+
+    const message = buildActiveKillMomentBlockMessage(session, {
+      action,
+      reason: safety.reason,
+    });
+    pushSessionLog(session, message);
+    sendEvent("error", {
+      sessionId: session.id,
+      error: { message },
+    });
+    const error = new Error(message);
+    error.code = "active-kill-moment";
+    throw error;
+  }
+}
+
+async function closeLiveSession(session, {
+  safetyCheck = true,
+} = {}) {
+  if (safetyCheck) {
+    await assertNoActiveKillMoment([session], { action: "close session" });
+  }
+
   session.bot.stop();
   await session.bot.detach().catch(() => { });
   await closeSessionPage(session);
@@ -2793,6 +2852,41 @@ async function closeLiveSession(session) {
   queueSessionStateSave();
 
   return serializeState();
+}
+
+async function closeMainWindow({
+  safetyCheck = true,
+} = {}) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return false;
+  }
+
+  if (safetyCheck && mainWindowCloseRequest) {
+    return mainWindowCloseRequest;
+  }
+
+  if (!safetyCheck) {
+    allowMainWindowClose = true;
+    try {
+      mainWindow.close();
+    } finally {
+      allowMainWindowClose = false;
+    }
+    return true;
+  }
+
+  mainWindowCloseRequest = (async () => {
+    await assertNoActiveKillMoment([...sessions.values()], { action: "close client" });
+    return closeMainWindow({ safetyCheck: false });
+  })().finally(() => {
+    mainWindowCloseRequest = null;
+  });
+
+  return mainWindowCloseRequest;
+}
+
+async function closeMainWindowSafely() {
+  return closeMainWindow({ safetyCheck: true });
 }
 
 async function syncInstanceCatalog({ ensureClaims = true } = {}) {
@@ -4469,6 +4563,7 @@ const EXTERNAL_CONTROL_METHODS = Object.freeze([
   "state",
   "refresh",
   "sessions",
+  "closeWindow",
   "newSession",
   "startBot",
   "stopBot",
@@ -4978,6 +5073,7 @@ function createWindow() {
     activeAlwaysOnTop = mainWindow && !mainWindow.isDestroyed()
       ? mainWindow.isAlwaysOnTop()
       : activeAlwaysOnTop;
+
     queueSessionStateSave();
   });
 
@@ -5231,18 +5327,21 @@ handleTrusted("bb:delete-trainer-duo", async (_event, duo = {}) => {
   return serializeState();
 });
 
-handleTrusted("bb:close-window", async () => {
+handleTrusted("bb:close-window", async (event) => {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return false;
   }
 
-  mainWindow.close();
-  return true;
+  return event?.externalControl === true
+    ? closeMainWindowSafely()
+    : closeMainWindow({ safetyCheck: false });
 });
 
-handleTrusted("bb:kill-session", async (_event, sessionId = null) => {
+handleTrusted("bb:kill-session", async (event, sessionId = null) => {
   const session = resolveSessionReference(sessionId) || requireActiveSession();
-  return closeLiveSession(session);
+  return closeLiveSession(session, {
+    safetyCheck: event?.externalControl === true,
+  });
 });
 
 handleTrusted("bb:select-session", async (_event, sessionId) => {

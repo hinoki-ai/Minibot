@@ -32,6 +32,7 @@ const lanes = {
     "test/repo-structure.test.mjs",
     "test/route-validation.test.mjs",
     "test/runtime-modules.test.mjs",
+    "test/session-safety.test.mjs",
   ],
   unit: [
     "test/ammo.test.mjs",
@@ -54,6 +55,7 @@ const lanes = {
     "test/record-same-floor-route.test.mjs",
     "test/refill.test.mjs",
     "test/shopper.test.mjs",
+    "test/session-safety.test.mjs",
     "test/sustain.test.mjs",
     "test/vocation-pack.test.mjs",
   ],

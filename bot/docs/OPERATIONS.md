@@ -133,6 +133,7 @@ Useful environment flags:
 - `MINIBOT_CONTROL_SOCKET_PATH=/path/to/minibot.sock`: use a Unix socket path instead of TCP
 - `MINIBOT_CONTROL_TOKEN=...`: require auth or a per-request token
 - `MINIBOT_CONTROL_ALLOW_RAW_CDP=1`: enable raw `cdp.send` and `cdp.evaluate`
+- `MINIBOT_DISABLE_VISIBLE_INPUT=1`: hard-disable visible mouse/keyboard input dispatch even when a session option enables it
 
 Raw CDP is off by default. Built-in bot actions also keep visible input control
 off by default, so local agents should prefer `action`, `actionBlock`, and
@@ -165,6 +166,12 @@ or include `token` on each request.
 ## Desktop Workflow
 
 The desk header exposes the session strip plus `New Session`, `Close Session`, `Scan All Tabs`, `Close Client`, `New Route`, `Saved Files`, `Accounts`, `Route Panel`, `Hunt Studio`, `Compact View`, `Desk Pinned`, and `Presets`.
+
+`Close Session` and `Close Client` are guarded by combat state. The main
+process refuses the close when the affected character has a current target, the
+route is in `combat-hold`, combat candidates are active, or a visible creature
+is targeting the character. Local agent socket methods use the same guard.
+Stop combat or wait for the target to clear before closing.
 
 ### 1. Sync And Claim
 
@@ -317,7 +324,7 @@ Use the left-rail cards and the shared module modal to configure:
 - alarms
 - looting
 - banking
-- follow chain
+- Team Hunt
 - anti-idle
 
 Important behavior notes:
@@ -330,8 +337,8 @@ Important behavior notes:
   triggering the slot generically
 - rules that carry a configured hotkey use that binding through the live
   client before falling back to their normal cast, hotbar, or inventory path
-- trainer keeps emergency heal, escape, mana-trainer, anti-idle, and follow-chain context aligned for training sessions
-- when follow chain owns movement, trainer can stay configured for inherited reconnect, food cadence, and anti-idle behavior from their owning modules while the trainer movement loop itself remains blocked
+- trainer keeps emergency heal, escape, mana-trainer, anti-idle, and Team Hunt context aligned for training sessions
+- when Team Hunt owns movement, trainer can stay configured for inherited reconnect, food cadence, and anti-idle behavior from their owning modules while the trainer movement loop itself remains blocked
 - looting uses keep lists, skip lists, and preferred container routing
 - refill can combine vocation restock thresholds, hidden supply-plan desired/minimum counts, buy caps, reserve gold, configured sell requests, protected autosell items, and capacity-aware autosell planning while a trade window is open; hidden loop settings can branch to a service leg and pause failed service actions with the owner reason
 - auto eat uses the selected food source from hotbar, equipment, or open containers before anti-idle pulses
@@ -339,9 +346,9 @@ Important behavior notes:
 - reconnect uses disconnect-only retry windows and the real Minibia reconnect surface; death still blocks it
 - alarms own low-HP, player, staff-like, and blacklist proximity thresholds instead of hiding that alert policy in the tab strip alone
 - banking uses banker-name matching, deposit or withdraw operations, and safety gates
-- follow chain uses ordered chains where each follower native-follows the name directly above it; separate live link components stay as separate chains
-- follow chain members can be live tabs, seen players, or manual player names
-- follow chain supports `Follow and fight` plus `Follow only`, with optional per-member tactical role overrides like `front-guard`, `assist-dps`, `sio-healer`, `party-buffer`, `rearguard`, and `scout`
+- Team Hunt uses ordered chains where each follower native-follows the name directly above it; separate live link components stay as separate chains
+- Team Hunt members can be live tabs, seen players, or manual player names
+- Team Hunt supports `Follow and fight` plus `Follow only`, with optional per-member tactical role overrides like `front-guard`, `assist-dps`, `sio-healer`, `party-buffer`, `rearguard`, and `scout`
 - visible same-floor combat threats suspend native follow so each follower can target, fight, and then reform the chain; same-floor recovery movement uses viewport map-clicks before client-path fallback
 - anti-idle sends a guarded keepalive pulse after real gameplay inactivity crosses the configured delay
 
@@ -680,12 +687,12 @@ npm run refresh:minibia-data
 The presets browser depends on `data/minibia/current` and `data/minibia/vocations`.
 The refresh keeps the latest source snapshot under `data/minibia/snapshots` and prunes older generated snapshots by default.
 
-### Follow Chain Does Not Move
+### Team Hunt Does Not Move
 
 Check:
 
-- `Follow Chain` is enabled
-- the active character name exists in the configured follow chain
+- `Team Hunt` is enabled
+- the active character name exists in the configured Team Hunt chain
 - the character is not the first name in the chain
 - the configured follow distance and default or per-member role fit the current session
 

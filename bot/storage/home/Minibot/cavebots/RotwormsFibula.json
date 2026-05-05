@@ -860,8 +860,35 @@
   "chaseMode": "aggressive",
   "runeMakerEnabled": false,
   "runeMakerRules": [],
-  "spellCasterEnabled": false,
-  "spellCasterRules": [],
+  "spellCasterEnabled": true,
+  "spellCasterRules": [
+    {
+      "enabled": true,
+      "label": "Front rotworm exori flam",
+      "words": "exori flam",
+      "hotkey": "",
+      "runeName": "",
+      "itemName": "",
+      "itemId": 0,
+      "targetNames": [
+        "Rotworm"
+      ],
+      "minManaPercent": 20,
+      "maxTargetDistance": 1,
+      "minTargetCount": 1,
+      "cooldownMs": 900,
+      "pattern": "aligned",
+      "aoeRadius": 1,
+      "targetCategories": [],
+      "playerSafe": true,
+      "noAoeZones": [],
+      "requireSafeTile": false,
+      "requireLineOfSight": true,
+      "requireTarget": true,
+      "requireNoPlayers": true,
+      "requireStationary": false
+    }
+  ],
   "aoeSolverEnabled": false,
   "aoeSolverRules": [],
   "distanceKeeperEnabled": false,
@@ -869,6 +896,7 @@
   "rookillerEnabled": false,
   "once": false,
   "dryRun": false,
+  "inputControlEnabled": true,
   "healerRules": [
     {
       "enabled": true,

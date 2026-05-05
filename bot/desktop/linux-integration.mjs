@@ -113,14 +113,19 @@ export function buildLinuxLaunchEnv(
   platform = process.platform,
   desktopEntryName = LINUX_DESKTOP_ENTRY_NAME,
 ) {
-  if (platform !== "linux" || env.CHROME_DESKTOP) {
+  if (platform !== "linux") {
     return env;
   }
 
-  return {
-    ...env,
-    CHROME_DESKTOP: desktopEntryName,
-  };
+  const patch = {};
+  if (!env.CHROME_DESKTOP) {
+    patch.CHROME_DESKTOP = desktopEntryName;
+  }
+  if (!env.MINIBOT_DISABLE_VISIBLE_INPUT) {
+    patch.MINIBOT_DISABLE_VISIBLE_INPUT = "1";
+  }
+
+  return Object.keys(patch).length ? { ...env, ...patch } : env;
 }
 
 function buildLinuxDesktopEntryTemplate({

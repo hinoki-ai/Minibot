@@ -50,7 +50,7 @@
       "preferShootable": true,
       "stickToTarget": true,
       "avoidBeam": true,
-      "avoidWave": false
+      "avoidWave": true
     },
     {
       "enabled": true,
@@ -279,7 +279,7 @@
   "amuletAutoReplaceRequireStationary": false,
   "bankingEnabled": false,
   "bankingRules": [],
-  "teamEnabled": false,
+  "teamEnabled": true,
   "partyFollowEnabled": false,
   "partyFollowMembers": [
     "Czarnobrat",
@@ -473,7 +473,7 @@
       "x": 32817,
       "y": 32136,
       "z": 8,
-      "type": "node",
+      "type": "walk",
       "label": "Waypoint 009",
       "radius": 1
     },
@@ -580,7 +580,7 @@
     },
     {
       "x": 32814,
-      "y": 32166,
+      "y": 32165,
       "z": 9,
       "type": "node",
       "label": "Waypoint 023",
@@ -640,10 +640,10 @@
       "label": "Waypoint 030"
     },
     {
-      "x": 32821,
+      "x": 32820,
       "y": 32145,
       "z": 6,
-      "type": "node",
+      "type": "stand",
       "label": "Waypoint 031",
       "radius": 1
     },

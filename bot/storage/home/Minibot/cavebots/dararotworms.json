@@ -15,6 +15,7 @@
   "autowalkEnabled": false,
   "autowalkLoop": false,
   "routeStrictClear": false,
+  "routeSpacingEnabled": true,
   "routeFollowExactWaypoints": true,
   "routeRecording": false,
   "routeRecordStep": 2,
@@ -197,6 +198,7 @@
   "amuletAutoReplaceRequireStationary": false,
   "bankingEnabled": false,
   "bankingRules": [],
+  "teamEnabled": false,
   "partyFollowEnabled": true,
   "partyFollowMembers": [
     "Lord Larva",
@@ -209,6 +211,13 @@
   "partyFollowMemberChaseModes": {},
   "partyFollowDistance": 2,
   "partyFollowCombatMode": "follow-and-fight",
+  "pkAssistEnabled": false,
+  "pkAssistMode": "evade-and-assist",
+  "pkAssistAllies": [],
+  "pkAssistRadiusSqm": 10,
+  "pkAssistRetreatHealthPercent": 45,
+  "pkAssistRetreatDistance": 6,
+  "pkAssistCooldownMs": 650,
   "chaseMode": "auto",
   "runeMakerEnabled": false,
   "runeMakerRules": [],
@@ -221,6 +230,7 @@
   "rookillerEnabled": false,
   "once": false,
   "dryRun": false,
+  "inputControlEnabled": false,
   "healerRules": [
     {
       "enabled": true,
