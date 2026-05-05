@@ -1795,8 +1795,8 @@ test("performAntiIdle uses the inventory pulse before the keyboard fallback", as
   assert.equal(evaluations.length, 3);
 });
 
-test("performAntiIdle falls back to the keyboard pulse when no inventory pulse is available", async () => {
-  const bot = new MinibiaTargetBot({});
+test("performAntiIdle can use the keyboard pulse fallback when input control is enabled", async () => {
+  const bot = new MinibiaTargetBot({ inputControlEnabled: true });
   const sendCalls = [];
   let evaluateCount = 0;
   bot.getNow = () => 20_000;
@@ -5701,8 +5701,8 @@ test("reconnectNow starts from the visible reconnect overlay by falling back to 
   assert.equal(directReconnectCalls, 0);
 });
 
-test("reconnectNow uses CDP mouse input on the real reconnect button before DOM fallback", async () => {
-  const bot = new MinibiaTargetBot({});
+test("reconnectNow can use CDP mouse input on the real reconnect button when input control is enabled", async () => {
+  const bot = new MinibiaTargetBot({ inputControlEnabled: true });
   const sentEvents = [];
   let buttonClicks = 0;
   let directReconnectCalls = 0;
@@ -10960,8 +10960,8 @@ test("useHotbarSlot routes item slots through the hotbar slot handler", async ()
   assert.equal(invocations[0].slotIndex, 0);
 });
 
-test("useHotkey dispatches configured function-key input", async () => {
-  const bot = new MinibiaTargetBot({});
+test("useHotkey dispatches configured function-key input when input control is enabled", async () => {
+  const bot = new MinibiaTargetBot({ inputControlEnabled: true });
   const sentEvents = [];
 
   bot.page = { id: "page-1", title: "Minibia" };
@@ -10994,8 +10994,31 @@ test("useHotkey dispatches configured function-key input", async () => {
   assert.deepEqual(keyEvents.map((event) => event.params.windowsVirtualKeyCode), [116, 116]);
 });
 
-test("useHotbarSlot prefers configured hotkeys over hotbar clicks", async () => {
+test("useHotkey refuses visible input by default", async () => {
   const bot = new MinibiaTargetBot({});
+  const sentEvents = [];
+
+  bot.cdp = {
+    async send(method, params = {}) {
+      sentEvents.push({ method, params });
+      return {};
+    },
+  };
+
+  const result = await bot.useHotkey({
+    type: "heal",
+    moduleKey: "healer",
+    hotkey: "F5",
+    words: "exura vita",
+  });
+
+  assert.equal(result?.ok, false);
+  assert.equal(result?.reason, "input control disabled");
+  assert.equal(sentEvents.length, 0);
+});
+
+test("useHotbarSlot prefers configured hotkeys over hotbar clicks when input control is enabled", async () => {
+  const bot = new MinibiaTargetBot({ inputControlEnabled: true });
   const sentEvents = [];
 
   bot.page = { id: "page-1", title: "Minibia" };
@@ -21509,7 +21532,7 @@ test("walk keeps retrying blocked waypoints in strict clear mode instead of skip
   assert.equal(bot.lastWalkFailureCount, 4);
 });
 
-test("walk uses viewport clicks directly instead of invoking client autopath", async () => {
+test("walk uses the client pathfinder before viewport input", async () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
     waypoints: [
@@ -21518,20 +21541,23 @@ test("walk uses viewport clicks directly instead of invoking client autopath", a
     ],
   });
 
-  let evaluateCalls = 0;
-  bot.clickViewportWalk = async (destination) => ({
-    ok: true,
-    transport: "viewport-click",
-    destination,
-  });
-  bot.cdp = {
-    async evaluate() {
-      evaluateCalls += 1;
-      throw new Error("walk should not call cdp.evaluate");
-    },
-    async send() {
-      return null;
-    },
+  let nativeCalls = 0;
+  let clickCalls = 0;
+  bot.executeNativeWalk = async (destination) => {
+    nativeCalls += 1;
+    return {
+      ok: true,
+      transport: "native-pathfinder",
+      destination,
+    };
+  };
+  bot.clickViewportWalk = async (destination) => {
+    clickCalls += 1;
+    return {
+      ok: true,
+      transport: "viewport-click",
+      destination,
+    };
   };
 
   const result = await bot.walk(bot.options.waypoints[0], {
@@ -21539,8 +21565,9 @@ test("walk uses viewport clicks directly instead of invoking client autopath", a
   });
 
   assert.equal(result?.ok, true);
-  assert.equal(result?.transport, "viewport-click");
-  assert.equal(evaluateCalls, 0);
+  assert.equal(result?.transport, "native-pathfinder");
+  assert.equal(nativeCalls, 1);
+  assert.equal(clickCalls, 0);
 });
 
 test("walk falls back to the client pathfinder when viewport walking fails", async () => {
@@ -24236,7 +24263,7 @@ test("walk restores preferred chase mode after a successful bot move", async () 
   assert.equal(restoreCalls, 1);
 });
 
-test("walk prefers viewport clicks even when standing in an elemental field", async () => {
+test("walk prefers the client pathfinder even when standing in an elemental field", async () => {
   const bot = new MinibiaTargetBot();
   const destination = { x: 100, y: 101, z: 8 };
   const events = [];
@@ -24269,7 +24296,7 @@ test("walk prefers viewport clicks even when standing in an elemental field", as
   };
   bot.executeNativeWalk = async () => {
     nativeCalls += 1;
-    return { ok: false, reason: "native pathfinder should not run" };
+    return { ok: true, transport: "native-pathfinder", destination };
   };
   bot.restorePreferredChaseMode = async () => ({ ok: true });
 
@@ -24282,14 +24309,14 @@ test("walk prefers viewport clicks even when standing in an elemental field", as
   );
 
   assert.equal(result?.ok, true);
-  assert.equal(result?.transport, "viewport-click");
+  assert.equal(result?.transport, "native-pathfinder");
   assert.equal(keyboardCalls, 0);
-  assert.equal(clickCalls, 1);
-  assert.equal(nativeCalls, 0);
-  assert.equal(events.find((event) => event.type === "walk")?.payload?.transport, "viewport-click");
+  assert.equal(clickCalls, 0);
+  assert.equal(nativeCalls, 1);
+  assert.equal(events.find((event) => event.type === "walk")?.payload?.transport, "native-pathfinder");
 });
 
-test("walk falls back to a keyboard step when a one-sqm viewport click is unavailable", async () => {
+test("walk falls back to a keyboard step when direct and viewport movement are unavailable", async () => {
   const bot = new MinibiaTargetBot({ intervalMs: 250 });
   const destination = { x: 100, y: 101, z: 8 };
   const events = [];
@@ -24316,7 +24343,7 @@ test("walk falls back to a keyboard step when a one-sqm viewport click is unavai
   };
   bot.executeNativeWalk = async () => {
     nativeCalls += 1;
-    return { ok: false, reason: "native pathfinder should not run" };
+    return { ok: false, reason: "native pathfinder unavailable" };
   };
   bot.restorePreferredChaseMode = async () => ({ ok: true });
 
@@ -24332,12 +24359,12 @@ test("walk falls back to a keyboard step when a one-sqm viewport click is unavai
   assert.equal(result?.transport, "keyboard-step");
   assert.equal(clickCalls, 1);
   assert.equal(keyboardCalls, 1);
-  assert.equal(nativeCalls, 0);
+  assert.equal(nativeCalls, 1);
   assert.equal(events.find((event) => event.type === "walk")?.payload?.transport, "keyboard-step");
   assert.equal(events.find((event) => event.type === "walk")?.payload?.fallbackReason, "target outside viewport");
 });
 
-test("reposition uses a viewport click for one-sqm combat setup steps", async () => {
+test("reposition uses the client pathfinder for one-sqm combat setup steps", async () => {
   const bot = new MinibiaTargetBot();
   const destination = { x: 101, y: 100, z: 8 };
   const events = [];
@@ -24345,14 +24372,14 @@ test("reposition uses a viewport click for one-sqm combat setup steps", async ()
   let restoreCalls = 0;
 
   bot.on((event) => events.push(event));
-  bot.clickViewportWalk = async (target) => ({
-    ok: true,
-    transport: "viewport-click",
-    destination: target,
-  });
-  bot.executeNativeWalk = async () => {
+  let clickCalls = 0;
+  bot.clickViewportWalk = async () => {
+    clickCalls += 1;
+    return { ok: true, transport: "viewport-click" };
+  };
+  bot.executeNativeWalk = async (target) => {
     nativeCalls += 1;
-    return { ok: false, reason: "native pathfinder should not run" };
+    return { ok: true, transport: "native-pathfinder", destination: target };
   };
   bot.restorePreferredChaseMode = async ({ force = false } = {}) => {
     restoreCalls += 1;
@@ -24367,11 +24394,12 @@ test("reposition uses a viewport click for one-sqm combat setup steps", async ()
   });
 
   assert.equal(result?.ok, true);
-  assert.equal(result?.transport, "viewport-click");
-  assert.equal(nativeCalls, 0);
+  assert.equal(result?.transport, "native-pathfinder");
+  assert.equal(nativeCalls, 1);
+  assert.equal(clickCalls, 0);
   assert.equal(restoreCalls, 1);
   assert.equal(bot.lastWalkKey, "101,100,8");
-  assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "viewport-click");
+  assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "native-pathfinder");
 });
 
 test("reposition refuses combat floor-transition no-go destinations before clicking", async () => {
@@ -24495,7 +24523,7 @@ test("reposition refuses combat floor-transition danger-zone destinations before
   assert.equal(clickCalls, 0);
 });
 
-test("reposition falls back to native pathfinder when viewport click is unavailable", async () => {
+test("reposition uses native pathfinder before viewport fallback", async () => {
   const bot = new MinibiaTargetBot();
   const destination = { x: 101, y: 100, z: 8 };
   const events = [];
@@ -24524,11 +24552,11 @@ test("reposition falls back to native pathfinder when viewport click is unavaila
   assert.equal(result?.transport, "native-pathfinder");
   assert.equal(nativeCalls, 1);
   assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "native-pathfinder");
-  assert.equal(events.find((event) => event.type === "move")?.payload?.fallbackReason, "target outside viewport");
+  assert.equal(events.find((event) => event.type === "move")?.payload?.fallbackReason, "");
 });
 
 test("executeKeyboardStep sends a cardinal arrow pulse", async () => {
-  const bot = new MinibiaTargetBot();
+  const bot = new MinibiaTargetBot({ inputControlEnabled: true });
   const sentEvents = [];
 
   bot.cdp = {
@@ -24583,7 +24611,7 @@ test("reposition uses keyboard step before another click when the same one-sqm m
   };
   bot.executeNativeWalk = async () => {
     nativeCalls += 1;
-    return { ok: false, reason: "native pathfinder should not run" };
+    return { ok: false, reason: "native pathfinder unavailable" };
   };
   bot.restorePreferredChaseMode = async () => ({ ok: true });
 
@@ -24598,13 +24626,13 @@ test("reposition uses keyboard step before another click when the same one-sqm m
   assert.equal(result?.transport, "keyboard-step");
   assert.equal(keyboardCalls, 1);
   assert.equal(clickCalls, 0);
-  assert.equal(nativeCalls, 0);
+  assert.equal(nativeCalls, 1);
   assert.equal(bot.lastWalkOriginKey, "100,100,8");
   assert.equal(events.find((event) => event.type === "move")?.payload?.transport, "keyboard-step");
   assert.equal(events.find((event) => event.type === "move")?.payload?.fallbackReason, "same step did not move");
 });
 
-test("followTrainWalk records recovery telemetry on viewport regroup moves", async () => {
+test("followTrainWalk records recovery telemetry on native regroup moves", async () => {
   const bot = new MinibiaTargetBot({
     partyFollowEnabled: true,
     partyFollowMembers: ["Knight Alpha", "Scout Beta"],
@@ -24651,14 +24679,14 @@ test("followTrainWalk records recovery telemetry on viewport regroup moves", asy
   });
 
   assert.equal(result?.ok, true);
-  assert.equal(result?.transport, "viewport-click");
-  assert.equal(nativeCalls, 0);
-  assert.equal(clickCalls, 1);
+  assert.equal(result?.transport, "native-pathfinder");
+  assert.equal(nativeCalls, 1);
+  assert.equal(clickCalls, 0);
   assert.equal(bot.followTrainState.recoveryWalkAttempts, 3);
   assert.equal(bot.followTrainState.lastRecoveryWalkAt, 1_000);
 });
 
-test("followTrainWalk falls back to native pathfinder when viewport clicking is unavailable", async () => {
+test("followTrainWalk uses native pathfinder before viewport input", async () => {
   const bot = new MinibiaTargetBot({
     partyFollowEnabled: true,
     partyFollowMembers: ["Knight Alpha", "Scout Beta"],
@@ -24691,7 +24719,7 @@ test("followTrainWalk falls back to native pathfinder when viewport clicking is 
   assert.equal(result?.ok, true);
   assert.equal(result?.transport, "native-pathfinder");
   assert.equal(nativeCalls, 1);
-  assert.equal(clickCalls, 1);
+  assert.equal(clickCalls, 0);
 });
 
 test("refreshFollowTrainRuntime clears stale follower telemetry when the session becomes the pilot", () => {
@@ -26674,6 +26702,7 @@ test("handleReconnect retries the real reconnect button through CDP mouse clicks
     reconnectEnabled: true,
     reconnectRetryDelayMs: 1000,
     reconnectMaxAttempts: 3,
+    inputControlEnabled: true,
   });
   const disconnectedSnapshot = {
     ready: false,

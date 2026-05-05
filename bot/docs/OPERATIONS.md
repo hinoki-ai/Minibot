@@ -132,7 +132,11 @@ Useful environment flags:
 - `MINIBOT_CONTROL_HOST=127.0.0.1`: set the TCP host
 - `MINIBOT_CONTROL_SOCKET_PATH=/path/to/minibot.sock`: use a Unix socket path instead of TCP
 - `MINIBOT_CONTROL_TOKEN=...`: require auth or a per-request token
-- `MINIBOT_CONTROL_ALLOW_RAW_CDP=0`: disable raw `cdp.send` and `cdp.evaluate`
+- `MINIBOT_CONTROL_ALLOW_RAW_CDP=1`: enable raw `cdp.send` and `cdp.evaluate`
+
+Raw CDP is off by default. Built-in bot actions also keep visible input control
+off by default, so local agents should prefer `action`, `actionBlock`, and
+named bot commands over mouse/key dispatch.
 
 Protocol shape:
 
@@ -140,7 +144,7 @@ Protocol shape:
 {"id":1,"method":"state"}
 {"id":2,"method":"selectSession","params":{"sessionId":"..."}}
 {"id":3,"method":"startBot","params":{"sessionId":"..."}}
-{"id":4,"method":"action","params":{"sessionId":"...","action":{"type":"useHotkey","hotkey":"F1"}}}
+{"id":4,"method":"action","params":{"sessionId":"...","action":{"type":"useItem","name":"rope"}}}
 {"id":5,"method":"actionBlock","params":{"steps":[{"type":"say","words":"hi"},{"type":"wait","durationMs":500}]}}
 ```
 
@@ -435,6 +439,7 @@ Accepted flags:
 - `--floor`
 - `--url`
 - `--autowalk`
+- `--allow-input-control`
 - `--once`
 - `--dry-run`
 - `--help`

@@ -36,12 +36,15 @@ export function probeActionCapabilities(bot = null) {
 
   const hasTransport = hasMethod(bot, "attach")
     || hasMethod(bot?.cdp, "evaluate");
+  const hasInputControl = hasMethod(bot, "isInputControlEnabled")
+    ? bot.isInputControlEnabled()
+    : hasTransport;
 
   return {
     actions,
     drivers: {
       hook: hasTransport,
-      input: hasTransport,
+      input: hasInputControl,
     },
   };
 }

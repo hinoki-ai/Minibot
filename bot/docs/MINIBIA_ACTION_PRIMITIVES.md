@@ -169,9 +169,10 @@ Shared hotkey actions already support:
 - modifier ordering and aliases such as `Ctrl`, `Command`, `Option`, and `Win`
 - CDP keyboard dispatch with modifiers held and released around the primary key
 
-Hotkey actions are input-style actions. They should carry the same module,
-rule, words, target, item, name, and category metadata as the rule that emitted
-them so logs and cooldown tracking remain attributable.
+Hotkey actions are input-style actions and are blocked unless visible input
+control is explicitly enabled. They should carry the same module, rule, words,
+target, item, name, and category metadata as the rule that emitted them so logs
+and cooldown tracking remain attributable.
 
 ### Inventory Moves
 

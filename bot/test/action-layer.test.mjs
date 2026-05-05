@@ -391,6 +391,8 @@ test("probeActionCapabilities reflects the shared action surface", () => {
   assert.equal(capabilities.actions.buyPromotion, true);
   assert.equal(capabilities.actions.dailyTask, true);
   assert.equal(capabilities.actions.runProgressionWorkflow, true);
+  assert.equal(capabilities.drivers.hook, true);
+  assert.equal(capabilities.drivers.input, false);
 });
 
 test("executeAction routes aliases and normalizes driver metadata", async () => {

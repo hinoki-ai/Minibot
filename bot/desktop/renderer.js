@@ -1119,7 +1119,7 @@ const MODULE_RULE_SCHEMAS = {
         key: "antiIdleIntervalMs",
         label: "Delay ms",
         type: "number",
-        help: "Direct keepalive is attempted first, with input fallback only when the client hook is unavailable.",
+        help: "Direct keepalive is attempted first; visible input fallback stays off unless explicitly enabled.",
       },
     ],
   },

@@ -55,7 +55,7 @@ function normalizeControlSocketOptions({
     socketPath: socketPath ? path.resolve(socketPath) : "",
     infoFilePath,
     token: normalizeText(env.MINIBOT_CONTROL_TOKEN || env.MINIBIA_CONTROL_TOKEN || ""),
-    allowRawCdp: !isFalsyEnvFlag(env.MINIBOT_CONTROL_ALLOW_RAW_CDP ?? "1"),
+    allowRawCdp: isTruthyEnvFlag(env.MINIBOT_CONTROL_ALLOW_RAW_CDP || ""),
     required: isTruthyEnvFlag(env.MINIBOT_CONTROL_REQUIRED || ""),
     maxMessageBytes: normalizePositiveInteger(env.MINIBOT_CONTROL_MAX_MESSAGE_BYTES, DEFAULT_MAX_MESSAGE_BYTES)
       || DEFAULT_MAX_MESSAGE_BYTES,

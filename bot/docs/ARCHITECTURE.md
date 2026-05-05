@@ -49,9 +49,9 @@ The Electron main process also owns a local NDJSON socket for trusted automation
 - default transport: `127.0.0.1:17373`, falling back to an ephemeral local port when that default is busy
 - discovery file: `control-socket.json` in the active Minibot config directory
 - optional auth: `MINIBOT_CONTROL_TOKEN`
-- raw CDP passthrough is available for trusted local agents and can be disabled with `MINIBOT_CONTROL_ALLOW_RAW_CDP=0`
+- raw CDP passthrough is disabled by default and can be enabled for local debugging with `MINIBOT_CONTROL_ALLOW_RAW_CDP=1`
 
-The socket accepts direct commands such as state reads, session selection, start/stop, cavebot pause, option updates, route edits, action execution, action-block execution, selected bot methods, and raw CDP send/evaluate calls. Subscribed clients receive the same `bb:event` envelopes as the renderer.
+The socket accepts direct commands such as state reads, session selection, start/stop, cavebot pause, option updates, route edits, action execution, action-block execution, and selected bot methods. Raw CDP send/evaluate calls are available only when explicitly enabled for local debugging. Subscribed clients receive the same `bb:event` envelopes as the renderer.
 
 ### Bot Runtime Layer
 

@@ -648,6 +648,7 @@ export const DEFAULTS = {
   rookillerEnabled: false,
   once: false,
   dryRun: false,
+  inputControlEnabled: false,
 };
 
 const GOLD_COIN_ID = 3031;
@@ -3818,6 +3819,7 @@ export function normalizeOptions(options = {}) {
   merged.npcArchive = [...merged.creatureLedger.npcs];
   merged.once = Boolean(merged.once);
   merged.dryRun = Boolean(merged.dryRun);
+  merged.inputControlEnabled = merged.inputControlEnabled === true;
 
   return merged;
 }
@@ -3885,6 +3887,11 @@ export function parseArgs(argv) {
 
     if (arg === "--dry-run") {
       options.dryRun = true;
+      continue;
+    }
+
+    if (arg === "--allow-input-control") {
+      options.inputControlEnabled = true;
       continue;
     }
 
@@ -24559,6 +24566,10 @@ export class MinibiaTargetBot {
     );
   }
 
+  isInputControlEnabled() {
+    return this.options?.inputControlEnabled === true;
+  }
+
   async clearWaypointOverlay() {
     if (!this.hasUsableTransport()) return null;
     this.lastOverlaySyncKey = "";
@@ -26812,7 +26823,7 @@ export class MinibiaTargetBot {
       return { ok: false, reason: "reconnect unavailable" };
     }
 
-    if (typeof this.cdp.send !== "function") {
+    if (!this.isInputControlEnabled() || typeof this.cdp.send !== "function") {
       return this.cdp.evaluate(buildReconnectNowExpression());
     }
 
@@ -35666,7 +35677,7 @@ export class MinibiaTargetBot {
     const markFailureCooldown = action.markFailureCooldown !== false;
     const now = Date.now();
 
-    if (hotkey) {
+    if (hotkey && this.isInputControlEnabled()) {
       return this.useHotkey({
         ...action,
         hotkey,
@@ -35719,6 +35730,10 @@ export class MinibiaTargetBot {
 
     if (!hotkey || !keyEvent) {
       return { ok: false, reason: "invalid hotkey", hotkey: action.hotkey || "" };
+    }
+
+    if (!this.isInputControlEnabled()) {
+      return { ok: false, reason: "input control disabled", hotkey, words };
     }
 
     if (this.options.dryRun) {
@@ -35827,7 +35842,7 @@ export class MinibiaTargetBot {
     const markFailureCooldown = action.markFailureCooldown !== false;
     const now = Date.now();
 
-    if (hotkey) {
+    if (hotkey && this.isInputControlEnabled()) {
       return this.useHotkey({
         ...action,
         hotkey,
@@ -36812,6 +36827,10 @@ export class MinibiaTargetBot {
       return { ok: false, reason: "keyboard step unavailable" };
     }
 
+    if (!this.isInputControlEnabled()) {
+      return { ok: false, reason: "input control disabled", destination };
+    }
+
     await this.attach();
     if (!this.hasUsableTransport() || typeof this.cdp?.send !== "function") {
       return { ok: false, reason: "transport unavailable" };
@@ -36942,6 +36961,21 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
+    let nativeResult = null;
+    try {
+      nativeResult = await this.executeNativeWalk(destination);
+    } catch (error) {
+      nativeResult = {
+        ok: false,
+        reason: "native pathfinder unavailable",
+        message: error?.message || String(error || ""),
+      };
+    }
+
+    if (nativeResult?.ok) {
+      return acceptMove(nativeResult, nativeResult.transport || "native-pathfinder");
+    }
+
     let keyboardResult = null;
     if (repeatedUnmovedAttempt) {
       try {
@@ -36971,7 +37005,7 @@ export class MinibiaTargetBot {
     }
 
     if (clickResult?.ok) {
-      return acceptMove(clickResult, clickResult.transport || "viewport-click");
+      return acceptMove(clickResult, clickResult.transport || "viewport-click", nativeResult?.reason || "");
     }
 
     if (!keyboardResult) {
@@ -36988,21 +37022,6 @@ export class MinibiaTargetBot {
       if (keyboardResult?.ok) {
         return acceptMove(keyboardResult, keyboardResult.transport || "keyboard-step", clickResult?.reason || "");
       }
-    }
-
-    let nativeResult = null;
-    try {
-      nativeResult = await this.executeNativeWalk(destination);
-    } catch (error) {
-      nativeResult = {
-        ok: false,
-        reason: "native pathfinder unavailable",
-        message: error?.message || String(error || ""),
-      };
-    }
-
-    if (nativeResult?.ok) {
-      return acceptMove(nativeResult, nativeResult.transport || "native-pathfinder", clickResult?.reason || "");
     }
 
     const failureReason = nativeResult?.reason
@@ -37502,6 +37521,10 @@ export class MinibiaTargetBot {
   }
 
   async sendAntiIdleFallbackKey() {
+    if (!this.isInputControlEnabled()) {
+      return { ok: false, reason: "input control disabled" };
+    }
+
     if (!this.hasUsableTransport()) {
       return { ok: false, reason: "transport unavailable" };
     }
@@ -37712,6 +37735,10 @@ export class MinibiaTargetBot {
   }
 
   async clickViewportWalk(waypoint) {
+    if (!this.isInputControlEnabled()) {
+      return { ok: false, reason: "input control disabled", destination: waypoint || null };
+    }
+
     await this.attach();
     try {
       await this.cdp.send("Page.bringToFront", {});
@@ -37859,6 +37886,21 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
+    let nativeResult = null;
+    try {
+      nativeResult = await this.executeNativeWalk(destination);
+    } catch (error) {
+      nativeResult = {
+        ok: false,
+        reason: "native pathfinder unavailable",
+        message: error?.message || String(error || ""),
+      };
+    }
+
+    if (nativeResult?.ok) {
+      return acceptWalk(nativeResult, nativeResult.transport || "native-pathfinder");
+    }
+
     let clickResult = null;
     try {
       clickResult = await this.clickViewportWalk(destination);
@@ -37870,7 +37912,7 @@ export class MinibiaTargetBot {
       };
     }
     if (clickResult?.ok) {
-      return acceptWalk(clickResult, clickResult.transport || "viewport-click");
+      return acceptWalk(clickResult, clickResult.transport || "viewport-click", nativeResult?.reason || "");
     }
 
     let keyboardResult = null;
@@ -37892,21 +37934,6 @@ export class MinibiaTargetBot {
           clickResult?.reason || "",
         );
       }
-    }
-
-    let nativeResult = null;
-    try {
-      nativeResult = await this.executeNativeWalk(destination);
-    } catch (error) {
-      nativeResult = {
-        ok: false,
-        reason: "native pathfinder unavailable",
-        message: error?.message || String(error || ""),
-      };
-    }
-
-    if (nativeResult?.ok) {
-      return acceptWalk(nativeResult, nativeResult.transport || "native-pathfinder", clickResult?.reason || "");
     }
 
     this.setLastWalkAttempt(walkKey, origin, {
@@ -38006,6 +38033,14 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
+    const nativeResult = await executeNativeFollowTrainWalk();
+    if (nativeResult?.ok) {
+      return acceptFollowTrainWalk(
+        nativeResult,
+        nativeResult.transport || "native-pathfinder",
+      );
+    }
+
     let clickResult = null;
     try {
       clickResult = await this.clickViewportWalk(destination);
@@ -38017,7 +38052,7 @@ export class MinibiaTargetBot {
       };
     }
     if (clickResult?.ok) {
-      return acceptFollowTrainWalk(clickResult, clickResult.transport || "viewport-click");
+      return acceptFollowTrainWalk(clickResult, clickResult.transport || "viewport-click", nativeResult?.reason || "");
     }
 
     let keyboardResult = null;
@@ -38036,18 +38071,9 @@ export class MinibiaTargetBot {
         return acceptFollowTrainWalk(
           keyboardResult,
           keyboardResult.transport || "keyboard-step",
-          clickResult?.reason || "",
+          nativeResult?.reason || clickResult?.reason || "",
         );
       }
-    }
-
-    const nativeResult = await executeNativeFollowTrainWalk();
-    if (nativeResult?.ok) {
-      return acceptFollowTrainWalk(
-        nativeResult,
-        nativeResult.transport || "native-pathfinder",
-        clickResult?.reason || keyboardResult?.reason || "",
-      );
     }
 
     this.setLastWalkAttempt(walkKey, origin, {
@@ -38292,6 +38318,10 @@ export class MinibiaTargetBot {
   async executeTrainerPartyContextMenuAction(expressionAction, {
     targetId = null,
   } = {}) {
+    if (!this.isInputControlEnabled()) {
+      return { ok: false, reason: "input control disabled" };
+    }
+
     if (!this.cdp || typeof this.cdp.send !== "function") {
       return { ok: false, reason: "input unavailable" };
     }

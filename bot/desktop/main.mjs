@@ -4780,7 +4780,22 @@ async function executeExternalControlBotCommand(params = {}) {
 
 function assertExternalRawCdpAllowed() {
   if (externalControlServer?.getPublicInfo?.()?.allowRawCdp === false) {
-    throw new Error("Raw CDP control is disabled by MINIBOT_CONTROL_ALLOW_RAW_CDP=0.");
+    throw new Error("Raw CDP control is disabled. Set MINIBOT_CONTROL_ALLOW_RAW_CDP=1 to enable it.");
+  }
+}
+
+function isVisibleInputCdpMethod(methodName = "") {
+  const normalized = String(methodName || "").trim();
+  return normalized === "Page.bringToFront" || normalized.startsWith("Input.");
+}
+
+function assertExternalInputControlAllowed(session, methodName = "") {
+  if (!isVisibleInputCdpMethod(methodName)) {
+    return;
+  }
+
+  if (session?.bot?.isInputControlEnabled?.() !== true) {
+    throw new Error("Visible input control is disabled for this session.");
   }
 }
 
@@ -4792,6 +4807,7 @@ async function executeExternalControlCdpSend(params = {}) {
   }
 
   const session = await attachExternalControlSession(params);
+  assertExternalInputControlAllowed(session, methodName);
   const cdpParams = getControlParam(params, ["params", "cdpParams"], {});
   const timeoutMs = getControlParam(params, ["timeoutMs"], undefined);
   const result = await session.bot.cdp.send(methodName, isPlainObject(cdpParams) ? cdpParams : {}, {
@@ -4811,6 +4827,9 @@ async function executeExternalControlCdpEvaluate(params = {}) {
   }
 
   const session = await attachExternalControlSession(params);
+  if (getControlParam(params, ["bringToFront"], false) === true) {
+    assertExternalInputControlAllowed(session, "Page.bringToFront");
+  }
   if (getControlParam(params, ["bringToFront"], false) === true) {
     await session.bot.cdp.send("Page.bringToFront", {}).catch(() => { });
   }

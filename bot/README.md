@@ -171,7 +171,7 @@ node onscreen_monster_bot.mjs --port 9224 --url https://minibia.com/play --autow
 
 Supported flags: `--port`, `--monster`, `--monsters`, `--interval`,
 `--retarget`, `--range-x`, `--range-y`, `--floor`, `--url`, `--autowalk`,
-`--once`, `--dry-run`, and `--help`.
+`--allow-input-control`, `--once`, `--dry-run`, and `--help`.
 
 ### Route Recorder Helper
 

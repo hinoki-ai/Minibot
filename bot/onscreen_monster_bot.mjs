@@ -14,7 +14,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 
 export const CLI_HELP_TEXT = `Usage:
-  node onscreen_monster_bot.mjs [--port 9224] [--monster Rotworm] [--monster Rat] [--interval 250] [--retarget 1200] [--range-x 7] [--range-y 5] [--floor 1] [--chase-mode auto|stand|chase|aggressive] [--url https://minibia.com/play] [--autowalk] [--once] [--dry-run]
+  node onscreen_monster_bot.mjs [--port 9224] [--monster Rotworm] [--monster Rat] [--interval 250] [--retarget 1200] [--range-x 7] [--range-y 5] [--floor 1] [--chase-mode auto|stand|chase|aggressive] [--url https://minibia.com/play] [--autowalk] [--allow-input-control] [--once] [--dry-run]
 
 Examples:
   node onscreen_monster_bot.mjs

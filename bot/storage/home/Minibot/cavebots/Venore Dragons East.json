@@ -279,7 +279,7 @@
   "amuletAutoReplaceRequireStationary": false,
   "bankingEnabled": false,
   "bankingRules": [],
-  "teamEnabled": true,
+  "teamEnabled": false,
   "partyFollowEnabled": false,
   "partyFollowMembers": [
     "Czarnobrat",
@@ -311,6 +311,7 @@
   "rookillerEnabled": false,
   "once": false,
   "dryRun": false,
+  "inputControlEnabled": false,
   "healerRules": [
     {
       "enabled": true,

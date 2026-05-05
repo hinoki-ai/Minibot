@@ -1537,6 +1537,7 @@ test("tick falls back to a Shift key pulse when no anti-idle keepalive hook is e
   const bot = createBot({
     antiIdleEnabled: true,
     antiIdleIntervalMs: 1000,
+    inputControlEnabled: true,
   });
   const sentEvents = [];
   installRefresh(bot, {
@@ -1587,6 +1588,7 @@ test("anti-idle falls back when direct keepalive evaluation throws", async () =>
   const bot = createBot({
     antiIdleEnabled: true,
     antiIdleIntervalMs: 1000,
+    inputControlEnabled: true,
   });
   const sentEvents = [];
   installRefresh(bot, {

@@ -64,7 +64,7 @@ async function stopChrome(child) {
   }
 }
 
-test("reconnectNow dispatches a trusted browser click on the reconnect button", {
+test("reconnectNow dispatches a trusted browser click when input control is enabled", {
   skip: findChromePath() ? false : "Chrome binary unavailable",
 }, async () => {
   const chromePath = findChromePath();
@@ -127,7 +127,7 @@ document.getElementById("reconnect-now-btn").addEventListener("click", (event) =
     cdp = new CdpPage(page.webSocketDebuggerUrl);
     await cdp.connect();
 
-    const bot = new MinibiaTargetBot({});
+    const bot = new MinibiaTargetBot({ inputControlEnabled: true });
     bot.cdp = cdp;
 
     const result = await bot.reconnectNow();
