@@ -339,7 +339,7 @@ export function buildDiff(before = {}, after = {}) {
   };
 }
 
-async function capturePageState(bot) {
+export async function capturePageState(bot) {
   return bot.cdp.evaluate(`(() => {
     const normalizeText = (value = "") => String(value ?? "").replace(/\\s+/g, " ").trim();
     const isVisible = (element) => {
@@ -383,7 +383,7 @@ async function capturePageState(bot) {
   })()`);
 }
 
-async function captureState(bot) {
+export async function captureState(bot) {
   const [snapshot, dialogue, trade, pageState, floor] = await Promise.all([
     bot.refresh({ emitSnapshot: false }),
     bot.inspectDialogueState().catch(() => ({})),
@@ -417,7 +417,7 @@ async function captureState(bot) {
   };
 }
 
-async function sendLiveMessage(bot, message, channelIndex = null) {
+export async function sendLiveMessage(bot, message, channelIndex = null) {
   return bot.cdp.evaluate(`(() => {
     const text = ${JSON.stringify(String(message ?? ""))};
     const requestedChannelIndex = ${channelIndex == null ? "null" : Math.trunc(channelIndex)};

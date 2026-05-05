@@ -69,11 +69,16 @@
       "Surrillas",
       "Khaleesi",
       "Wurm",
-      "Zrosti"
+      "Zrosti",
+      "Golden Helmet",
+      "Czarnobrat",
+      "Zlocimir Wielkoportf"
     ],
     "npcs": []
   },
   "cavebotPaused": false,
+  "alarmsEnabled": true,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false
 }

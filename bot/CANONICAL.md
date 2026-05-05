@@ -41,6 +41,29 @@ UI, action surface, module rule shape, or persistence schema.
 - One character can be actively controlled by only one Minibot desk at a time;
   claim files enforce that across processes.
 
+## Testing Invariants
+
+- Live validation is the first proof for runtime, session, interaction, movement,
+  combat, persistence, and UI changes whenever a live Minibia session is
+  available and safe to exercise.
+- `npm test` is live-first: it attempts the live gate when live character tabs
+  are present, skips only that gate when none are available, and then runs the
+  smoke lane.
+- `npm run test:live` is the strict canonical live validation gate. It attaches
+  to discovered live character tabs through CDP, captures real normalized state,
+  and validates that live snapshots are ready, named, positioned, and tied to the
+  expected character.
+- `npm run test:live:smoke` runs the strict live gate first, then the smoke lane.
+  Use direct synthetic lanes only when the live gate is unavailable, unsafe, or
+  the change is purely deterministic.
+- Mocked, fake-user, fixture-only, and synthetic tests are regression coverage.
+  They must not be presented as the only proof for behavior that depends on the
+  real Minibia client, browser DOM, CDP transport, or in-memory game state unless
+  the live path is impossible or unsafe and that reason is stated.
+- Live validation must be read-only unless the operator deliberately chooses a
+  mutating probe. It must not close sessions, kill clients, send visible input,
+  or change combat-critical state as part of the default gate.
+
 ## Data Invariants
 
 - Official Minibia data is vendored under [`data/minibia/`](./data/minibia).

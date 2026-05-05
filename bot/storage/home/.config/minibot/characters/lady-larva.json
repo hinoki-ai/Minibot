@@ -1,5 +1,5 @@
 {
-  "cavebotName": "Scarabs 3 -2",
+  "cavebotName": "Scarabs 1 -2",
   "creatureLedger": {
     "monsters": [
       "Alpha Larva",
@@ -113,6 +113,8 @@
     "npcs": []
   },
   "cavebotPaused": false,
+  "alarmsEnabled": true,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false
 }

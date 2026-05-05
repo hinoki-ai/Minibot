@@ -644,6 +644,13 @@ test("normalizeOptions lets Team Hunt route sync coexist with Follow Chain", () 
   assert.equal(team.teamEnabled, true);
   assert.equal(team.partyFollowEnabled, false);
   assert.equal(team.routeSpacingEnabled, false);
+  assert.equal(team.routeFollowExactWaypoints, false);
+
+  const exactTeam = normalizeOptions({
+    teamEnabled: true,
+    routeFollowExactWaypoints: true,
+  });
+  assert.equal(exactTeam.routeFollowExactWaypoints, true);
 
   const follow = normalizeOptions({
     teamEnabled: true,
@@ -653,6 +660,7 @@ test("normalizeOptions lets Team Hunt route sync coexist with Follow Chain", () 
   assert.equal(follow.teamEnabled, true);
   assert.equal(follow.partyFollowEnabled, true);
   assert.equal(follow.routeSpacingEnabled, false);
+  assert.equal(follow.routeFollowExactWaypoints, false);
 });
 
 test("normalizeOptions preserves old configs with both team modes enabled", () => {
@@ -2446,6 +2454,60 @@ test("chooseFollowTrainAction waits for a short desync window before using share
   assert.equal(action?.reason, "recovery");
 });
 
+test("chooseFollowTrainAction immediately re-paths implicit Team Hunt followers toward shared leader coordinates", () => {
+  const bot = new MinibiaTargetBot({
+    teamEnabled: true,
+    partyFollowEnabled: false,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    partyFollowDistance: 1,
+  });
+  const now = 1_000;
+  bot.getNow = () => now;
+  bot.followTrainCoordinationState = {
+    selfInstanceId: "scout-beta",
+    members: [
+      {
+        instanceId: "knight-alpha",
+        characterName: "Knight Alpha",
+        playerPosition: { x: 105, y: 100, z: 7 },
+        updatedAt: now,
+      },
+      {
+        instanceId: "scout-beta",
+        characterName: "Scout Beta",
+        playerPosition: { x: 100, y: 100, z: 7 },
+        updatedAt: now,
+      },
+    ],
+  };
+
+  const action = bot.chooseFollowTrainAction({
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    visiblePlayers: [],
+    reachableTiles: [
+      { x: 101, y: 100, z: 7 },
+      { x: 102, y: 100, z: 7 },
+      { x: 103, y: 100, z: 7 },
+      { x: 104, y: 100, z: 7 },
+    ],
+    safeTiles: [],
+    isMoving: true,
+    pathfinderAutoWalking: true,
+    pathfinderFinalDestination: { x: 101, y: 100, z: 7 },
+    autoWalkStepsRemaining: 4,
+  });
+
+  assert.equal(action?.kind, "follow-train-walk");
+  assert.deepEqual(action?.destination, { x: 104, y: 100, z: 7 });
+  assert.equal(action?.targetName, "Knight Alpha");
+  assert.equal(action?.reason, "recovery");
+});
+
 test("chooseFollowTrainAction keeps regrouping far strays with shared leader coordinates", () => {
   const bot = new MinibiaTargetBot({
     partyFollowEnabled: true,
@@ -3273,6 +3335,45 @@ test("chooseFollowTrainAction does not reform the chain while combat threats are
   assert.equal(suspendAction?.targetName, "Knight Alpha");
 });
 
+test("chooseFollowTrainSuspendAction skips empty stop packets when combat is visible but native follow is already clear", () => {
+  const bot = new MinibiaTargetBot({
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    partyFollowDistance: 2,
+  });
+
+  const snapshot = {
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    currentTarget: null,
+    currentFollowTarget: null,
+    visiblePlayers: [
+      {
+        id: 10,
+        name: "Knight Alpha",
+        position: { x: 101, y: 100, z: 7 },
+      },
+    ],
+    visibleCreatures: [
+      {
+        id: 77,
+        name: "Rat",
+        position: { x: 102, y: 100, z: 7 },
+        withinCombatWindow: true,
+        withinCombatBox: true,
+        reachableForCombat: true,
+      },
+    ],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  assert.equal(bot.chooseFollowTrainSuspendAction(snapshot), null);
+  assert.equal(bot.chooseTarget(snapshot)?.chosen?.id, 77);
+});
+
 test("attack-and-follow followers target live on-screen monsters outside the saved queue", () => {
   const bot = new MinibiaTargetBot({
     partyFollowEnabled: true,
@@ -3631,6 +3732,39 @@ test("chooseRouteAction lets follow-train followers use the chain instead of rou
   });
 
   assert.equal(action, null);
+});
+
+test("chooseRouteAction lets implicit Team Hunt followers run the route while acquiring the leader", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    teamEnabled: true,
+    partyFollowEnabled: false,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    waypoints: [
+      { x: 100, y: 100, z: 7, type: "walk" },
+      { x: 101, y: 100, z: 7, type: "walk" },
+    ],
+  });
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    visiblePlayers: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(bot.getFollowTrainAssignment({ ready: true, playerName: "Scout Beta" })?.selfIndex, 1);
+  assert.equal(action?.kind, "walk");
+  assert.equal(action?.destination?.x, 101);
+  assert.equal(action?.destination?.y, 100);
+  assert.equal(action?.destination?.z, 7);
+  assert.equal(bot.routeIndex, 1);
 });
 
 test("chooseRouteAction passively syncs follower route progress for Team Hunt state", () => {
@@ -8006,6 +8140,72 @@ test("tick regroups follow chain before looting when combat is clear", async () 
   assert.equal(lootCalled, false);
 });
 
+test("tick lets attack-and-follow followers lock combat before follow-chain suspend work", async () => {
+  const bot = new MinibiaTargetBot({
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    partyFollowCombatMode: "follow-and-fight",
+  });
+  const rat = {
+    id: 77,
+    name: "Rat",
+    position: { x: 102, y: 100, z: 8 },
+    withinCombatWindow: true,
+    withinCombatBox: true,
+    reachableForCombat: true,
+  };
+  const snapshot = createModuleSnapshot({
+    playerName: "Scout Beta",
+    currentFollowTarget: {
+      id: 10,
+      name: "Knight Alpha",
+      position: { x: 101, y: 100, z: 8 },
+    },
+    visiblePlayers: [
+      {
+        id: 10,
+        name: "Knight Alpha",
+        position: { x: 101, y: 100, z: 8 },
+      },
+    ],
+    visibleCreatures: [rat],
+    candidates: [],
+  });
+  const calls = [];
+
+  bot.refresh = async () => snapshot;
+  bot.handleReconnect = async () => ({ handled: false });
+  bot.getActiveVocationProfile = async () => null;
+  bot.attemptDeathHeal = async () => ({ result: { ok: false } });
+  bot.isHealingPriorityActive = () => false;
+  bot.choosePreSustainHealActions = () => [];
+  bot.attemptSustain = async () => ({ result: { ok: false } });
+  bot.attemptHeal = async () => ({ result: { ok: false } });
+  bot.refreshProtectorStatus = () => null;
+  bot.chooseNoGoZoneEscape = () => null;
+  bot.handlePausedCavebotTick = async () => ({ handled: false });
+  bot.attemptTrainerEscape = async () => ({ result: { ok: false } });
+  bot.handleRookiller = async () => ({ handled: false });
+  bot.getVisibleEscapeThreats = () => [];
+  bot.chooseFollowTrainSuspendAction = () => {
+    calls.push("suspend");
+    return { kind: "follow-train-stop", targetName: "Knight Alpha", reason: "combat" };
+  };
+  bot.executeFollowTrainAction = async () => {
+    calls.push("follow-action");
+    return { ok: true };
+  };
+  bot.target = async (selection) => {
+    calls.push(`target:${selection?.chosen?.id}`);
+    return { ok: true, target: selection?.chosen, queuedTargets: selection?.candidates || [] };
+  };
+
+  const result = await bot.tick();
+
+  assert.equal(result, snapshot);
+  assert.deepEqual(calls, ["target:77"]);
+});
+
 test("normalizeOptions normalizes tile rules into the route state", () => {
   const options = normalizeOptions({
     tileRules: [
@@ -8194,6 +8394,12 @@ test("syncWaypointOverlay serializes lap and stuck telemetry for the top-right c
     now: 1000,
     pendingProgress: true,
   });
+  bot.routeStallState = {
+    stuckWaypointIndex: 1,
+    stuckReason: "stalled",
+    positionKey: "100,200,7",
+    confirmed: true,
+  };
   bot.cdp = {
     async evaluate(code) {
       expression = String(code);
@@ -8271,6 +8477,37 @@ test("route telemetry counts completed laps, marks blocked stalls, and resets on
   bot.resetRoute(1);
   assert.equal(bot.routeLapCount, 0);
   assert.equal(bot.routeStallState, null);
+});
+
+test("route telemetry confirms stalled walks on a repeated same-position sample", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    waypoints: [
+      { x: 101, y: 100, z: 8, type: "walk" },
+    ],
+  });
+
+  bot.running = true;
+  bot.routeIndex = 0;
+  bot.setLastWalkAttempt("101,100,8", { x: 100, y: 100, z: 8 }, {
+    now: 1000,
+    pendingProgress: true,
+  });
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    isMoving: false,
+    pathfinderAutoWalking: false,
+  };
+
+  const first = bot.refreshRouteTelemetry(snapshot, 2200);
+  assert.equal(first.stuck, false);
+
+  const second = bot.refreshRouteTelemetry(snapshot, 4800);
+  assert.equal(second.stuck, true);
+  assert.equal(second.stuckWaypointIndex, 0);
+  assert.equal(second.stuckReason, "stalled");
 });
 
 test("route telemetry counts laps when route loops back to waypoint one before the physical tail", () => {
@@ -19444,6 +19681,45 @@ test("chooseRouteAction advances a pass-through waypoint from vicinity after a r
   assert.deepEqual(action?.waypoint, bot.options.waypoints[1]);
 });
 
+test("chooseRouteAction advances a radius node from outer vicinity after a recent walk attempt", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    routeFollowExactWaypoints: false,
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "node", radius: 1 },
+      { x: 104, y: 100, z: 8, type: "node", radius: 1 },
+    ],
+  });
+
+  bot.resetRoute(0);
+  bot.lastWalkKey = "100,100,8";
+  bot.lastWalkAt = Date.now();
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 102, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    safeTiles: [
+      { x: 100, y: 102, z: 8 },
+      { x: 104, y: 100, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 100, y: 102, z: 8 },
+      { x: 104, y: 100, z: 8 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(bot.routeIndex, 1);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.waypoint, bot.options.waypoints[1]);
+});
+
 test("chooseRouteAction does not advance a nearby waypoint from vicinity without movement evidence", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -20320,6 +20596,69 @@ test("resyncRouteProgress does not skip a mandatory stair while still on its sou
   assert.equal(bot.routeIndex, 0);
   assert.equal(action?.kind, "walk");
   assert.deepEqual(action?.destination, bot.options.waypoints[0]);
+});
+
+test("chooseRouteAction reanchors a stale cross-floor route index to the nearby same-floor segment", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    routeFollowExactWaypoints: false,
+    waypoints: [
+      { x: 0, y: 0, z: 8, type: "node", radius: 1 },
+      { x: 1, y: 0, z: 8, type: "stairs-down" },
+      { x: 2, y: 0, z: 9, type: "node", radius: 1 },
+      { x: 3, y: 0, z: 9, type: "stairs-up" },
+      { x: 4, y: 0, z: 8, type: "stairs-up" },
+      { x: 6, y: 0, z: 7, type: "node", radius: 1 },
+      { x: 8, y: 0, z: 7, type: "node", radius: 1 },
+    ],
+  });
+
+  bot.resetRoute(0);
+
+  const snapshot = {
+    ready: true,
+    playerPosition: { x: 6, y: 2, z: 7 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    visiblePlayers: [],
+    elementalFields: [],
+    walkableTiles: [
+      { x: 6, y: 2, z: 7 },
+      { x: 6, y: 1, z: 7 },
+      { x: 6, y: 0, z: 7 },
+      { x: 8, y: 0, z: 7 },
+    ],
+    reachableWalkableTiles: [
+      { x: 6, y: 2, z: 7 },
+      { x: 6, y: 1, z: 7 },
+      { x: 6, y: 0, z: 7 },
+      { x: 8, y: 0, z: 7 },
+    ],
+    safeTiles: [
+      { x: 6, y: 2, z: 7 },
+      { x: 6, y: 1, z: 7 },
+      { x: 6, y: 0, z: 7 },
+      { x: 8, y: 0, z: 7 },
+    ],
+    reachableTiles: [
+      { x: 6, y: 2, z: 7 },
+      { x: 6, y: 1, z: 7 },
+      { x: 6, y: 0, z: 7 },
+      { x: 8, y: 0, z: 7 },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  };
+
+  const action = bot.chooseRouteAction(snapshot);
+
+  assert.equal(bot.routeIndex, 6);
+  assert.equal(action?.kind, "walk");
+  assert.deepEqual(action?.waypoint, bot.options.waypoints[6]);
+  assert.notEqual(action?.walkReason, "floor-recovery");
 });
 
 test("chooseRouteAction uses direct stair routing outside combat instead of one-tile hazard detours", () => {
@@ -21386,7 +21725,12 @@ test("Team Hunt enables ordered follow-chain followers from shared members", () 
   assert.equal(bot.isFollowTrainEnabled(), true);
   assert.equal(bot.getFollowTrainAssignment(snapshot)?.selfIndex, 1);
   assert.equal(bot.getFollowTrainAssignment(snapshot)?.predecessorName, "Knight Alpha");
-  assert.equal(bot.chooseRouteAction(snapshot), null);
+  const routeAction = bot.chooseRouteAction(snapshot);
+  assert.equal(routeAction?.kind, "walk");
+  assert.equal(routeAction?.destination?.x, 101);
+  assert.equal(routeAction?.destination?.y, 200);
+  assert.equal(routeAction?.destination?.z, 8);
+  assert.equal(bot.routeIndex, 1);
 });
 
 test("Team Hunt route sync does not hold on a chained follower already beside the pilot", () => {
@@ -22124,6 +22468,132 @@ test("chooseTarget prioritizes same-session assist targets over solo targets", (
 
   assert.equal(selection?.chosen?.id, 11);
   assert.equal(bot.lastTargetScoreReport?.candidates.find((entry) => entry.id === 11)?.scoreBreakdown.sharedAssist, 5000);
+});
+
+test("chooseTarget spreads same-vocation Team Hunt sessions across identical monsters", () => {
+  const bot = new MinibiaTargetBot({
+    teamEnabled: true,
+    partyFollowCombatMode: "attack-and-follow",
+    partyFollowMembers: ["Knight One", "Knight Two"],
+    vocation: "knight",
+    monsterNames: ["Scarab"],
+    rangeX: 8,
+    rangeY: 8,
+    combatRangeX: 8,
+    combatRangeY: 8,
+  });
+  bot.followTrainCoordinationState = {
+    selfInstanceId: "knight-two",
+    members: [
+      {
+        instanceId: "knight-one",
+        characterName: "Knight One",
+        enabled: true,
+        vocation: "knight",
+        playerPosition: { x: 100, y: 99, z: 8 },
+      },
+      {
+        instanceId: "knight-two",
+        characterName: "Knight Two",
+        enabled: true,
+        vocation: "knight",
+        playerPosition: { x: 100, y: 100, z: 8 },
+      },
+    ],
+  };
+
+  const scarabs = [1, 2, 3, 4, 5].map((id) => ({
+    id,
+    name: "Scarab",
+    position: { x: 100 + id, y: 100, z: 8 },
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+  }));
+
+  const selection = bot.chooseTarget(createModuleSnapshot({
+    playerName: "Knight Two",
+    progression: { vocation: "knight" },
+    visibleCreatures: scarabs,
+    allMatches: scarabs,
+    candidates: scarabs,
+  }));
+
+  assert.equal(selection?.chosen?.id, 2);
+  assert.equal(bot.lastTargetScoreReport?.candidates.find((entry) => entry.id === 2)?.scoreBreakdown.teamHuntSpread, 1600);
+});
+
+test("chooseTarget avoids a same-vocation Team Hunt peer's current target when another copy is available", () => {
+  const bot = new MinibiaTargetBot({
+    teamEnabled: true,
+    partyFollowCombatMode: "attack-and-follow",
+    partyFollowMembers: ["Knight One", "Knight Two"],
+    vocation: "knight",
+    monsterNames: ["Scarab"],
+    rangeX: 8,
+    rangeY: 8,
+    combatRangeX: 8,
+    combatRangeY: 8,
+  });
+  bot.followTrainCoordinationState = {
+    selfInstanceId: "knight-two",
+    members: [
+      {
+        instanceId: "knight-one",
+        characterName: "Knight One",
+        enabled: true,
+        vocation: "knight",
+        combatActive: true,
+        combatTargetName: "Scarab",
+        combatTargetId: 1,
+        combatTargetPosition: { x: 101, y: 100, z: 8 },
+        playerPosition: { x: 101, y: 99, z: 8 },
+      },
+      {
+        instanceId: "knight-two",
+        characterName: "Knight Two",
+        enabled: true,
+        vocation: "knight",
+        playerPosition: { x: 100, y: 100, z: 8 },
+      },
+    ],
+  };
+
+  const claimedScarab = {
+    id: 1,
+    name: "Scarab",
+    position: { x: 101, y: 100, z: 8 },
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+    engagedPlayerNames: ["Knight One"],
+  };
+  const freeScarab = {
+    id: 2,
+    name: "Scarab",
+    position: { x: 102, y: 100, z: 8 },
+    reachableForCombat: true,
+    withinCombatBox: true,
+    withinCombatWindow: true,
+  };
+
+  const selection = bot.chooseTarget(createModuleSnapshot({
+    playerName: "Knight Two",
+    progression: { vocation: "knight" },
+    visiblePlayers: [
+      {
+        id: 900,
+        name: "Knight One",
+        position: { x: 101, y: 99, z: 8 },
+      },
+    ],
+    visibleCreatures: [claimedScarab, freeScarab],
+    allMatches: [claimedScarab, freeScarab],
+    candidates: [claimedScarab, freeScarab],
+  }));
+
+  assert.equal(selection?.chosen?.id, 2);
+  assert.equal(bot.lastTargetScoreReport?.candidates.find((entry) => entry.id === 1)?.scoreBreakdown.teamHuntSpread, -10000);
 });
 
 test("chooseTarget keeps local combat available while route spacing is collapsed", () => {
@@ -23751,6 +24221,110 @@ test("chooseRouteAction uses an adjacent recovery ladder before relatching to a 
   assert.deepEqual(action?.waypoint, bot.options.waypoints[1]);
 });
 
+test("chooseRouteAction uses an observed ladder when a recorded stair tile is use-item based", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 100, y: 100, z: 8, type: "stairs-up" },
+      { x: 100, y: 100, z: 7, type: "walk" },
+    ],
+  });
+
+  bot.resetRoute(0);
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    visiblePlayers: [],
+    elementalFields: [],
+    walkableTiles: [
+      { x: 100, y: 100, z: 8 },
+    ],
+    reachableWalkableTiles: [
+      { x: 100, y: 100, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 100, y: 100, z: 8 },
+    ],
+    hazardTiles: [
+      {
+        position: { x: 100, y: 100, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["ladder"],
+      },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(action?.kind, "use-item");
+  assert.equal(action?.advanceOnSuccess, false);
+  assert.equal(action?.waypoint?.type, "ladder");
+  assert.deepEqual(
+    { x: action?.waypoint?.x, y: action?.waypoint?.y, z: action?.waypoint?.z },
+    { x: 100, y: 100, z: 8 },
+  );
+});
+
+test("chooseRouteAction finds a visible recovery ladder when the route is on the wrong floor", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    waypointRadius: 0,
+    waypoints: [
+      { x: 100, y: 100, z: 7, type: "walk" },
+      { x: 101, y: 100, z: 7, type: "walk" },
+    ],
+  });
+
+  bot.resetRoute(0);
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+    currentTarget: null,
+    candidates: [],
+    visibleCreatures: [],
+    visiblePlayers: [],
+    elementalFields: [],
+    walkableTiles: [
+      { x: 100, y: 100, z: 8 },
+    ],
+    reachableWalkableTiles: [
+      { x: 100, y: 100, z: 8 },
+    ],
+    reachableTiles: [
+      { x: 100, y: 100, z: 8 },
+      { x: 101, y: 100, z: 8 },
+    ],
+    hazardTiles: [
+      {
+        position: { x: 101, y: 100, z: 8 },
+        categories: ["stairsLadders"],
+        labels: ["ladder"],
+      },
+    ],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(action?.kind, "use-item");
+  assert.equal(action?.floorRecovery, true);
+  assert.equal(action?.advanceOnSuccess, false);
+  assert.equal(action?.waypoint?.type, "ladder");
+  assert.deepEqual(
+    { x: action?.waypoint?.x, y: action?.waypoint?.y, z: action?.waypoint?.z },
+    { x: 101, y: 100, z: 8 },
+  );
+});
+
 test("walk keeps the original blocked route after the nearby-combat retry grace expires", async () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -24045,7 +24619,7 @@ test("target interrupts autowalk before locking a new target", async () => {
   assert.equal(bot.lastWalkProgressPending, false);
 });
 
-test("target sends only the focused creature to the live target set", async () => {
+test("target sends the focused creature first with the selected live target batch", async () => {
   const bot = new MinibiaTargetBot({
     monsterNames: ["Dragon"],
   });
@@ -24108,10 +24682,10 @@ test("target sends only the focused creature to the live target set", async () =
   });
 
   assert.equal(result?.ok, true);
-  assert.deepEqual(targetSetSizes, [1]);
+  assert.deepEqual(targetSetSizes, [2]);
   assert.equal(result?.target?.id, 10);
-  assert.deepEqual(result?.queuedTargets.map((target) => target.id), [10]);
-  assert.equal(bot.lastTargetSignature, "10");
+  assert.deepEqual(result?.queuedTargets.map((target) => target.id), [10, 11]);
+  assert.equal(bot.lastTargetSignature, "10,11");
   assert.equal(player.__target?.id, 10);
 });
 

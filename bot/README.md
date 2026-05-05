@@ -67,6 +67,8 @@ Useful scripts:
 
 ```bash
 npm run check:structure
+npm run test:live
+npm run test:live:smoke
 npm run test:core
 npm run test:desktop
 npm run test:all
@@ -224,16 +226,21 @@ in [`temporals/`](./temporals).
 
 ```bash
 npm run check:structure
+npm run test:live
 npm test
 ```
 
 `npm run check:structure` verifies the portable root boundary, canonical
 markdown set, generated-state exclusions, and package entry points. `npm test`
-runs the smoke lane only. Use `npm run test:core` for bot decision logic, `npm
-run test:desktop` for the Electron renderer and shell, `npm run
-test:integration` for local browser/socket/CDP behavior, `npm run test:release`
-for bundle and repository checks, and `npm run test:all` only when the whole
-suite is required.
+is live-first: it validates live Minibia character tabs read-only through CDP
+when they are present and then runs the smoke lane; it skips only the live gate
+when no live tab is available. `npm run test:live` is the strict live gate and
+fails when no live session is found. `npm run test:live:smoke` runs that strict
+live gate before the smoke lane. Use `npm run test:smoke` for synthetic smoke
+only, `npm run test:core` for bot decision logic, `npm run test:desktop` for
+the Electron renderer and shell, `npm run test:integration` for local
+browser/socket/CDP behavior, `npm run test:release` for bundle and repository
+checks, and `npm run test:all` only when the whole suite is required.
 
 `npm run pack` produces an unpacked release bundle. `npm run dist` creates
 installable artifacts for the current platform.

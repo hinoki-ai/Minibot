@@ -666,12 +666,19 @@ function createFollowTrainCoordinationAdapter(session) {
         }
 
         const followTrainStatus = peer?.bot?.getFollowTrainStatus?.(peer?.bot?.lastSnapshot) || null;
+        const vocation = String(
+          followTrainStatus?.vocation
+          || peer?.bot?.resolveActiveVocation?.(peer?.bot?.lastSnapshot)
+          || peer?.bot?.options?.vocation
+          || "",
+        ).trim();
 
         members.push({
           instanceId: peer.claimOwnerId,
           characterName,
           enabled: Boolean(followTrainStatus?.enabled),
           role: String(followTrainStatus?.role || ""),
+          vocation,
           trainerEnabled: peer?.bot?.options?.trainerEnabled === true,
           trainerAutoPartyEnabled: peer?.bot?.options?.trainerAutoPartyEnabled !== false,
           trainerPartnerName: String(peer?.bot?.getTrainerPartnerName?.(peer?.bot?.lastSnapshot) || ""),
@@ -685,6 +692,7 @@ function createFollowTrainCoordinationAdapter(session) {
             && Number.isFinite(Number(followTrainStatus.combatTargetId))
             ? Math.trunc(Number(followTrainStatus.combatTargetId))
             : null,
+          combatTargetPosition: normalizeSessionPlayerPosition(followTrainStatus?.combatTargetPosition),
           combatThreatCount: Math.max(0, Math.trunc(Number(followTrainStatus?.combatThreatCount) || 0)),
           floorTransition: peer?.bot?.getFollowTrainFloorTransition?.() || null,
           recentActions: peer?.bot?.getFollowTrainRecentActions?.() || [],

@@ -336,11 +336,25 @@ The test suite currently covers:
 - hunt preset generation
 - sustain, looting, banking, equipment replacement, refill, and shopping helpers
 
-The default test command is intentionally small:
+The default test command is live-first and then smoke:
 
 ```bash
 npm test
 ```
+
+`npm test` validates discovered live character tabs read-only through CDP when
+they are present, skips only the live gate when none are available, and then runs
+the smoke lane. Runtime-facing work can require a strict live gate before relying
+on synthetic regression suites:
+
+```bash
+npm run test:live
+npm run test:live:smoke
+```
+
+`test:live` attaches read-only through CDP and validates real normalized
+snapshots for discovered character tabs. `test:live:smoke` runs that gate first,
+then the smoke lane.
 
 Named lanes keep slow suites explicit:
 

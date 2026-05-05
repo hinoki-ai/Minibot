@@ -81,7 +81,7 @@
   "autowalkLoop": true,
   "routeStrictClear": false,
   "routeSpacingEnabled": false,
-  "routeFollowExactWaypoints": true,
+  "routeFollowExactWaypoints": false,
   "routeRecording": false,
   "routeRecordStep": 5,
   "showWaypointOverlay": true,
@@ -143,7 +143,7 @@
   "reconnectMaxAttempts": 0,
   "avoidElementalFields": true,
   "avoidFieldCategories": {
-    "fire": true,
+    "fire": false,
     "energy": true,
     "poison": true,
     "holes": true,
@@ -263,17 +263,25 @@
   "amuletAutoReplaceRequireStationary": false,
   "bankingEnabled": false,
   "bankingRules": [],
-  "teamEnabled": true,
-  "partyFollowEnabled": true,
+  "teamEnabled": false,
+  "partyFollowEnabled": false,
   "partyFollowMembers": [
-    "Zlocimir Wielkoportf",
-    "Czarnobrat"
+    "Czarnobrat",
+    "Zlocimir Wielkoportf"
   ],
   "partyFollowManualPlayers": [],
   "partyFollowMemberRoles": {},
   "partyFollowMemberChaseModes": {},
   "partyFollowDistance": 1,
   "partyFollowCombatMode": "follow-and-fight",
+  "partyFollowLooseRecoveryEnabled": true,
+  "pkAssistEnabled": false,
+  "pkAssistMode": "evade-and-assist",
+  "pkAssistAllies": [],
+  "pkAssistRadiusSqm": 10,
+  "pkAssistRetreatHealthPercent": 45,
+  "pkAssistRetreatDistance": 6,
+  "pkAssistCooldownMs": 650,
   "chaseMode": "aggressive",
   "runeMakerEnabled": false,
   "runeMakerRules": [],
@@ -286,6 +294,7 @@
   "rookillerEnabled": false,
   "once": false,
   "dryRun": false,
+  "inputControlEnabled": false,
   "healerRules": [
     {
       "enabled": true,
@@ -387,138 +396,191 @@
       "y": 32145,
       "z": 7,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 001"
+      "label": "West tower entry",
+      "radius": 2
     },
     {
       "x": 32779,
       "y": 32143,
       "z": 7,
       "type": "stairs-up",
-      "label": "Waypoint 002"
+      "label": "Climb west tower to z6"
+    },
+    {
+      "x": 32779,
+      "y": 32145,
+      "z": 6,
+      "type": "node",
+      "label": "West tower z6 landing",
+      "radius": 2
     },
     {
       "x": 32779,
       "y": 32147,
       "z": 6,
       "type": "stairs-up",
-      "label": "Waypoint 003"
+      "label": "Climb west tower to z5"
     },
     {
       "x": 32779,
-      "y": 32142,
+      "y": 32145,
+      "z": 5,
+      "type": "node",
+      "label": "West tower top landing",
+      "radius": 2
+    },
+    {
+      "x": 32779,
+      "y": 32147,
       "z": 5,
       "type": "stairs-down",
-      "label": "Waypoint 004"
+      "label": "Descend west tower to z6"
+    },
+    {
+      "x": 32779,
+      "y": 32145,
+      "z": 6,
+      "type": "node",
+      "label": "West tower middle landing",
+      "radius": 2
     },
     {
       "x": 32779,
       "y": 32143,
       "z": 6,
       "type": "stairs-down",
-      "label": "Waypoint 005"
+      "label": "Descend west tower to z7"
+    },
+    {
+      "x": 32780,
+      "y": 32145,
+      "z": 7,
+      "type": "node",
+      "label": "West tower ground landing",
+      "radius": 2
+    },
+    {
+      "x": 32780,
+      "y": 32147,
+      "z": 7,
+      "type": "stand",
+      "label": "West basement hole approach"
     },
     {
       "x": 32779,
       "y": 32147,
       "z": 7,
       "type": "stairs-down",
-      "label": "Waypoint 006"
+      "label": "Descend west tower to z8"
     },
     {
       "x": 32779,
       "y": 32142,
       "z": 8,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 007"
+      "label": "West basement south landing",
+      "radius": 2
     },
     {
       "x": 32785,
       "y": 32138,
       "z": 8,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 008"
+      "label": "West basement center",
+      "radius": 2
     },
     {
       "x": 32790,
       "y": 32138,
       "z": 8,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 009"
+      "label": "West basement north",
+      "radius": 2
     },
     {
       "x": 32789,
       "y": 32133,
       "z": 8,
       "type": "stairs-down",
-      "label": "Waypoint 010"
+      "label": "Drop to west dragon lord floor"
+    },
+    {
+      "x": 32788,
+      "y": 32135,
+      "z": 9,
+      "type": "node",
+      "label": "West dragon lord landing",
+      "radius": 2
+    },
+    {
+      "x": 32789,
+      "y": 32137,
+      "z": 9,
+      "type": "node",
+      "label": "West dragon lord room",
+      "radius": 2
     },
     {
       "x": 32789,
       "y": 32133,
       "z": 9,
       "type": "stairs-up",
-      "label": "Waypoint 011"
+      "label": "Exit west dragon lord floor"
     },
     {
       "x": 32788,
       "y": 32135,
       "z": 8,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 012"
+      "label": "West basement north return",
+      "radius": 2
     },
     {
       "x": 32783,
       "y": 32137,
       "z": 8,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 013"
+      "label": "West basement west return",
+      "radius": 2
     },
     {
       "x": 32782,
       "y": 32142,
       "z": 8,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 014"
+      "label": "West basement exit approach",
+      "radius": 2
+    },
+    {
+      "x": 32779,
+      "y": 32145,
+      "z": 8,
+      "type": "node",
+      "label": "West basement exit landing",
+      "radius": 2
+    },
+    {
+      "x": 32780,
+      "y": 32147,
+      "z": 8,
+      "type": "stand",
+      "label": "West basement ramp approach"
     },
     {
       "x": 32779,
       "y": 32147,
       "z": 8,
       "type": "stairs-up",
-      "label": "Waypoint 015"
+      "label": "Climb west basement to z7"
     },
     {
       "x": 32780,
       "y": 32147,
       "z": 7,
       "type": "node",
-      "radius": 1,
-      "label": "Waypoint 016"
+      "label": "West tower loop reset",
+      "radius": 2
     }
   ],
-  "tileRules": [
-    {
-      "id": "tile-rule-venore-dragons-west-tower-no-go-32778-32143-6",
-      "enabled": true,
-      "label": "No-go 32778,32143,6",
-      "shape": "tile",
-      "x": 32778,
-      "y": 32143,
-      "z": 6,
-      "trigger": "approach",
-      "policy": "avoid",
-      "priority": 100,
-      "exactness": "exact",
-      "vicinityRadius": 0,
-      "waitMs": 0,
-      "cooldownMs": 0
-    }
-  ]
+  "tileRules": []
 }

@@ -1,5 +1,5 @@
 {
-  "cavebotName": "Scarabs 4 -2",
+  "cavebotName": "Scarabs 1 -2",
   "creatureLedger": {
     "monsters": [
       "Larva",
@@ -121,11 +121,14 @@
       "Laudi",
       "Ulduren",
       "Mercenario",
-      "Bubber"
+      "Bubber",
+      "Veriss"
     ],
     "npcs": []
   },
   "cavebotPaused": false,
+  "alarmsEnabled": true,
+  "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false
 }

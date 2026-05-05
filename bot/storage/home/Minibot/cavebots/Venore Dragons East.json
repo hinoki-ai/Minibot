@@ -93,11 +93,11 @@
   "combatRangeX": 2,
   "combatRangeY": 2,
   "floorTolerance": 1,
-  "autowalkEnabled": false,
-  "autowalkLoop": false,
+  "autowalkEnabled": true,
+  "autowalkLoop": true,
   "routeStrictClear": false,
   "routeSpacingEnabled": false,
-  "routeFollowExactWaypoints": true,
+  "routeFollowExactWaypoints": false,
   "routeRecording": false,
   "routeRecordStep": 5,
   "showWaypointOverlay": false,
@@ -159,7 +159,7 @@
   "reconnectMaxAttempts": 0,
   "avoidElementalFields": true,
   "avoidFieldCategories": {
-    "fire": true,
+    "fire": false,
     "energy": true,
     "poison": true,
     "holes": true,
@@ -292,6 +292,7 @@
   "partyFollowMemberChaseModes": {},
   "partyFollowDistance": 1,
   "partyFollowCombatMode": "follow-and-fight",
+  "partyFollowLooseRecoveryEnabled": true,
   "pkAssistEnabled": false,
   "pkAssistMode": "evade-and-assist",
   "pkAssistAllies": [],
@@ -415,7 +416,7 @@
       "z": 4,
       "type": "node",
       "label": "Waypoint 001",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32821,
@@ -437,7 +438,7 @@
       "z": 6,
       "type": "node",
       "label": "Waypoint 004",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32825,
@@ -452,7 +453,7 @@
       "z": 7,
       "type": "node",
       "label": "Waypoint 006",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32816,
@@ -467,7 +468,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 008",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32817,
@@ -475,7 +476,7 @@
       "z": 8,
       "type": "walk",
       "label": "Waypoint 009",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32821,
@@ -483,7 +484,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 010",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32826,
@@ -491,7 +492,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 011",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32831,
@@ -499,7 +500,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 012",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32832,
@@ -514,7 +515,7 @@
       "z": 9,
       "type": "node",
       "label": "Waypoint 014",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32832,
@@ -529,7 +530,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 016",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32825,
@@ -537,7 +538,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 017",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32819,
@@ -545,7 +546,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 018",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32814,
@@ -553,7 +554,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 019",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32812,
@@ -561,7 +562,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 020",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32811,
@@ -569,7 +570,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 021",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32811,
@@ -584,7 +585,7 @@
       "z": 9,
       "type": "node",
       "label": "Waypoint 023",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32811,
@@ -599,7 +600,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 025",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32812,
@@ -607,7 +608,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 026",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32813,
@@ -615,7 +616,7 @@
       "z": 8,
       "type": "node",
       "label": "Waypoint 027",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32816,
@@ -630,7 +631,7 @@
       "z": 7,
       "type": "node",
       "label": "Waypoint 029",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32825,
@@ -645,7 +646,7 @@
       "z": 6,
       "type": "stand",
       "label": "Waypoint 031",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32817,
@@ -660,7 +661,7 @@
       "z": 5,
       "type": "node",
       "label": "Waypoint 033",
-      "radius": 1
+      "radius": 2
     },
     {
       "x": 32821,
@@ -675,7 +676,7 @@
       "z": 4,
       "type": "node",
       "label": "Waypoint 035",
-      "radius": 1
+      "radius": 2
     }
   ]
 }

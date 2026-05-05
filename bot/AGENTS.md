@@ -57,20 +57,21 @@ Rules:
 
 ## Immediate Rules
 
-1. Run `git status --short` before edits and preserve unrelated local changes.
-2. Update the owning canonical doc in the same change that alters a contract,
+1. Live validation is the highest-priority proof. When a live Minibia session is
+   available and safe to exercise, validate against that live session before
+   relying on mocked, fake-user, fixture-only, or synthetic tests. Synthetic
+   tests are regression coverage after live proof, or a fallback only when live
+   validation is impossible or unsafe.
+2. Run `git status --short` before edits and preserve unrelated local changes.
+3. Update the owning canonical doc in the same change that alters a contract,
    workflow, module surface, UI rule, launch flow, or persistence path.
-3. Prefer editing an existing canonical doc over adding a new file.
-4. Move open work into `todo.md`, not a new handoff file.
-5. Move stable runtime or product truth into the owning canonical doc, not into
+4. Prefer editing an existing canonical doc over adding a new file.
+5. Move open work into `todo.md`, not a new handoff file.
+6. Move stable runtime or product truth into the owning canonical doc, not into
    `todo.md`.
-6. Delete stale duplicate documentation once canon is updated.
-7. Runtime behavior belongs in `lib/`; renderer event handlers should stay
+7. Delete stale duplicate documentation once canon is updated.
+8. Runtime behavior belongs in `lib/`; renderer event handlers should stay
    presentation-oriented.
-8. When a live Minibia session is available and safe to exercise, validate
-   against that live session first. Use mocked, fake-user, or synthetic tests
-   only after the live path is impossible, unsafe, or already covered for
-   regression.
 9. Run `npm run check:structure` after changing repository layout, canonical
    documentation, package entry points, or portable storage boundaries.
 10. Never close, kill, or tear down a live Minibia session, browser tab, or

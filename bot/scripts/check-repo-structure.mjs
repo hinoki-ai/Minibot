@@ -56,6 +56,7 @@ export const REQUIRED_BUNDLE_PATHS = Object.freeze([
   "bot/bb.mjs",
   "bot/onscreen_monster_bot.mjs",
   "bot/scripts/check-repo-structure.mjs",
+  "bot/scripts/run-live-tests.mjs",
   "bot/scripts/run-tests.mjs",
   "bot/test/repo-structure.test.mjs",
 ]);
@@ -258,12 +259,16 @@ function validatePackageManifest({
     issues.push("bot/package.json must expose npm run check:structure");
   }
 
-  if (packageJson.scripts?.test !== "node scripts/run-tests.mjs smoke") {
-    issues.push("bot/package.json test script must run the smoke test lane");
+  if (packageJson.scripts?.test !== "node scripts/run-live-tests.mjs --all-sessions --allow-skip --then smoke") {
+    issues.push("bot/package.json test script must run the live-first smoke gate");
   }
 
   if (packageJson.scripts?.["test:all"] !== "node scripts/run-tests.mjs all") {
     issues.push("bot/package.json must expose npm run test:all for the full suite");
+  }
+
+  if (packageJson.scripts?.["test:live"] !== "node scripts/run-live-tests.mjs --all-sessions") {
+    issues.push("bot/package.json must expose npm run test:live for live session validation");
   }
 
   if (!Array.isArray(packageJson.files) || !packageJson.files.includes("scripts/**/*")) {

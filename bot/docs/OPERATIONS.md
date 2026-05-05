@@ -17,14 +17,18 @@ Minibot currently targets Node.js `>=22`.
 Run the test suite:
 
 ```bash
+npm run test:live
 npm test
 ```
 
-When a live Minibia session is already available and safe to exercise, validate
-the implementation against that live session first. Prefer the control socket or
-other direct live-session probe over fake renderer/user shims. Run mocked or
-synthetic tests afterward as regression coverage, or only first when live
-validation is impossible or unsafe.
+Live validation is the first gate when a Minibia character tab is available and
+safe to exercise. `npm test` attempts the read-only live gate when live tabs are
+present, skips only that gate when none are available, and then runs smoke.
+`npm run test:live` is the strict version that fails when no live session is
+found. `npm run test:live:smoke` runs the same strict live gate and then the
+smoke lane. Prefer this gate, the control socket, or another direct live-session
+probe over fake renderer/user shims. Run mocked or synthetic tests afterward as
+regression coverage, or only first when live validation is impossible or unsafe.
 
 Build an unpacked production bundle:
 
