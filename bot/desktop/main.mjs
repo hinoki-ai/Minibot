@@ -943,8 +943,23 @@ const FOLLOW_TRAIN_OPTION_KEYS = new Set([
 
 const TEAM_HUNT_OPTION_KEYS = new Set([
   "teamEnabled",
+  "teamHuntEnabled",
   "partyFollowEnabled",
+  "followChainEnabled",
 ]);
+
+function hasOwnOption(source = {}, key = "") {
+  return Object.prototype.hasOwnProperty.call(source, key);
+}
+
+function getFirstOwnOption(source = {}, keys = []) {
+  for (const key of keys) {
+    if (hasOwnOption(source, key)) {
+      return source[key];
+    }
+  }
+  return undefined;
+}
 
 function isFollowTrainOnlyPatch(partial = {}) {
   if (!partial || typeof partial !== "object") {
@@ -955,16 +970,55 @@ function isFollowTrainOnlyPatch(partial = {}) {
   return keys.length > 0 && keys.every((key) => FOLLOW_TRAIN_OPTION_KEYS.has(key));
 }
 
-function isTeamHuntOnlyPatch(partial = {}) {
+function isSessionTeamHuntActive(session = null) {
+  const config = session?.config || session?.bot?.options || {};
+  return Boolean(config.teamEnabled || config.teamHuntEnabled);
+}
+
+function getTeamHuntPropagationPatch(partial = {}, {
+  activeSessionWasTeamHunt = false,
+} = {}) {
+  if (!partial || typeof partial !== "object") {
+    return null;
+  }
+
+  const hasTeamKey = hasOwnOption(partial, "teamEnabled") || hasOwnOption(partial, "teamHuntEnabled");
+  if (!hasTeamKey) {
+    return null;
+  }
+
+  const teamValue = getFirstOwnOption(partial, ["teamEnabled", "teamHuntEnabled"]);
+  const followValue = getFirstOwnOption(partial, ["partyFollowEnabled", "followChainEnabled"]);
+  if (followValue === true) {
+    return null;
+  }
+
+  if (teamValue === true) {
+    return {
+      teamEnabled: true,
+    };
+  }
+
+  if (teamValue === false && activeSessionWasTeamHunt) {
+    return {
+      teamEnabled: false,
+    };
+  }
+
+  return null;
+}
+
+function isTeamHuntOnlyPatch(partial = {}, activeSession = null) {
   if (!partial || typeof partial !== "object") {
     return false;
   }
 
   const keys = Object.keys(partial);
   return keys.length > 0
-    && Object.prototype.hasOwnProperty.call(partial, "teamEnabled")
-    && partial.teamEnabled === true
-    && keys.every((key) => TEAM_HUNT_OPTION_KEYS.has(key));
+    && keys.every((key) => TEAM_HUNT_OPTION_KEYS.has(key))
+    && Boolean(getTeamHuntPropagationPatch(partial, {
+      activeSessionWasTeamHunt: isSessionTeamHuntActive(activeSession),
+    }));
 }
 
 function buildFollowTrainOptionsPatch(partial = {}, activeSession = null) {
@@ -976,7 +1030,6 @@ function buildFollowTrainOptionsPatch(partial = {}, activeSession = null) {
   }
 
   if (patch.partyFollowEnabled === true) {
-    patch.teamEnabled = false;
     const requestedMembers = mergeMonsterNames(patch.partyFollowMembers || []);
     if (requestedMembers.length < 2) {
       const activeMembers = mergeMonsterNames(activeSession?.config?.partyFollowMembers || []);
@@ -1024,9 +1077,9 @@ async function persistTeamHuntOptionsForLiveSessions(activeSession, partial = {}
     await ensureSessionConfig(activeSession);
   }
 
+  const requestedTeamEnabled = getFirstOwnOption(partial, ["teamEnabled", "teamHuntEnabled"]);
   const patch = {
-    teamEnabled: partial.teamEnabled === true,
-    partyFollowEnabled: false,
+    teamEnabled: requestedTeamEnabled === true,
   };
   const selectedSessions = resolveTeamHuntPersistSessions(activeSession);
 
@@ -2981,7 +3034,9 @@ function seedManagedBrowserProfile({
       fs.cpSync(resolvedSourceUserDataDir, resolvedTargetUserDataDir, {
         recursive: true,
         force: true,
-        filter: (sourcePath) => shouldCopyBrowserProfilePath(sourcePath, resolvedSourceUserDataDir),
+        filter: (sourcePath) => shouldCopyBrowserProfilePath(sourcePath, resolvedSourceUserDataDir, {
+          preserveSavedPasswords: true,
+        }),
       });
     } else {
       fs.mkdirSync(resolvedTargetUserDataDir, { recursive: true });
@@ -2995,7 +3050,9 @@ function seedManagedBrowserProfile({
     });
   }
 
-  pruneBrowserProfile(resolvedTargetUserDataDir);
+  pruneBrowserProfile(resolvedTargetUserDataDir, {
+    preserveSavedPasswords: true,
+  });
 
   return resolvedTargetUserDataDir;
 }
@@ -3057,6 +3114,14 @@ function getElectronHomeDir() {
   }
 }
 
+function isEnabledEnvValue(value) {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function shouldAllowHotbarBrowserProfileDiscovery() {
+  return isEnabledEnvValue(process.env.MINIBOT_HOTBAR_ALLOW_BROWSER_DISCOVERY);
+}
+
 function buildHotbarHydrationProfileCandidates(context = {}, {
   includeBundledSeedProfile = true,
   includeDefaultBrowserProfiles = true,
@@ -3078,7 +3143,7 @@ function buildHotbarHydrationProfileCandidates(context = {}, {
     env: process.env,
     homeDir: getElectronHomeDir(),
     platform: process.platform,
-    includeDefaultBrowserProfiles,
+    includeDefaultBrowserProfiles: includeDefaultBrowserProfiles && shouldAllowHotbarBrowserProfileDiscovery(),
   });
 }
 
@@ -5409,8 +5474,12 @@ handleTrusted("bb:reconnect-session", async (_event, sessionId = null) => {
 handleTrusted("bb:update-options", async (_event, partial) => {
   const session = requireActiveSession();
   await ensureSessionConfig(session);
+  const activeSessionWasTeamHunt = isSessionTeamHuntActive(session);
+  const teamHuntPropagationPatch = getTeamHuntPropagationPatch(partial, {
+    activeSessionWasTeamHunt,
+  });
 
-  if (isTeamHuntOnlyPatch(partial)) {
+  if (isTeamHuntOnlyPatch(partial, session)) {
     await persistTeamHuntOptionsForLiveSessions(session, partial);
     return serializeState();
   }
@@ -5421,6 +5490,9 @@ handleTrusted("bb:update-options", async (_event, partial) => {
   }
 
   await persistSessionConfig(session, mergeOptions(session.config, partial));
+  if (teamHuntPropagationPatch) {
+    await persistTeamHuntOptionsForLiveSessions(session, teamHuntPropagationPatch);
+  }
   const refreshPresenceClassification = partial && typeof partial === "object" && (
     Object.hasOwn(partial, "creatureLedger")
     || Object.hasOwn(partial, "monsterArchive")

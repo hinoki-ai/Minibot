@@ -35,6 +35,7 @@ export function buildPartyPlannerSummary(snapshot = {}, options = {}, {
     : members;
   const spacing = Math.max(0, Math.trunc(Number(options.partyFollowDistance) || 0));
   const selfIndex = chain.findIndex((entry) => entry.toLowerCase() === selfName.toLowerCase());
+  const enabled = options.partyFollowEnabled === true || (options.teamEnabled === true && chain.length >= 2);
   const predecessor = selfIndex > 0 ? chain[selfIndex - 1] : "";
   const predecessorPosition = predecessor ? getMemberPosition(snapshot, predecessor) : null;
   const selfPosition = snapshot.playerPosition || null;
@@ -58,7 +59,7 @@ export function buildPartyPlannerSummary(snapshot = {}, options = {}, {
   }));
 
   return {
-    enabled: options.partyFollowEnabled === true,
+    enabled,
     role: roleMap[selfName] || (selfIndex <= 0 ? "leader" : "follower"),
     members: chain,
     predecessor,

@@ -1758,9 +1758,9 @@ test("dashboard shows inherited trainer services and follow-chain movement block
 
   assert.equal(document.getElementById("summary-trainer").textContent.trim(), "Follow");
   assert.match(document.getElementById("summary-trainer-detail").textContent, /Follow Chain owns movement/i);
-  assert.equal(document.getElementById("summary-reconnect").textContent.trim(), "Off");
-  assert.equal(document.getElementById("summary-auto-eat").textContent.trim(), "Off");
-  assert.equal(document.getElementById("summary-anti-idle").textContent.trim(), "Off");
+  assert.notEqual(document.getElementById("summary-reconnect").textContent.trim(), "Off");
+  assert.notEqual(document.getElementById("summary-auto-eat").textContent.trim(), "Off");
+  assert.notEqual(document.getElementById("summary-anti-idle").textContent.trim(), "Off");
 
   const nextState = currentState();
   nextState.sessions = nextState.sessions.map((session) => (
@@ -2118,7 +2118,7 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
   assert.equal(document.getElementById("quick-toggle-record").closest(".route-toggle-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-waypoints").closest(".route-toggle-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-session-waypoints").closest(".quick-module-card") !== null, true);
-  assert.match(document.getElementById("quick-open-session-waypoints").textContent, /All tabs markers/);
+  assert.match(document.getElementById("quick-open-session-waypoints").textContent, /All tabs/);
   assert.equal(document.getElementById("quick-toggle-cavebot-pause").closest(".quick-module-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-looting").closest(".quick-module-card") !== null, true);
   assert.equal(document.getElementById("quick-toggle-banking").closest(".quick-module-card") !== null, true);
@@ -2309,9 +2309,9 @@ test("desktop buttons and modals remain clickable and wire to the backend bridge
     }
   }
   const teamPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "teamEnabled") && payload.teamEnabled === true);
-  assert.equal(teamPayload?.partyFollowEnabled, false);
+  assert.equal(Object.hasOwn(teamPayload || {}, "partyFollowEnabled"), false);
   const followPayload = calls.updateOptions.find((payload) => Object.hasOwn(payload, "partyFollowEnabled") && payload.partyFollowEnabled === true);
-  assert.equal(followPayload?.teamEnabled, false);
+  assert.equal(Object.hasOwn(followPayload || {}, "teamEnabled"), false);
   assert.equal(document.getElementById("quick-toggle-autowalk").closest(".route-toggle-card")?.dataset.state, "off");
   assert.equal(document.getElementById("quick-toggle-mana-trainer").closest(".quick-module-card")?.dataset.state, "on");
   assert.equal(document.getElementById("quick-toggle-anti-idle").closest(".quick-module-card")?.dataset.state, "on");
@@ -2757,7 +2757,7 @@ test("master stop reflects running live sessions across the full desk, not only 
 
   assert.equal(getCompactText(document.getElementById("quick-toggle-cavebot-pause")), "StatusRunning");
   assert.equal(document.getElementById("compact-cavebot-master-stop").textContent.trim(), "Stop 1");
-  assert.match(document.getElementById("quick-open-cavebot-pause")?.title || "", /stop 1 live character/i);
+  assert.match(document.getElementById("quick-open-cavebot-pause")?.title || "", /stop 1 tab/i);
 });
 
 test("hunt, trainer, and follow-chain buttons open their own panels", async () => {
@@ -6920,7 +6920,7 @@ test("haste module renders a compact settings modal and saves mana-fluid options
   });
   const { document, window, calls, currentState } = desk;
 
-  assert.equal(document.getElementById("summary-haste").textContent.trim(), "On");
+  assert.equal(document.getElementById("summary-haste").textContent.trim(), "utani hur");
   assert.match(document.getElementById("summary-haste-detail").textContent, /utani hur/i);
   assert.match(document.getElementById("summary-haste-detail").textContent, /drink Mana Fluid/i);
 
@@ -7449,7 +7449,7 @@ test("ammo modal leaves quiver value-slot coins alone while ammo is disabled", a
   });
   const { document } = desk;
 
-  assert.equal(document.getElementById("summary-ammo").textContent.trim(), "Off");
+  assert.notEqual(document.getElementById("summary-ammo").textContent.trim(), "Off");
 
   document.querySelector('[data-open-modal="ammo"]').click();
   await flush();
@@ -8203,7 +8203,7 @@ test("follow chain surfaces shared HP supply and loot summaries", async () => {
   assert.match(overviewText, /1\.8k gp \/ 5 kills \/ 1 lap/);
 });
 
-test("Team Hunt and Follow Chain quick toggles send mutually exclusive modes", async () => {
+test("Team Hunt and Follow Chain quick toggles can be enabled together", async () => {
   const desk = await createDesk({
     initialState: createState({
       options: {
@@ -8223,7 +8223,6 @@ test("Team Hunt and Follow Chain quick toggles send mutually exclusive modes", a
 
   assert.deepEqual(calls.updateOptions.at(-1), {
     teamEnabled: true,
-    partyFollowEnabled: false,
   });
   assert.equal(currentState().options.teamEnabled, true);
   assert.equal(currentState().options.partyFollowEnabled, false);
@@ -8231,9 +8230,9 @@ test("Team Hunt and Follow Chain quick toggles send mutually exclusive modes", a
   document.getElementById("quick-toggle-party-follow").click();
   await flush();
 
-  assert.equal(calls.updateOptions.at(-1).teamEnabled, false);
   assert.equal(calls.updateOptions.at(-1).partyFollowEnabled, true);
-  assert.equal(currentState().options.teamEnabled, false);
+  assert.equal(Object.hasOwn(calls.updateOptions.at(-1), "teamEnabled"), false);
+  assert.equal(currentState().options.teamEnabled, true);
   assert.equal(currentState().options.partyFollowEnabled, true);
 });
 

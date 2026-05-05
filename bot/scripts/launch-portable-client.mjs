@@ -138,7 +138,9 @@ export function preparePortableClientProfile({
       cpImpl(resolvedSeedProfileDir, resolvedProfileDir, {
         recursive: true,
         force: true,
-        filter: (sourcePath) => shouldCopyBrowserProfilePath(sourcePath, resolvedSeedProfileDir),
+        filter: (sourcePath) => shouldCopyBrowserProfilePath(sourcePath, resolvedSeedProfileDir, {
+          preserveSavedPasswords: true,
+        }),
       });
       shouldCleanupProfileLocks = true;
     } else {
@@ -160,6 +162,7 @@ export function preparePortableClientProfile({
   pruneBrowserProfile(resolvedProfileDir, {
     existsImpl,
     rmImpl,
+    preserveSavedPasswords: true,
   });
 
   return resolvedProfileDir;

@@ -2,21 +2,23 @@
   "cavebotName": "RotwormsFibula",
   "creatureLedger": {
     "monsters": [
-      "Rat",
-      "Troll",
-      "Cave Rat",
-      "Bug",
-      "Spider",
       "Alpha Rat",
-      "Dog",
-      "Wolf",
-      "Bear",
-      "Poison Spider",
-      "Rotworm",
       "Alpha Rotworm",
-      "Snake",
+      "Bear",
+      "Bug",
+      "Cave Rat",
+      "Chicken",
+      "Dog",
+      "Ghoul",
+      "Poison Spider",
       "Rabbit",
-      "Chicken"
+      "Rat",
+      "Rotworm",
+      "Snake",
+      "Spider",
+      "Troll",
+      "Wolf",
+      "Monk"
     ],
     "players": [
       "Zlocimir Wielkoportf",
@@ -37,12 +39,18 @@
       "Scouse Goebbels",
       "Jonnny Testatudo",
       "Grof",
-      "Curandeira"
+      "Curandeira",
+      "Sus",
+      "Kara Boska",
+      "Zeus",
+      "Palawey",
+      "Mclovin Doom Mage",
+      "Panzerkampfwagen Iv"
     ],
     "npcs": []
   },
   "cavebotPaused": false,
-  "alarmsEnabled": true,
+  "alarmsEnabled": false,
   "alarmsSoundEnabled": true,
   "trainerPartnerName": "",
   "stopAggroHold": false

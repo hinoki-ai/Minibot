@@ -80,6 +80,12 @@ If the live browser is still being throttled behind other windows, opt into the 
 MINIBOT_KEEP_BROWSER_BACKGROUND_ACTIVE=1 npm run desktop
 ```
 
+Hotbar restore normally reads only the managed Minibia seed/runtime profile. To recover a hotbar from a normal browser profile, run once with:
+
+```bash
+MINIBOT_HOTBAR_ALLOW_BROWSER_DISCOVERY=1 npm run desktop
+```
+
 ### Manual Attach
 
 Open a browser yourself with remote debugging enabled:
@@ -332,7 +338,7 @@ Important behavior notes:
 - follow chain uses ordered chains where each follower native-follows the name directly above it; separate live link components stay as separate chains
 - follow chain members can be live tabs, seen players, or manual player names
 - follow chain supports `Follow and fight` plus `Follow only`, with optional per-member tactical role overrides like `front-guard`, `assist-dps`, `sio-healer`, `party-buffer`, `rearguard`, and `scout`
-- visible same-floor combat threats suspend native follow so each follower can target, fight, and then reform the chain; recovery movement uses client pathing rather than viewport mouse clicks
+- visible same-floor combat threats suspend native follow so each follower can target, fight, and then reform the chain; same-floor recovery movement uses viewport map-clicks before client-path fallback
 - anti-idle sends a guarded keepalive pulse after real gameplay inactivity crosses the configured delay
 
 `Combat` and `Once` live in Hunt Studio, not in the shared module modal or Route Builder. `Field Safe`, `Session Waypoints`, `Cavebot Pause`, and `Rookiller` are quick controls on the desk.

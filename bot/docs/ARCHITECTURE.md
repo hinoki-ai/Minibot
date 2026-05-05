@@ -127,6 +127,8 @@ If those are unset, it falls back to common Chrome, Chromium, Brave, and Edge in
 
 The managed launcher builds a detached launch spec with DevTools, managed-profile, and background-hygiene Chromium flags, then waits for the new session to appear on the configured DevTools port. The heavier always-active background flags are opt-in through `MINIBOT_KEEP_BROWSER_BACKGROUND_ACTIVE=1`.
 
+Hotbar restoration is scoped to the explicit Minibia seed/runtime profile by default so curated session hotbars and window placement remain stable across launches. Broad Chrome/Chromium/Brave/Edge profile discovery is only enabled for recovery when `MINIBOT_HOTBAR_ALLOW_BROWSER_DISCOVERY=1`.
+
 ## Runtime Flow
 
 ### Boot

@@ -112,6 +112,15 @@ export const BROWSER_PROFILE_COPY_EXCLUDED_PREFIXES = Object.freeze([
   "Safe Browsing ",
 ]);
 
+const SAVED_PASSWORD_PROFILE_BASENAMES = new Set([
+  "Account Web Data",
+  "Account Web Data-journal",
+  "Login Data",
+  "Login Data For Account",
+  "Login Data For Account-journal",
+  "Login Data-journal",
+]);
+
 function getRelativeSegments(sourcePath, rootPath) {
   const resolvedRoot = path.resolve(String(rootPath || ""));
   const resolvedSource = path.resolve(String(sourcePath || ""));
@@ -135,9 +144,14 @@ function getRelativeSegments(sourcePath, rootPath) {
 export function matchesBrowserProfileExcludedName(name = "", {
   excludedBasenames = BROWSER_PROFILE_COPY_EXCLUDED_BASENAMES,
   excludedPrefixes = BROWSER_PROFILE_COPY_EXCLUDED_PREFIXES,
+  preserveSavedPasswords = false,
 } = {}) {
   const normalizedName = String(name || "").trim();
   if (!normalizedName) {
+    return false;
+  }
+
+  if (preserveSavedPasswords && SAVED_PASSWORD_PROFILE_BASENAMES.has(normalizedName)) {
     return false;
   }
 
@@ -163,6 +177,7 @@ export function pruneBrowserProfile(profileRoot, {
   existsImpl = fs.existsSync,
   readdirImpl = fs.readdirSync,
   rmImpl = fs.rmSync,
+  preserveSavedPasswords = false,
 } = {}) {
   const resolvedProfileRoot = path.resolve(String(profileRoot || ""));
   if (!resolvedProfileRoot || !existsImpl(resolvedProfileRoot)) {
@@ -180,7 +195,7 @@ export function pruneBrowserProfile(profileRoot, {
 
     for (const entry of entries) {
       const entryPath = path.join(directoryPath, entry.name);
-      if (matchesBrowserProfileExcludedName(entry.name)) {
+      if (matchesBrowserProfileExcludedName(entry.name, { preserveSavedPasswords })) {
         try {
           rmImpl(entryPath, { recursive: true, force: true });
           removedPaths.push(entryPath);

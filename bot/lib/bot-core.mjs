@@ -3745,42 +3745,6 @@ export function normalizeOptions(options = {}) {
   merged.partyFollowCombatMode = normalizeFollowTrainCombatMode(merged.partyFollowCombatMode);
   merged.teamEnabled = Boolean(merged.teamEnabled);
   merged.partyFollowEnabled = Boolean(merged.partyFollowEnabled);
-  if (merged.teamEnabled && merged.partyFollowEnabled) {
-    const followChainSpecificFields = [
-      "followChainEnabled",
-      "followChainMembers",
-      "followChainManualPlayers",
-      "followChainMemberRoles",
-      "followChainMemberChaseModes",
-      "followChainDistance",
-      "followChainCombatMode",
-      "partyFollowMembers",
-      "partyFollowManualPlayers",
-      "partyFollowMemberRoles",
-      "partyFollowMemberChaseModes",
-      "partyFollowDistance",
-      "partyFollowCombatMode",
-    ];
-    const hasFollowChainSpecificField = followChainSpecificFields.some((key) => {
-      if (!hasOwn(key)) {
-        return false;
-      }
-      const value = options[key];
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      if (value && typeof value === "object") {
-        return Object.keys(value).length > 0;
-      }
-      return value !== undefined && value !== null && value !== "";
-    });
-
-    if (hasFollowChainSpecificField) {
-      merged.teamEnabled = false;
-    } else {
-      merged.partyFollowEnabled = false;
-    }
-  }
   if (merged.partyFollowEnabled) {
     merged.trainerConfigured = merged.trainerConfigured || merged.trainerEnabled;
     merged.trainerEnabled = false;
@@ -3861,32 +3825,6 @@ export function normalizeOptions(options = {}) {
 export function mergeOptions(baseOptions = {}, nextOptions = {}) {
   const nextSource = nextOptions && typeof nextOptions === "object" ? nextOptions : {};
   const merged = { ...baseOptions, ...nextSource };
-  const nextKeys = Object.keys(nextSource);
-  const teamPatchIndex = Math.max(nextKeys.indexOf("teamEnabled"), nextKeys.indexOf("teamHuntEnabled"));
-  const followPatchIndex = Math.max(nextKeys.indexOf("partyFollowEnabled"), nextKeys.indexOf("followChainEnabled"));
-  if (teamPatchIndex >= 0 || followPatchIndex >= 0) {
-    const teamRequested = teamPatchIndex >= 0
-      ? Boolean(nextSource.teamEnabled ?? nextSource.teamHuntEnabled)
-      : null;
-    const followRequested = followPatchIndex >= 0
-      ? Boolean(nextSource.partyFollowEnabled ?? nextSource.followChainEnabled)
-      : null;
-
-    if (teamRequested === true && followRequested === true) {
-      if (teamPatchIndex > followPatchIndex) {
-        merged.partyFollowEnabled = false;
-      } else {
-        merged.teamEnabled = false;
-      }
-    } else {
-      if (teamRequested === true) {
-        merged.partyFollowEnabled = false;
-      }
-      if (followRequested === true) {
-        merged.teamEnabled = false;
-      }
-    }
-  }
   const hasMonster = Object.prototype.hasOwnProperty.call(nextSource, "monster");
   const hasMonsterNames = Object.prototype.hasOwnProperty.call(nextSource, "monsterNames");
   const hasHealerRules = Object.prototype.hasOwnProperty.call(nextSource, "healerRules");
@@ -16127,6 +16065,25 @@ export class MinibiaTargetBot {
     return normalizeTextList(this.options?.partyFollowMembers);
   }
 
+  getFollowTrainChainIndex(name = "") {
+    const key = this.getNameKey(name);
+    if (!key) {
+      return -1;
+    }
+    return this.getFollowTrainChainMembers().findIndex((entry) => this.getNameKey(entry) === key);
+  }
+
+  isFollowTrainEnabled() {
+    if (this.options?.partyFollowEnabled === true) {
+      return true;
+    }
+    return this.options?.teamEnabled === true && this.getFollowTrainChainMembers().length >= 2;
+  }
+
+  isFollowTrainFollowerName(name = "") {
+    return this.isFollowTrainEnabled() && this.getFollowTrainChainIndex(name) > 0;
+  }
+
   getFollowTrainCombatMode() {
     return normalizeFollowTrainCombatMode(this.options?.partyFollowCombatMode);
   }
@@ -16187,7 +16144,7 @@ export class MinibiaTargetBot {
       && !this.options?.partyFollowEnabled
       && !String(this.options?.trainerPartnerName || "").trim(),
     );
-    if (!snapshot?.ready || (!this.options.partyFollowEnabled && !legacyTrainerFollowEnabled)) {
+    if (!snapshot?.ready || (!this.isFollowTrainEnabled() && !legacyTrainerFollowEnabled)) {
       return null;
     }
 
@@ -18734,7 +18691,9 @@ export class MinibiaTargetBot {
     }
 
     const hasPathfinderDestination = Boolean(this.getPositionKey(snapshot?.pathfinderFinalDestination));
-    if (snapshot?.isMoving || (snapshot?.pathfinderAutoWalking && hasPathfinderDestination)) {
+    const pathfinderStepsRemaining = Number(snapshot?.autoWalkStepsRemaining);
+    const pathfinderStillHasSteps = !Number.isFinite(pathfinderStepsRemaining) || pathfinderStepsRemaining > 0;
+    if (snapshot?.isMoving || (snapshot?.pathfinderAutoWalking && hasPathfinderDestination && pathfinderStillHasSteps)) {
       return false;
     }
 
@@ -18760,7 +18719,9 @@ export class MinibiaTargetBot {
     }
 
     const hasPathfinderDestination = Boolean(this.getPositionKey(snapshot?.pathfinderFinalDestination));
-    if (snapshot?.isMoving || (snapshot?.pathfinderAutoWalking && hasPathfinderDestination)) {
+    const pathfinderStepsRemaining = Number(snapshot?.autoWalkStepsRemaining);
+    const pathfinderStillHasSteps = !Number.isFinite(pathfinderStepsRemaining) || pathfinderStepsRemaining > 0;
+    if (snapshot?.isMoving || (snapshot?.pathfinderAutoWalking && hasPathfinderDestination && pathfinderStillHasSteps)) {
       return false;
     }
 
@@ -21461,6 +21422,22 @@ export class MinibiaTargetBot {
       return null;
     }
 
+    const movementClaimed = Boolean(
+      snapshot?.pathfinderAutoWalking
+      || snapshot?.isMoving
+      || snapshot?.pathfinderFinalDestination
+      || Number(snapshot?.autoWalkStepsRemaining) > 0
+    );
+    if (movementClaimed && this.hasRecentBlockedWalkMessage(snapshot, now)) {
+      this.rememberBlockedWalkDestinationFromSnapshot(snapshot, now);
+      this.clearClientAutoWalkStationaryState();
+      return {
+        kind: "hold-route",
+        reason: "blocked-message",
+        interrupt: true,
+      };
+    }
+
     const staleState = this.updateClientAutoWalkStationaryState(snapshot, now);
     if (!staleState?.ready) {
       return null;
@@ -21701,6 +21678,7 @@ export class MinibiaTargetBot {
       this.running ? 1 : 0,
       this.options.teamEnabled === true ? 1 : 0,
       this.options.partyFollowEnabled === true ? 1 : 0,
+      this.isFollowTrainEnabled() ? 1 : 0,
       this.options.trainerEnabled === true ? 1 : 0,
       this.options.trainerAutoPartyEnabled !== false ? 1 : 0,
       String(snapshot?.playerName || "").trim().toLowerCase(),
@@ -21724,7 +21702,7 @@ export class MinibiaTargetBot {
   }
 
   isTeamHuntEnabled() {
-    return this.options.teamEnabled === true && this.options.partyFollowEnabled !== true;
+    return this.options.teamEnabled === true;
   }
 
   isRouteCoordinationEnabled() {
@@ -22697,6 +22675,21 @@ export class MinibiaTargetBot {
     return members.find((member) => member.instanceId === selfInstanceId) || null;
   }
 
+  isTeamHuntPeerCoveredByFollowTrain(member = null, selfMember = null) {
+    if (!member || !this.isFollowTrainFollowerName(member.characterName)) {
+      return false;
+    }
+
+    const selfPosition = selfMember?.playerPosition || this.lastSnapshot?.playerPosition || null;
+    const peerPosition = member.playerPosition || null;
+    const distance = this.getPositionDistance(selfPosition, peerPosition);
+    if (!Number.isFinite(distance)) {
+      return false;
+    }
+
+    return distance <= Math.max(2, this.getFollowTrainSpacing() + 1);
+  }
+
   isTeamHuntPeerBehind(peerIndex, currentIndex) {
     const total = this.options.waypoints.length;
     if (total < 2 || !Number.isInteger(peerIndex) || !Number.isInteger(currentIndex)) {
@@ -22766,6 +22759,9 @@ export class MinibiaTargetBot {
 
     const blockingPeer = members.find((member) => {
       if (!member || member.instanceId === selfMember.instanceId) {
+        return false;
+      }
+      if (this.isTeamHuntPeerCoveredByFollowTrain(member, selfMember)) {
         return false;
       }
 
@@ -37716,6 +37712,11 @@ export class MinibiaTargetBot {
   }
 
   async clickViewportWalk(waypoint) {
+    await this.attach();
+    try {
+      await this.cdp.send("Page.bringToFront", {});
+    } catch {}
+
     const click = await this.cdp.evaluate(buildViewportClickPositionExpression(waypoint));
     if (!click?.ok) return click;
 
@@ -37858,6 +37859,20 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
+    let clickResult = null;
+    try {
+      clickResult = await this.clickViewportWalk(destination);
+    } catch (error) {
+      clickResult = {
+        ok: false,
+        reason: "viewport click failed",
+        message: error?.message || String(error || ""),
+      };
+    }
+    if (clickResult?.ok) {
+      return acceptWalk(clickResult, clickResult.transport || "viewport-click");
+    }
+
     let keyboardResult = null;
     if (this.shouldTryKeyboardStepBeforeViewportWalk(destination, origin, now)) {
       try {
@@ -37871,13 +37886,12 @@ export class MinibiaTargetBot {
       }
 
       if (keyboardResult?.ok) {
-        return acceptWalk(keyboardResult, keyboardResult.transport || "keyboard-step");
+        return acceptWalk(
+          keyboardResult,
+          keyboardResult.transport || "keyboard-step",
+          clickResult?.reason || "",
+        );
       }
-    }
-
-    const clickResult = await this.clickViewportWalk(destination);
-    if (clickResult?.ok) {
-      return acceptWalk(clickResult, clickResult.transport || "viewport-click");
     }
 
     let nativeResult = null;
@@ -37949,7 +37963,12 @@ export class MinibiaTargetBot {
         fallbackReason,
       });
     };
-    const executeNativeFollowTrainWalk = async (fallbackReason = "") => {
+    const acceptFollowTrainWalk = async (result, transport, fallbackReason = "") => {
+      await this.restorePreferredChaseMode({ force: true }).catch(() => null);
+      recordAcceptedFollowTrainWalk(transport, fallbackReason);
+      return { ...result, transport, destination };
+    };
+    const executeNativeFollowTrainWalk = async () => {
       let nativeResult = null;
       try {
         nativeResult = await this.executeNativeWalk(destination);
@@ -37959,11 +37978,6 @@ export class MinibiaTargetBot {
           reason: "native pathfinder unavailable",
           message: error?.message || String(error || ""),
         };
-      }
-
-      if (nativeResult?.ok) {
-        await this.restorePreferredChaseMode({ force: true }).catch(() => null);
-        recordAcceptedFollowTrainWalk(nativeResult.transport || "native-pathfinder", fallbackReason);
       }
 
       return nativeResult;
@@ -37992,9 +38006,48 @@ export class MinibiaTargetBot {
       return { ok: true, dryRun: true, destination };
     }
 
+    let clickResult = null;
+    try {
+      clickResult = await this.clickViewportWalk(destination);
+    } catch (error) {
+      clickResult = {
+        ok: false,
+        reason: "viewport click failed",
+        message: error?.message || String(error || ""),
+      };
+    }
+    if (clickResult?.ok) {
+      return acceptFollowTrainWalk(clickResult, clickResult.transport || "viewport-click");
+    }
+
+    let keyboardResult = null;
+    if (this.shouldTryKeyboardStepBeforeViewportWalk(destination, origin, now)) {
+      try {
+        keyboardResult = await this.executeKeyboardStep(destination, origin);
+      } catch (error) {
+        keyboardResult = {
+          ok: false,
+          reason: "keyboard step failed",
+          message: error?.message || String(error || ""),
+        };
+      }
+
+      if (keyboardResult?.ok) {
+        return acceptFollowTrainWalk(
+          keyboardResult,
+          keyboardResult.transport || "keyboard-step",
+          clickResult?.reason || "",
+        );
+      }
+    }
+
     const nativeResult = await executeNativeFollowTrainWalk();
     if (nativeResult?.ok) {
-      return { ...nativeResult, destination };
+      return acceptFollowTrainWalk(
+        nativeResult,
+        nativeResult.transport || "native-pathfinder",
+        clickResult?.reason || keyboardResult?.reason || "",
+      );
     }
 
     this.setLastWalkAttempt(walkKey, origin, {
@@ -38004,12 +38057,14 @@ export class MinibiaTargetBot {
       preserveFailures: true,
     });
     this.noteWalkFailure(walkKey, { origin });
-    const failureReason = nativeResult?.reason || "unknown error";
+    const failureReason = nativeResult?.reason || clickResult?.reason || keyboardResult?.reason || "unknown error";
     this.log(`Follow chain move failed toward ${targetName}: ${failureReason}`);
     return nativeResult?.reason ? {
-      ...nativeResult,
+      ...clickResult,
+      keyboardResult,
+      nativeResult,
       reason: failureReason,
-    } : nativeResult;
+    } : (clickResult || keyboardResult || nativeResult);
   }
 
   async followTrainFollowCreature(action = {}) {

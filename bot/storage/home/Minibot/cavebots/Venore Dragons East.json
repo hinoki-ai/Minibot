@@ -280,7 +280,7 @@
   "bankingEnabled": false,
   "bankingRules": [],
   "teamEnabled": true,
-  "partyFollowEnabled": true,
+  "partyFollowEnabled": false,
   "partyFollowMembers": [
     "Czarnobrat",
     "Zlocimir Wielkoportf"
@@ -462,7 +462,7 @@
     },
     {
       "x": 32817,
-      "y": 32141,
+      "y": 32140,
       "z": 8,
       "type": "node",
       "label": "Waypoint 008",
@@ -470,7 +470,7 @@
     },
     {
       "x": 32817,
-      "y": 32137,
+      "y": 32136,
       "z": 8,
       "type": "node",
       "label": "Waypoint 009",
@@ -556,7 +556,7 @@
     },
     {
       "x": 32812,
-      "y": 32155,
+      "y": 32156,
       "z": 8,
       "type": "node",
       "label": "Waypoint 020",

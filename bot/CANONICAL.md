@@ -150,8 +150,12 @@ Do not document backlog-only route fields as current runtime schema.
   explicit names, generic slot requests, or vendored item metadata.
 - Looting uses keep lists, skip lists, and preferred container routing rather
   than one-off corpse scripts.
-- Follow chain uses `partyFollow*` keys. Multiple independent chains may run at
-  once. Slot 1 leads; each later member follows the name directly above it.
+- Follow chain uses `partyFollow*` keys. Team Hunt route sync is the
+  `teamEnabled` behavior inside the same party/follow module, and may run
+  alongside Follow Chain. When `teamEnabled` is true and `partyFollowMembers`
+  has at least two names, the ordered follow train is active even if
+  `partyFollowEnabled` is false. Multiple independent chains may run at once.
+  Slot 1 leads; each later member follows the name directly above it.
 - Follow chain members may be live tabs, seen players, or manual player names.
 - Follow chain supports `follow-and-fight` and `follow-only` plus per-member
   tactical roles such as `front-guard`, `assist-dps`, `sio-healer`,
@@ -177,8 +181,8 @@ Do not document backlog-only route fields as current runtime schema.
   constructor.
 - Arrow-key movement through CDP works, but it is too granular for reliable
   cavebot routing.
-- For same-floor cavebot movement inside the visible game area, prefer viewport
-  tile clicks from the live player anchor.
+- For same-floor cavebot and follow-chain recovery movement inside the visible
+  game area, prefer viewport tile clicks from the live player anchor.
 - Safe same-floor routes should use nearby checkpoints around holes rather than
   floor-change waypoint types unless the route intentionally changes floors.
 - Short checkpoint spacing, `radius: 1`, and a lower `walkRepathMs` such as

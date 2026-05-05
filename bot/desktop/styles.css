@@ -14932,6 +14932,39 @@ select[data-feedback="success"] {
   color: rgba(239, 228, 207, 0.86);
 }
 
+.modal-panel .modal-actions .modal-close-button {
+  border-color: rgba(170, 118, 118, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 45%),
+    linear-gradient(180deg, #593938, #3f2727);
+  color: #f3dbd7;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(170, 118, 118, 0.1);
+}
+
+.modal-panel .modal-actions .modal-close-button:hover:not(:disabled) {
+  border-color: rgba(196, 147, 147, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 45%),
+    linear-gradient(180deg, #64403f, #472d2d);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(170, 118, 118, 0.14),
+    0 8px 18px rgba(0, 0, 0, 0.14);
+}
+
+.modal-panel .modal-actions .modal-close-button:active:not(:disabled),
+.modal-panel .modal-actions .modal-close-button[data-pressed="true"]:not(:disabled) {
+  border-color: rgba(215, 171, 171, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.3),
+    inset 0 0 0 999px rgba(0, 0, 0, 0.07),
+    0 0 0 1px rgba(170, 118, 118, 0.16);
+}
+
 .modal-panel-module.module-modal-headless {
   grid-template-rows: minmax(0, 1fr) auto;
 }
@@ -15910,4 +15943,78 @@ input[type="checkbox"]:checked::before {
 
 #modal-targeting input[type="checkbox"]:checked::before {
   background: linear-gradient(180deg, #fff4d7, #c89947);
+}
+
+/* Modules panel: fixed tile rhythm and uncluttered quick summaries. */
+.control-card .quick-grid {
+  grid-auto-rows: 58px;
+}
+
+.control-card .quick-module-card {
+  min-height: 0;
+  height: 100%;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  gap: 3px;
+  padding: 3px;
+  overflow: hidden;
+}
+
+.control-card .quick-module-open,
+.control-card .quick-module-toggle {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.control-card .quick-module-open {
+  padding: 5px 15px 5px 7px;
+  gap: 1px;
+}
+
+.control-card .quick-module-open span,
+.control-card .quick-module-toggle span {
+  max-width: 100%;
+  line-height: 1.05;
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-wrap: wrap;
+}
+
+.control-card .quick-module-open span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 8px;
+  letter-spacing: 0.07em;
+}
+
+.control-card .quick-module-open strong {
+  font-size: 11px;
+  line-height: 1.1;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.control-card .quick-module-toggle {
+  min-width: 0;
+  width: 58px;
+  padding: 4px 3px;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+}
+
+.control-card .quick-module-toggle span {
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.control-card .quick-module-toggle strong {
+  max-width: 100%;
+  font-size: 11px;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  text-align: center;
 }

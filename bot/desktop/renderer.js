@@ -15881,7 +15881,7 @@ function renderSummarySheets() {
     summaryFields.deathHeal,
     deathHealState.state === "inherited"
       ? deathHealState.label
-      : (options.deathHealEnabled ? `<= ${deathHealThreshold}%` : "Off"),
+      : `<= ${deathHealThreshold}%`,
   );
   setTextContent(
     summaryFields.deathHealDetail,
@@ -15906,9 +15906,7 @@ function renderSummarySheets() {
     summaryFields.autoEat,
     autoEatState.state === "inherited"
       ? autoEatState.label
-      : autoEatMode.moduleEnabled
-        ? formatMs(options.autoEatCooldownMs)
-        : "Off",
+      : formatDurationMs(options.autoEatCooldownMs),
   );
   setTextContent(
     summaryFields.autoEatDetail,
@@ -15920,7 +15918,7 @@ function renderSummarySheets() {
   );
   setTextContent(
     summaryFields.haste,
-    options.hasteEnabled ? "On" : "Off",
+    formatHasteSpellLabel(options.hasteWords).replace(/^Haste\s*\/\s*/i, ""),
   );
   setTextContent(
     summaryFields.hasteDetail,
@@ -15931,7 +15929,7 @@ function renderSummarySheets() {
   setTextContent(
     summaryFields.ammo,
     !ammoPowerOn
-      ? "Off"
+      ? (ammoSummary.enabled ? ammoSummary.preferredValue : "No policy")
       : ammoSummary.enabled
       ? (ammoSummary.equippedCount > 0
         ? `${ammoSummary.equippedCount} / ${ammoSummary.carriedCount}`
@@ -15951,7 +15949,7 @@ function renderSummarySheets() {
   const equipmentReplaceSummary = getEquipmentReplaceCombinedStatus(options);
   setTextContent(
     summaryFields.ringAmuletAutoReplace,
-    equipmentReplaceSummary.activeLabel,
+    equipmentReplaceSummary.enabledCount ? equipmentReplaceSummary.activeLabel : "Ring + amulet",
   );
   setTextContent(
     summaryFields.ringAmuletAutoReplaceDetail,
@@ -15997,9 +15995,7 @@ function renderSummarySheets() {
   const lootPreferredContainers = normalizeTextListSummary(options.lootPreferredContainers);
   setTextContent(
     summaryFields.looting,
-    options.lootingEnabled
-      ? (lootWhitelist.length ? `${lootWhitelist.length} keep` : "All items")
-      : "Paused",
+    lootWhitelist.length ? `${lootWhitelist.length} keep` : "All items",
   );
   setTextContent(
     summaryFields.lootingDetail,
@@ -16010,7 +16006,7 @@ function renderSummarySheets() {
   const activeBankingRules = getActiveRules(options.bankingRules || []);
   setTextContent(
     summaryFields.banking,
-    activeBankingRules.length ? `${activeBankingRules.length} rule${activeBankingRules.length === 1 ? "" : "s"}` : "Idle",
+    activeBankingRules.length ? `${activeBankingRules.length} rule${activeBankingRules.length === 1 ? "" : "s"}` : "No rules",
   );
   setTextContent(
     summaryFields.bankingDetail,
@@ -16034,7 +16030,7 @@ function renderSummarySheets() {
       ? trainerState.label
       : trainerState.effectiveEnabled
         ? formatTrainerPartnerHeadline(trainerPartnerName)
-        : "Off",
+        : "No partner",
   );
   setTextContent(
     summaryFields.trainerDetail,
@@ -16044,7 +16040,12 @@ function renderSummarySheets() {
         ? `Keep ${Math.max(1, Math.trunc(Number(options.trainerPartnerDistance) || 0))} sqm / party ${options.trainerAutoPartyEnabled !== false ? "auto" : "manual"} / trainer reconnect ${options.trainerReconnectEnabled !== false ? "on" : "off"} / idle ${formatDurationMs(options.antiIdleIntervalMs)} / food ${autoEatFoodName} ${formatDurationMs(options.autoEatCooldownMs)} / mana ${formatTrainerManaTrainerDetail(options, { empty: "off" })} / heal <= ${formatPercent(options.healerEmergencyHealthPercent)} / escape <= ${formatPercent(options.trainerEscapeHealthPercent)}`
         : "Target, trainer reconnect, keep-close, food, and escape off",
   );
-  setTextContent(summaryFields.reconnect, reconnectRuntime.headline);
+  setTextContent(
+    summaryFields.reconnect,
+    reconnectRuntime.enabled || reconnectRuntime.manualAvailable
+      ? reconnectRuntime.headline
+      : formatDurationMs(reconnectRuntime.retryDelayMs),
+  );
   setTextContent(
     summaryFields.reconnectDetail,
     `${reconnectRuntime.detail} / ${reconnectRuntime.configDetail}`,
@@ -16058,7 +16059,7 @@ function renderSummarySheets() {
       ? antiIdleState.label
       : antiIdleMode.moduleEnabled
         ? formatDurationMs(options.antiIdleIntervalMs)
-        : "Off",
+        : formatDurationMs(options.antiIdleIntervalMs),
   );
   setTextContent(
     summaryFields.antiIdleDetail,
@@ -16067,11 +16068,11 @@ function renderSummarySheets() {
       : "Idle keepalive off",
   );
   const alarmSummary = getAlarmSummaryData(options);
-  setTextContent(summaryFields.alarms, alarmSummary.headline);
+  setTextContent(summaryFields.alarms, alarmSummary.headline === "Off" ? "Muted" : alarmSummary.headline);
   setTextContent(summaryFields.alarmsDetail, alarmSummary.detail);
   setTextContent(
     summaryFields.teamHunt,
-    options.teamEnabled ? "On" : "Off",
+    "Route sync",
   );
   setTextContent(
     summaryFields.teamHuntDetail,
@@ -16083,7 +16084,7 @@ function renderSummarySheets() {
     summaryFields.partyFollow,
     options.partyFollowEnabled
       ? formatFollowTrainHeadline(partyFollowMembers)
-      : "Off",
+      : formatFollowTrainHeadline(partyFollowMembers),
   );
   setTextContent(
     summaryFields.partyFollowDetail,
@@ -16093,7 +16094,12 @@ function renderSummarySheets() {
         : ""}${followContext.passiveFollower ? " / Passive follow suppresses combat" : ""}`
       : "No follow chain active",
   );
-  setTextContent(summaryFields.pkAssist, formatPkAssistHeadline(options, state));
+  setTextContent(
+    summaryFields.pkAssist,
+    options.pkAssistEnabled || getPkAssistRuntimeStatus(state)?.active
+      ? formatPkAssistHeadline(options, state)
+      : formatPkAssistModeLabel(options.pkAssistMode),
+  );
   setTextContent(summaryFields.pkAssistDetail, formatPkAssistDetail(options, state));
   const rookillerStatus = getBoundInstance()?.rookillerStatus || null;
   const rookillerLevel = Number(rookillerStatus?.level);
@@ -16270,8 +16276,8 @@ function renderDashboard() {
     setTextContent(
       cavebotMasterStopSummary,
       deskCavebotControlState.anyRunning
-        ? `Stop ${deskCavebotControlState.runningCount} live character${deskCavebotControlState.runningCount === 1 ? "" : "s"}`
-        : "All live characters stopped",
+        ? `Stop ${deskCavebotControlState.runningCount} tab${deskCavebotControlState.runningCount === 1 ? "" : "s"}`
+        : "All stopped",
     );
     syncTextTitle(cavebotMasterStopSummary);
   }
@@ -18457,7 +18463,7 @@ function modulesPayload() {
   const trainerPartnerName = getResolvedTrainerPartnerName(draft);
   const partyFollowMembers = normalizeTextListSummary(draft.partyFollowMembers);
   const teamEnabled = Boolean(draft.teamEnabled);
-  const partyFollowEnabled = teamEnabled ? false : Boolean(draft.partyFollowEnabled);
+  const partyFollowEnabled = Boolean(draft.partyFollowEnabled);
   const trainerManaTrainerRules = (() => {
     const sourceRules = Array.isArray(draft.trainerManaTrainerRules) ? draft.trainerManaTrainerRules : [];
     const sourceRule = sourceRules.find((rule) => String(rule?.words || "").trim()) || null;
@@ -18630,7 +18636,7 @@ function followTrainPayload() {
   const partyFollowEnabled = Boolean(draft.partyFollowEnabled);
 
   return {
-    teamEnabled: partyFollowEnabled ? false : Boolean(draft.teamEnabled),
+    teamEnabled: Boolean(draft.teamEnabled),
     partyFollowEnabled,
     partyFollowMembers: partyFollowMembers.join("\n"),
     partyFollowManualPlayers: normalizeTextListSummary(draft.partyFollowManualPlayers).join("\n"),
@@ -18843,7 +18849,6 @@ function addSeenFollowTrainMembers() {
 
 function buildPartyFollowTogglePayload(enabled) {
   const payload = {
-    teamEnabled: false,
     partyFollowEnabled: enabled,
   };
   if (enabled) {
@@ -18858,7 +18863,6 @@ function buildPartyFollowTogglePayload(enabled) {
 function buildTeamHuntTogglePayload(enabled) {
   return {
     teamEnabled: enabled,
-    partyFollowEnabled: false,
   };
 }
 
@@ -20462,6 +20466,7 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
     optionKey: "ringAutoReplaceEnabled",
     label: "Ring amulet replace",
     getCurrentEnabled: () => Boolean(state?.options?.ringAutoReplaceEnabled || state?.options?.amuletAutoReplaceEnabled),
+    getSuccessEnabled: (nextState) => Boolean(nextState?.options?.ringAutoReplaceEnabled || nextState?.options?.amuletAutoReplaceEnabled),
     buildPayload: (nextEnabled) => buildEquipmentReplaceMasterTogglePayload(nextEnabled),
   },
   { button: quickButtons.runeMaker, optionKey: "runeMakerEnabled", label: "Rune module" },
@@ -20483,7 +20488,7 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
   },
   { button: quickButtons.partyFollow, optionKey: "partyFollowEnabled", label: "Follow Chain" },
   { button: quickButtons.pkAssist, optionKey: "pkAssistEnabled", label: "PK Assist" },
-].forEach(({ button, optionKey, label, getCurrentEnabled, buildPayload }) => {
+].forEach(({ button, optionKey, label, getCurrentEnabled, getSuccessEnabled, buildPayload }) => {
   button?.addEventListener("click", async () => {
     if (!isStateReady() || !isDeskBound()) return;
     const currentEnabled = typeof getCurrentEnabled === "function"
@@ -20498,8 +20503,8 @@ routeLivePreviewToggleButton?.addEventListener("click", (event) => {
     await updateOptions(payload, {
       buttons: button,
       successMessage: (nextState) => {
-        const enabled = typeof buildPayload === "function"
-          ? Boolean(nextState?.options?.ringAutoReplaceEnabled || nextState?.options?.amuletAutoReplaceEnabled)
+        const enabled = typeof getSuccessEnabled === "function"
+          ? getSuccessEnabled(nextState)
           : Boolean(nextState?.options?.[optionKey]);
         return `${label} ${enabled ? "enabled" : "disabled"}`;
       },

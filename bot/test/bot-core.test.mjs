@@ -604,7 +604,7 @@ test("normalizeOptions accepts follow-chain alias option names", () => {
   assert.equal(Object.hasOwn(options, "followChainCombatMode"), false);
 });
 
-test("normalizeOptions keeps Team Hunt separate from Follow Chain", () => {
+test("normalizeOptions lets Team Hunt route sync coexist with Follow Chain", () => {
   const team = normalizeOptions({
     teamEnabled: true,
     routeSpacingEnabled: true,
@@ -614,27 +614,29 @@ test("normalizeOptions keeps Team Hunt separate from Follow Chain", () => {
   assert.equal(team.routeSpacingEnabled, false);
 
   const follow = normalizeOptions({
+    teamEnabled: true,
     partyFollowEnabled: true,
     partyFollowMembers: ["Knight Alpha", "Scout Beta"],
   });
-  assert.equal(follow.teamEnabled, false);
+  assert.equal(follow.teamEnabled, true);
   assert.equal(follow.partyFollowEnabled, true);
+  assert.equal(follow.routeSpacingEnabled, false);
 });
 
-test("normalizeOptions resolves old configs with both team modes enabled", () => {
+test("normalizeOptions preserves old configs with both team modes enabled", () => {
   const teamFallback = normalizeOptions({
     teamEnabled: true,
     partyFollowEnabled: true,
   });
   assert.equal(teamFallback.teamEnabled, true);
-  assert.equal(teamFallback.partyFollowEnabled, false);
+  assert.equal(teamFallback.partyFollowEnabled, true);
 
   const followFallback = normalizeOptions({
     teamEnabled: true,
     partyFollowEnabled: true,
     partyFollowMembers: ["Knight Alpha", "Scout Beta"],
   });
-  assert.equal(followFallback.teamEnabled, false);
+  assert.equal(followFallback.teamEnabled, true);
   assert.equal(followFallback.partyFollowEnabled, true);
 });
 
@@ -3172,6 +3174,57 @@ test("chooseFollowTrainAction reissues native follow when a same-floor follower 
   assert.equal(action?.kind, "follow-train-creature");
   assert.equal(action?.targetId, 10);
   assert.equal(action?.targetName, "Knight Alpha");
+  assert.equal(action?.force, true);
+});
+
+test("chooseFollowTrainAction treats zero-step native follow autowalk as stalled", () => {
+  const bot = new MinibiaTargetBot({
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    partyFollowDistance: 2,
+  });
+  bot.getNow = () => 30_000;
+  bot.followTrainState = {
+    leaderName: "Knight Alpha",
+    leaderKey: "knight alpha",
+    currentState: "FOLLOWING",
+    lastStateChangeAt: 1_000,
+    lastSeenAt: 29_000,
+    lastSeenPosition: { x: 107, y: 100, z: 7 },
+    lastLeaderSource: "visible",
+    activeFollowTargetId: 10,
+    activeFollowTargetKey: "knight alpha",
+    lastFollowAttemptAt: 1_000,
+    lastRejoinAt: 1_000,
+  };
+
+  const action = bot.chooseFollowTrainAction({
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 100, z: 7 },
+    currentTarget: null,
+    currentFollowTarget: {
+      id: 10,
+      name: "Knight Alpha",
+      position: { x: 107, y: 100, z: 7 },
+    },
+    visiblePlayers: [
+      {
+        id: 10,
+        name: "Knight Alpha",
+        position: { x: 107, y: 100, z: 7 },
+      },
+    ],
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: true,
+    pathfinderFinalDestination: { x: 101, y: 100, z: 7 },
+    autoWalkStepsRemaining: 0,
+  });
+
+  assert.equal(action?.kind, "follow-train-creature");
+  assert.equal(action?.targetId, 10);
   assert.equal(action?.force, true);
 });
 
@@ -16113,6 +16166,51 @@ test("chooseRouteAction interrupts stale client autowalk when no bot walk is pen
   }
 });
 
+test("chooseRouteAction interrupts blocked client autowalk immediately", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: false,
+    waypointRadius: 0,
+    walkRepathMs: 1200,
+    waypoints: [
+      { x: 5, y: 0, z: 8, type: "walk" },
+    ],
+  });
+
+  let now = 1_000;
+  const realDateNow = Date.now;
+  Date.now = () => now;
+  bot.getNow = () => now;
+  bot.resetRoute(0);
+
+  try {
+    const action = bot.chooseRouteAction({
+      ready: true,
+      playerPosition: { x: 0, y: 0, z: 8 },
+      currentTarget: null,
+      candidates: [],
+      visibleCreatures: [],
+      isMoving: false,
+      pathfinderAutoWalking: true,
+      pathfinderFinalDestination: { x: 5, y: 0, z: 8 },
+      autoWalkStepsRemaining: 1,
+      serverMessages: [
+        {
+          text: "There is no way.",
+          timestamp: now - 50,
+        },
+      ],
+    });
+
+    assert.equal(action?.kind, "hold-route");
+    assert.equal(action?.reason, "blocked-message");
+    assert.equal(action?.interrupt, true);
+    assert.equal(bot.isRecentlyBlockedWalkDestination({ x: 5, y: 0, z: 8 }, now), true);
+  } finally {
+    Date.now = realDateNow;
+  }
+});
+
 test("chooseRouteAction keeps waiting when claimed client autowalk is still changing tiles", () => {
   const bot = new MinibiaTargetBot({
     autowalkEnabled: true,
@@ -19894,19 +19992,19 @@ test("Team Hunt route-walks and holds waypoint progress for same-route peers", (
 
   bot.routeIndex = 1;
   bot.routeCoordinationState = {
-    selfInstanceId: "scout",
+    selfInstanceId: "knight",
     members: [
       {
         instanceId: "knight",
         characterName: "Knight Alpha",
-        routeIndex: 0,
-        confirmedIndex: 0,
+        routeIndex: 1,
+        confirmedIndex: 1,
         startedAt: 1,
       },
       {
         instanceId: "scout",
         characterName: "Scout Beta",
-        routeIndex: 1,
+        routeIndex: 0,
         confirmedIndex: 0,
         startedAt: 2,
       },
@@ -19915,7 +20013,7 @@ test("Team Hunt route-walks and holds waypoint progress for same-route peers", (
 
   const snapshot = {
     ready: true,
-    playerName: "Scout Beta",
+    playerName: "Knight Alpha",
     playerPosition: { x: 101, y: 200, z: 8 },
     currentTarget: null,
     visibleCreatures: [],
@@ -19927,20 +20025,162 @@ test("Team Hunt route-walks and holds waypoint progress for same-route peers", (
 
   assert.equal(bot.options.teamEnabled, true);
   assert.equal(bot.options.partyFollowEnabled, false);
-  assert.equal(bot.getFollowTrainAssignment(snapshot), null);
+  assert.equal(bot.getFollowTrainAssignment(snapshot)?.selfIndex, 0);
 
   const heldAction = bot.chooseRouteAction(snapshot);
   assert.equal(heldAction?.kind, "hold-route");
   assert.equal(heldAction?.reason, "team-hunt-sync");
   assert.equal(bot.routeIndex, 1);
 
-  bot.routeCoordinationState.members[0].routeIndex = 1;
-  bot.routeCoordinationState.members[0].confirmedIndex = 1;
+  bot.routeCoordinationState.members[1].routeIndex = 1;
+  bot.routeCoordinationState.members[1].confirmedIndex = 1;
 
   const walkAction = bot.chooseRouteAction(snapshot);
   assert.equal(walkAction?.kind, "walk");
   assert.equal(walkAction?.destination?.x, 102);
   assert.equal(bot.routeIndex, 2);
+});
+
+test("Team Hunt enables ordered follow-chain followers from shared members", () => {
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    teamEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    waypoints: [
+      { x: 100, y: 200, z: 8, type: "walk" },
+      { x: 101, y: 200, z: 8, type: "walk" },
+    ],
+  });
+
+  const snapshot = {
+    ready: true,
+    playerName: "Scout Beta",
+    playerPosition: { x: 100, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  };
+
+  assert.equal(bot.options.teamEnabled, true);
+  assert.equal(bot.options.partyFollowEnabled, false);
+  assert.equal(bot.isFollowTrainEnabled(), true);
+  assert.equal(bot.getFollowTrainAssignment(snapshot)?.selfIndex, 1);
+  assert.equal(bot.getFollowTrainAssignment(snapshot)?.predecessorName, "Knight Alpha");
+  assert.equal(bot.chooseRouteAction(snapshot), null);
+});
+
+test("Team Hunt route sync does not hold on a chained follower already beside the pilot", () => {
+  const waypoints = [
+    { x: 100, y: 200, z: 8, type: "walk" },
+    { x: 101, y: 200, z: 8, type: "walk" },
+    { x: 102, y: 200, z: 8, type: "walk" },
+  ];
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    teamEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    waypoints,
+  });
+
+  bot.routeIndex = 1;
+  bot.routeCoordinationState = {
+    selfInstanceId: "knight",
+    members: [
+      {
+        instanceId: "knight",
+        characterName: "Knight Alpha",
+        routeIndex: 1,
+        confirmedIndex: 1,
+        playerPosition: { x: 101, y: 200, z: 8 },
+        startedAt: 1,
+      },
+      {
+        instanceId: "scout",
+        characterName: "Scout Beta",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        playerPosition: { x: 100, y: 200, z: 8 },
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const action = bot.chooseRouteAction({
+    ready: true,
+    playerName: "Knight Alpha",
+    playerPosition: { x: 101, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  });
+
+  assert.equal(bot.getFollowTrainAssignment({ ready: true, playerName: "Knight Alpha" })?.selfIndex, 0);
+  assert.equal(action?.kind, "walk");
+  assert.equal(action?.destination?.x, 102);
+  assert.equal(bot.teamHuntHold, null);
+});
+
+test("Team Hunt route sync remains active while Follow Chain is enabled", () => {
+  const waypoints = [
+    { x: 100, y: 200, z: 8, type: "walk" },
+    { x: 101, y: 200, z: 8, type: "walk" },
+    { x: 102, y: 200, z: 8, type: "walk" },
+  ];
+  const bot = new MinibiaTargetBot({
+    autowalkEnabled: true,
+    autowalkLoop: true,
+    teamEnabled: true,
+    partyFollowEnabled: true,
+    partyFollowMembers: ["Knight Alpha", "Scout Beta"],
+    waypoints,
+  });
+
+  bot.routeIndex = 1;
+  bot.routeCoordinationState = {
+    selfInstanceId: "knight",
+    members: [
+      {
+        instanceId: "scout",
+        characterName: "Scout Beta",
+        routeIndex: 0,
+        confirmedIndex: 0,
+        startedAt: 1,
+      },
+      {
+        instanceId: "knight",
+        characterName: "Knight Alpha",
+        routeIndex: 1,
+        confirmedIndex: 1,
+        startedAt: 2,
+      },
+    ],
+  };
+
+  const snapshot = {
+    ready: true,
+    playerName: "Knight Alpha",
+    playerPosition: { x: 101, y: 200, z: 8 },
+    currentTarget: null,
+    visibleCreatures: [],
+    candidates: [],
+    isMoving: false,
+    pathfinderAutoWalking: false,
+    pathfinderFinalDestination: null,
+  };
+
+  assert.equal(bot.getFollowTrainAssignment(snapshot)?.selfIndex, 0);
+
+  const heldAction = bot.chooseRouteAction(snapshot);
+  assert.equal(heldAction?.kind, "hold-route");
+  assert.equal(heldAction?.reason, "team-hunt-sync");
 });
 
 test("team coordination sync is throttled while the runtime loop is hot", async () => {
@@ -23996,7 +24236,7 @@ test("walk restores preferred chase mode after a successful bot move", async () 
   assert.equal(restoreCalls, 1);
 });
 
-test("walk uses a keyboard step before viewport click when standing in an elemental field", async () => {
+test("walk prefers viewport clicks even when standing in an elemental field", async () => {
   const bot = new MinibiaTargetBot();
   const destination = { x: 100, y: 101, z: 8 };
   const events = [];
@@ -24042,11 +24282,59 @@ test("walk uses a keyboard step before viewport click when standing in an elemen
   );
 
   assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "viewport-click");
+  assert.equal(keyboardCalls, 0);
+  assert.equal(clickCalls, 1);
+  assert.equal(nativeCalls, 0);
+  assert.equal(events.find((event) => event.type === "walk")?.payload?.transport, "viewport-click");
+});
+
+test("walk falls back to a keyboard step when a one-sqm viewport click is unavailable", async () => {
+  const bot = new MinibiaTargetBot({ intervalMs: 250 });
+  const destination = { x: 100, y: 101, z: 8 };
+  const events = [];
+  let clickCalls = 0;
+  let keyboardCalls = 0;
+  let nativeCalls = 0;
+
+  bot.on((event) => events.push(event));
+  bot.lastSnapshot = {
+    ready: true,
+    playerPosition: { x: 100, y: 100, z: 8 },
+  };
+  bot.lastWalkOriginKey = "100,100,8";
+  bot.lastWalkKey = "100,101,8";
+  bot.lastWalkDestinationKey = "100,101,8";
+  bot.lastWalkAt = Date.now() - 1_000;
+  bot.clickViewportWalk = async () => {
+    clickCalls += 1;
+    return { ok: false, reason: "target outside viewport" };
+  };
+  bot.executeKeyboardStep = async (target) => {
+    keyboardCalls += 1;
+    return { ok: true, transport: "keyboard-step", key: "ArrowDown", destination: target };
+  };
+  bot.executeNativeWalk = async () => {
+    nativeCalls += 1;
+    return { ok: false, reason: "native pathfinder should not run" };
+  };
+  bot.restorePreferredChaseMode = async () => ({ ok: true });
+
+  const result = await bot.walk(
+    destination,
+    {
+      destination,
+      origin: { x: 100, y: 100, z: 8 },
+    },
+  );
+
+  assert.equal(result?.ok, true);
   assert.equal(result?.transport, "keyboard-step");
+  assert.equal(clickCalls, 1);
   assert.equal(keyboardCalls, 1);
-  assert.equal(clickCalls, 0);
   assert.equal(nativeCalls, 0);
   assert.equal(events.find((event) => event.type === "walk")?.payload?.transport, "keyboard-step");
+  assert.equal(events.find((event) => event.type === "walk")?.payload?.fallbackReason, "target outside viewport");
 });
 
 test("reposition uses a viewport click for one-sqm combat setup steps", async () => {
@@ -24316,7 +24604,7 @@ test("reposition uses keyboard step before another click when the same one-sqm m
   assert.equal(events.find((event) => event.type === "move")?.payload?.fallbackReason, "same step did not move");
 });
 
-test("followTrainWalk records recovery telemetry on regroup moves", async () => {
+test("followTrainWalk records recovery telemetry on viewport regroup moves", async () => {
   const bot = new MinibiaTargetBot({
     partyFollowEnabled: true,
     partyFollowMembers: ["Knight Alpha", "Scout Beta"],
@@ -24363,14 +24651,14 @@ test("followTrainWalk records recovery telemetry on regroup moves", async () => 
   });
 
   assert.equal(result?.ok, true);
-  assert.equal(result?.transport, "native-pathfinder");
-  assert.equal(nativeCalls, 1);
-  assert.equal(clickCalls, 0);
+  assert.equal(result?.transport, "viewport-click");
+  assert.equal(nativeCalls, 0);
+  assert.equal(clickCalls, 1);
   assert.equal(bot.followTrainState.recoveryWalkAttempts, 3);
   assert.equal(bot.followTrainState.lastRecoveryWalkAt, 1_000);
 });
 
-test("followTrainWalk holds instead of viewport-clicking when client pathfinder is unavailable", async () => {
+test("followTrainWalk falls back to native pathfinder when viewport clicking is unavailable", async () => {
   const bot = new MinibiaTargetBot({
     partyFollowEnabled: true,
     partyFollowMembers: ["Knight Alpha", "Scout Beta"],
@@ -24384,11 +24672,11 @@ test("followTrainWalk holds instead of viewport-clicking when client pathfinder 
   };
   bot.clickViewportWalk = async () => {
     clickCalls += 1;
-    return { ok: true };
+    return { ok: false, reason: "target outside viewport" };
   };
   bot.executeNativeWalk = async () => {
     nativeCalls += 1;
-    return { ok: false, reason: "native pathfinder unavailable" };
+    return { ok: true, transport: "native-pathfinder" };
   };
 
   const result = await bot.followTrainWalk({
@@ -24400,10 +24688,10 @@ test("followTrainWalk holds instead of viewport-clicking when client pathfinder 
     reason: "recovery",
   });
 
-  assert.equal(result?.ok, false);
-  assert.equal(result?.reason, "native pathfinder unavailable");
+  assert.equal(result?.ok, true);
+  assert.equal(result?.transport, "native-pathfinder");
   assert.equal(nativeCalls, 1);
-  assert.equal(clickCalls, 0);
+  assert.equal(clickCalls, 1);
 });
 
 test("refreshFollowTrainRuntime clears stale follower telemetry when the session becomes the pilot", () => {

@@ -656,6 +656,7 @@
   "autowalkEnabled": true,
   "autowalkLoop": true,
   "routeStrictClear": false,
+  "routeSpacingEnabled": true,
   "routeFollowExactWaypoints": false,
   "routeRecording": false,
   "routeRecordStep": 3,
@@ -838,6 +839,7 @@
   "amuletAutoReplaceRequireStationary": false,
   "bankingEnabled": false,
   "bankingRules": [],
+  "teamEnabled": false,
   "partyFollowEnabled": false,
   "partyFollowMembers": [
     "Zlocimir Wielkoportf",
